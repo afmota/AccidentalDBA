@@ -1,371 +1,336 @@
+000014-YD8KFM-8FFR3C-294X93-BYJN9T-8JHY59-0H77VT-EBPFUJ-FCHD0B-TK0TP6
+
 High Performance SQL Server
+
 Troubleshooting SQL Server
 A Guide for the Accidental DBA
+
 Jonathan Kehayias and Ted Krueger
+
 Foreword by Paul Randal
 Technical review by Gail Shaw
-ISBN: 978-1-906434-77-9Troubleshooting SQL Server
+ISBN: 978-1-906434-77-9
+
+
+
+
+Troubleshooting SQL Server
 A Guide for the Accidental DBA
 By Jonathan Kehayias and Ted Krueger
+
 With a Foreword from Paul S. Randal
-First published by Simple Talk Publishing September 2011Copyright Jonathan Kehayias and Ted Krueger 2011
+
+First published by Simple Talk Publishing September 2011
+
+Direitos autorais de Jonathan Kehayias e Ted Krueger 2011
 ISBN 978-1-906434-77-9
-The right of Jonathan Kehayias and Ted Krueger to be identified as the authors of this work has been
-asserted by them in accordance with the Copyright, Designs and Patents Act 1988.
-All rights reserved. No part of this publication may be reproduced, stored or introduced into a retrieval
-system, or transmitted, in any form, or by any means (electronic, mechanical, photocopying, recording or
-otherwise) without the prior written consent of the publisher. Any person who does any unauthorized act
-in relation to this publication may be liable to criminal prosecution and civil claims for damages.
-This book is sold subject to the condition that it shall not, by way of trade or otherwise, be lent, re-sold,
-hired out, or otherwise circulated without the publisher's prior consent in any form other than which it is
-published and without a similar condition including this condition being imposed on the subsequent
-publisher.
-Edited by Tony Davis
-Technical Review and Additional Material: Gail Shaw
-Cover Image by Andy Martin
-Typeset & Designed by Matthew Tye & Gower AssociatesTable of Contents
-Introduction ................................................................................... 16
-Who is this book for? ............................................................................................................. 17
-Code Examples ....................................................................................................................... 18
-Chapter 1: A Performance Troubleshooting Methodology.......... 19
-Defining a Troubleshooting Methodology........................................................................ 20
-Wait Statistics: the Basis for Troubleshooting .................................................................. 23
-Virtual File Statistics ..............................................................................................................28
-Performance Counters ..........................................................................................................30
-Plan Cache Usage ...................................................................................................................38
-Summary................................................................................................................................. 40
-Chapter 2: Disk I/O Configuration................................................42
-Disk Configuration: Basic Considerations.........................................................................43
-Disk size vs. disk throughput ........................................................................................... 44
-Random versus sequential I/O..........................................................................................45
-Choosing the Right RAID Level.......................................................................................... 46
-A brief overview of RAID configurations ....................................................................... 48
-Disk size and throughput considerations .......................................................................54
-Workload considerations...................................................................................................57
-Direct Attached Storage vs. Storage Area Networks......................................................... 61
-Direct Attached Storage.....................................................................................................61
-Storage Area Networks...................................................................................................... 62
-Diagnosing Disk I/O Issues ..................................................................................................65
-Common Disk I/O Problems................................................................................................65
-Sizing for capacity instead of I/O performance ............................................................ 66
-Incorrect workload isolation ............................................................................................ 67
-Incorrect partition alignment .......................................................................................... 68
-Incorrect bandwidth using SAN configurations ........................................................... 70
-Summary.................................................................................................................................. 71Chapter 3: High CPU Utilization .................................................. 73
-Investigating CPU Pressure ..................................................................................................74
-Performance Monitor ........................................................................................................ 74
-SQL Trace............................................................................................................................ 76
-Dynamic Management Views ...........................................................................................77
-Common Causes of High CPU Usage.................................................................................85
-Missing indexes .................................................................................................................. 86
-Outdated statistics ............................................................................................................. 88
-Non-SARGable predicates................................................................................................. 89
-Implicit conversions............................................................................................................93
-Parameter sniffing .............................................................................................................. 95
-Ad hoc non-parameterized queries................................................................................103
-Inappropriate parallelism................................................................................................ 108
-TokenAndPermUserStore ................................................................................................ 117
-Windows Server and BIOS power saving options .......................................................120
-Summary................................................................................................................................ 122
-Additional Resources ........................................................................................................... 122
-Chapter 4: Memory Management............................................... 126
-The Self-Tuning Database Engine..................................................................................... 127
-How SQL Server Allocates Memory.................................................................................. 127
-32-bit Virtual Address Space limitations.........................................................................131
-Using 64-bit SQL Server ................................................................................................. 140
-Memory configuration options with 64-bit SQL Server ............................................ 143
-Diagnosing Memory Pressure ............................................................................................149
-Memory-related counters ................................................................................................150
-Memory-related DMVs..................................................................................................... 154
-Common Memory-Related Problems ................................................................................155
-The SQL Server memory leak myth............................................................................... 155
-Paging problems ................................................................................................................ 155
-OS instability due to Lock Pages in Memory
-plus unlimited max server memory ...............................................................................156
-App Domain is marked for unload due to memory pressure .................................... 157Error 701 and FAILED_VIRTUAL_RESERVE .............................................................. 158
-Over-provisioned virtual machines................................................................................159
-Memory settings for multiple instances....................................................................... 160
-Summary................................................................................................................................ 161
-Chapter 5: Missing Indexes......................................................... 163
-Index Selection and Design ................................................................................................164
-Index key column order ...................................................................................................165
-Use of included columns..................................................................................................169
-Index width ........................................................................................................................172
-Identifying Missing Indexes ............................................................................................... 172
-Workload analysis with the Database Engine Tuning Advisor ................................. 173
-Missing index feature ...................................................................................................... 180
-Missing indexes on foreign keys .....................................................................................188
-Identifying Unused Indexes................................................................................................189
-Identifying Duplicate Indexes ............................................................................................ 191
-Summary................................................................................................................................192
-Chapter 6: Blocking..................................................................... 193
-Locks and Concurrency (a Brief Review)..........................................................................194
-Lock modes ........................................................................................................................194
-Lock types...........................................................................................................................196
-Lock escalation ..................................................................................................................197
-Concurrency and the transaction isolation levels .......................................................198
-Latches and latch contention......................................................................................... 203
-Monitoring Blocking........................................................................................................... 204
-Using sysprocesses (SQL Server 2000 and later) ........................................................ 205
-Cumulative wait statistics with DBCC SQLPERF (waitstats)...................................208
-Dynamic Management Views ........................................................................................208
-Performance Monitor .......................................................................................................216
-Automated Detection and Notification of Blocking ...................................................... 217
-The Sp_blocker_pss80 process .......................................................................................218
-SQL Trace...........................................................................................................................218
-Event notifications ............................................................................................................223Extended Events............................................................................................................... 226
-Resolving Blocking...............................................................................................................228
-Bad database design......................................................................................................... 229
-Inappropriate isolation level........................................................................................... 229
-Poorly written queries ..................................................................................................... 230
-Missing indexes ................................................................................................................. 231
-Poor application design.................................................................................................... 231
-Outdated hardware...........................................................................................................232
-Hints, Trace Flags and Other Last Resorts....................................................................... 233
-Locking hints ..................................................................................................................... 233
-Summary................................................................................................................................236
-Chapter 7: Handling Deadlocks .................................................. 237
-The Lock Monitor ................................................................................................................238
-Capturing Deadlock Graphs...............................................................................................238
-Trace Flag 1204 ..................................................................................................................239
-Trace Flag 1222...................................................................................................................241
-SQL Profiler XML Deadlock Graph event.....................................................................241
-Service Broker event notifications..................................................................................243
-WMI Provider for server events......................................................................................245
-Extended Events............................................................................................................... 246
-Reading Deadlock Graphs.................................................................................................. 249
-Interpreting Trace Flag 1204 deadlock graphs ............................................................ 249
-Interpreting Trace Flag 1222 deadlock graphs ..............................................................254
-Interpreting XML deadlock graphs ................................................................................257
-Common types of deadlock and how to eliminate them ..............................................259
-Bookmark lookup deadlock............................................................................................260
-Range scans caused by SERIALIZABLE isolation ....................................................... 262
-Cascading constraint deadlocks .................................................................................... 264
-Intra-query parallelism deadlocks ..................................................................................265
-Accessing objects in different orders ............................................................................ 266
-Handling Deadlocks to Prevent Errors.............................................................................267
-T-SQL TRY…CATCH blocks .......................................................................................... 268Handling ADO.NET SqlExceptions in .NET code ..................................................... 270
-Controlling Deadlock Behavior with Deadlock Priority................................................ 271
-Summary................................................................................................................................272
-Chapter 8: Large or Full Transaction Log................................... 273
-How the Transaction Log Works.......................................................................................274
-How SQL Server writes to the transaction log ........................................................... 276
-Understanding log truncation ........................................................................................277
-Sizing and growing the log ............................................................................................. 278
-Diagnosing a Runaway Transaction Log......................................................................... 280
-Excessive logging: index maintenance operations ......................................................281
-Lack of log space reuse .....................................................................................................285
-Other possible causes of log growth ............................................................................. 295
-Handling a "Transaction Log Full" Error......................................................................... 299
-Mismanagement or What Not To Do ...............................................................................302
-Detach database, delete log file...................................................................................... 302
-Forcing log file truncation ...............................................................................................303
-Scheduled shrinking of the transaction log................................................................. 304
-Proper Log Management ....................................................................................................305
-Summary................................................................................................................................307
-Chapter 9: Truncated Tables, Dropped Objects and Other
-Accidents Waiting to Happen.....................................................308
-Example Case: The Missing Sales Order Data................................................................ 309
-Recovering Lost Data........................................................................................................... 310
-Recovering from backup ..................................................................................................310
-Recovering without a backup......................................................................................... 320
-Finding the Culprit ..............................................................................................................324
-Prevention is Better than Cure ..........................................................................................326
-Plan for recovery from all data losses.............................................................................327
-Implement a change control process.............................................................................329
-Implement an appropriate security model ...................................................................330
-Access control measures ...................................................................................................331
-Summary................................................................................................................................ 338Appendix: What to Do When All Else Fails.................................340
-Microsoft Customer Support Services............................................................................. 340
-Online Resources .................................................................................................................342
-Articles ................................................................................................................................343
-Blogs ....................................................................................................................................343
-Forums ............................................................................................................................... 344
-Hiring a Consultant .............................................................................................................346x
-Foreword from Paul Randal
-For most people, troubleshooting performance, corruption, or other problems with SQL
-Server is a necessity rather than a preference. Unless you're an advanced DBA or consultant
-with many years of troubleshooting experience, the first question you often ask yourself is:
-where do I start? There are quite a few books on SQL Server internals, SQL Server troubleshooting, or both – but they're all organized from the perspective of SQL Server architecture
-or internals.
-With the burgeoning number of non-DBAs dealing with SQL Server, what these people really
-need is a book that's organized by problem area – and that's where this book differs from the
-other troubleshooting books out there. If you're an accidental or involuntary DBA, you've
-been asked to look after a SQL Server, and you're struggling with how to figure out a problem,
-this book is for you. On the other hand, if you're a seasoned DBA or consultant and you want
-a fresh way of thinking through SQL Server problem solving, this book will be immensely
-useful to you as well.
-The book covers many of what I consider to be the most common problems that people
-encounter when dealing with SQL Server. For each problem it gives a brief overview of the
-underlying technical details before getting into the "How do I work towards solving the
-problem" details that are the most important for a time-constrained IT professional to know.
-There's also a liberal sprinkling of links to background articles and blog posts for the more
-intrepid readers to explore.
-Jonathan, Ted, and Gail are all highly-respected SQL Server MVPs, prolific bloggers (going into
-great depth with their blog posts), and spend large amounts of time responding to inquisitive
-and in-need people from around the world on a variety of Internet forums and Twitter. Their
-writing is clear and precise, which is of paramount importance when imparting troubleshooting details to people who may be unfamiliar with the topics being described.
-I have personally learned from all three of these talented SQL Server experts, and I encourage
-you to do so too.
-Paul S. Randal, CEO – SQLskills.com
-Redmond, WA – October 2011xi
-About the Authors
-Jonathan Kehayias
-Jonathan is currently employed as a Principal Consultant and Trainer for SQLskills, one
-of the best-known and most respected SQL Server training and consulting companies in
-the world. Jonathan is a SQL Server MVP and one of the few Microsoft Certified Masters
-for SQL Server 2008, outside of Microsoft. Jonathan frequently blogs about SQL Server,
-presents sessions at PASS Summit, SQLBits, SQL Connections and local SQL Saturday
-events, and has remained a top answerer of questions on the MSDN SQL Server Database
-Engine forum since 2007.
-Jonathan is a performance tuning expert for both SQL Server and hardware, and has
-architected complex systems as a developer, business analyst, and DBA. He also
-has extensive development (T-SQL, C#, and ASP.Net), hardware and virtualization
-design expertise, Windows expertise, Active Directory experience, and IIS
-administration experience.
-Outside of SQL Server, Jonathan is also a Drill Sergeant in the US Army Reserves and is
-married with two young children. On most nights he can be found at the playground, in a
-swimming pool, or at the beach with his kids.
-Jonathan can be found online as @SQLPoolBoy on Twitter, or through his blog at
-http://sqlskills.com/blogs/jonathan.
-Ted Krueger
-Ted is a Senior SQL Server consultant for a respected Microsoft Partner company. He
-is an MVP, author, blogger, speaker, volunteer, and mentor. Working with SQL Server
-for over a decade, Ted's areas of expertise are SSIS, high-availability, mirroring, andxii
-replication, as well as embracing all the other features that come along with this powerful
-database server. He works tirelessly to educate and help others in the community. He
-is a co-founder of the technical community at http://LessThanDot.com. Ted can also
-be found answering forum questions, working as a PASS regional mentor, answering
-questions on Twitter, and fishing and golfing in his spare time.
-Ted can be found online as @onpnt on Twitter, or through his blog at
-http://blogs.LessThanDot.com.
-Ted contributed Chapters 3 and 6 to this book.
-About the Technical Reviewer
-Gail Shaw
-Gail is a Senior Consultant with Xpertease, based in Johannesburg, South Africa. She
-specializes in database performance tuning and database recovery, with a particular
-focus on topics such as indexing strategies, execution plans, and writing T-SQL code
-that performs well and scales gracefully.
-Gail is a SQL Server MVP, and a frequent poster on both the SQL Server Central and
-SQLTeam forums. She writes articles for SQLServerCentral and Simple-Talk and blogs on
-all things relating to database performance on her blog at http://sqlinthewild.co.za.
-She has spoken at TechEd Africa, several of the 24 Hours of PASS web events and, on
-multiple occasions, at the PASS Community summit. At the Pass Community Summit in
-2009, her presentation on statistics was ranked 7th overall, for the event.
-Gail is an Aikido Shodan (1st degree black belt) and an avid archer. In her copious
-spare time she is pursuing a Master's degree in Computer Science at the University of
-South Africa.xiii
-Gail also contributed additional material throughout the book, and particularly to
-Chapters 3, 5, and 6.
-Acknowledgements
-Jonathan Kehayias
-Getting this book to print required more than just putting thoughts down as text,
-and a number of people contributed to it along the way. First and foremost, I'd like
-to acknowledge my wife, Sarah, and kids, Charlotte and Michael, and their ability and
-willingness to put up with the late hours I spent at night, locked in our home office,
-as well as the weekends spent sitting at my laptop when there were so many other
-things we could have been doing. Over the last year, even more than normal, Sarah
-spent many nights wondering if I was actually going to make it to bed or not, and
-provided distractions for Michael and Charlotte on a number of weekends, especially
-during the last few weeks before going to print. Without their support, I never would
-have made it through the first drafts let alone the repeated edits, as we worked towards
-final completion of the book.
-Running a close second would be the technical editors associated with this book. The
-technical editor, Gail Shaw, contributed many ideas and topics to the book, as well as
-adding examples and text to enhance the content of many of the chapters. I knew, at
-the start of the book, that I wanted a leading member of the SQL Server forums as my
-technical editor, and though we primarily answer questions on different sites, Gail was at
-the top of a very short list of potential candidates. How Gail was able to find time to assist
-with this book defies understanding, but for her efforts I am forever indebted.
-The chief editor of the book, Tony Davis, has to be one of the most patient people I have
-ever met. Through all the edits, delays, and then the final sprint to the end, Tony workedxiv
-tirelessly to keep the book focused and progressing towards being printed. This book is as
-much their work as it is the authors'.
-A final thank you goes to my friend, Amit Banerjee, a member of the Escalation Team in
-Microsoft Customer Support Services for SQL Server in Bangalore, India, who graciously
-reviewed Chapter 4 of the book for technical errors in the information on memory
-internals.
-Additional recognition goes out to all of the mentors I've had over the years, the list
-of which is incredibly long. Without the commitment of SQL Server MVPs like Arnie
-Rowland, Paul Randal, Aaron Bertrand, Louis Davidson, Geoff Hiten, and countless
-others, I would never have remained committed to answering questions on the forums.
-Ted Krueger
-Being a contributor to this book was a great honor for me and I would not have been able
-to do it without the support of my loving wife, Michelle, and the patience and silliness
-of my sons, Ethan and Cameron. Family makes everything in a person, and the strength
-provided by my family was my motivating force throughout.
-Special thanks to the technical reviewer, Gail Shaw, whose tireless efforts and knowledge
-helped make this the book it is. Thanks also to Jonathan Kehayias for his confidence and
-mentorship in allowing me to author Chapters 3 and 6. In all the years I've been working
-with SQL Server, no other person has taught and helped me more than Jonathan. He puts
-more time and energy into helping the community and understanding SQL Server, than
-any other person I've worked with, and does so in an unselfish manner.
-Lastly, I'd like to thank the SQL Server Community for sharing their time and knowledge.
-I've been part of other development and engineering communities, but none could match
-the scale and energy of knowledge exchange that takes place every day in the SQL Server
-Community, via forums, articles, blogs and Twitter. I owe much of what I know to thesexv
-people: Replication from Kendal Van Dyke, Execution Plans from Grant Fritchey, SQL
-Server Internals from Paul Randal, and many more.
-Without their hard work, figuring out how to tame this complex database system would
-be a far more difficult task. I've tried my best, in turn, to share what I know with the
-community.16
+O direito de Jonathan Kehayias e Ted Krueger de serem identificados como autores desta obra foi afirmado por eles de acordo com o Copyright, Designs and Patents Act 1988.
+Todos os direitos reservados. Nenhuma parte desta publicação pode ser reproduzida, armazenada ou introduzida em um sistema de recuperação, ou transmitida de qualquer forma ou por qualquer meio (eletrônico, mecânico, fotocópia, gravação ou outro) sem o consentimento prévio por escrito do editor. Qualquer pessoa que realizar qualquer ato não autorizado em relação a esta publicação poderá ser responsabilizada por processo criminal e reivindicações civis por danos. Este livro é vendido sob a condição de que não seja emprestado, revendido, alugado ou circulado de outra forma sem o consentimento prévio do editor, em qualquer forma que não seja a publicada, e sem uma condição semelhante, incluindo esta condição, sendo imposta ao editor subsequente.
+Editado por Tony Davis
+Revisão técnica e material adicional: Gail Shaw
+Imagem da capa por Andy Martin
+Diagramação e design por Matthew Tye & Gower Associates
+
+
+
+
+Table of Contents
+
 Introduction
-I've spent much of the last six years of my working life trying to help people solve SQL
-Server-related performance problems, either hands-on, at client sites in my capacity as a
-consultant, or on various online community forums, answering people's questions.
-Over that time I've been exposed to a few weird and wonderful SQL Server issues but,
-mainly, have seen the same problems, and the same confusions, crop up time and again. It
-was only a matter of time before I leapt to the foolhardy conclusion that I ought to write
-a book to explain what the most common problems were, why they occurred, and to
-offer sensible, practical solutions, aimed squarely at removing the root cause of the issue,
-rather than simply "papering over the cracks."
-It turned out to be a much more daunting task than I imagined, for a number of reasons.
-Firstly, this is, by its very nature, a fairly broad-ranging book, covering topics stretching
-from CPU issues, to memory management, to missing indexes, and full transaction logs.
-Secondly, it is amazing how complex some of the simplest topics become when you try
-to put them down in text. Thirdly, technology changes rapidly, and the troubleshooter,
-and the advice he or she offers, must adapt accordingly. There were several cases in
-the writing of this book, where either a technology change meant I had to go back and
-adapt my original advice, or where my own opinion of the content and troubleshooting
-methodologies had evolved to the point where certain sections had to be completely
-rewritten.
-Despite the occasionally bumpy road, what I hope I've achieved is a book that covers
-clearly and concisely the most common problems associated with the currently supported
-versions of SQL Server, namely SQL Server 2005, 2008, and 2008 R2. The first chapter
-explains my basic approach to performance troubleshooting, and the tools I use. It
-stresses, in particular, how rare it is that a problem can be diagnosed by looking at just a
-single data point.17
-The art of taming an unruly SQL Server is the art of gathering the various pieces of
-information that you need, and then assembling the "puzzle" so that you have a complete
-picture of what is going on inside of a server, and a true understanding of the real root
-cause of the problem.
-The following eight chapters cover the areas in which I see problems arising with
-alarming regularity: disk I/O, high CPU, memory mismanagement, missing indexes,
-blocking and deadlocking, full transaction logs, and accidentally lost data.
-In each case, I describe the most common problems, why they occur, how they can be
-diagnosed, using tools such as the Performance Monitor counters, Dynamic Management
-Views, server-side tracing, and so on, and how to fix them.
-By applying the basic steps that I use daily to troubleshoot these performance problems,
-I hope that you, too, can begin to solve the performance problems in your environment,
-faster and more accurately.
 Who is this book for?
-The primary audience for this book is anyone who has found themselves in charge of
-SQL Server "by accident;" in other words, the accidental/involuntary DBAs and system
-administrators who have had guardianship of SQL Server databases added to their roles,
-because there is a SQL Server in their environment, and someone has got to look after it.
-However, the troubleshooting concepts and methodologies covered in this book can be
-applied by anyone, including seasoned database administrators, to identify and resolve
-common problems and learn new tricks for managing and maintaining SQL Server.
-Anyone who has ever posted questions on one of the community forums will probably
-learn something new from this book.18
 Code Examples
-Throughout this book are scripts demonstrating various ways to gather diagnostic data,
-and there are a few places where presentation of the full code was deferred, due to space
-restrictions. All the code you need to try out the examples in this book can be obtained
-from the following URL:
+
+Chapter 1: A Performance Troubleshooting Methodology
+Defining a Troubleshooting Methodology
+Wait Statistics: the Basis for Troubleshooting
+Virtual File Statistics
+Performance Counters
+Plan Cache Usage
+Summary
+
+Chapter 2: Disk I/O Configuration
+Disk Configuration: Basic Considerations
+Disk size vs. disk throughput
+Random versus sequential I/O
+Choosing the Right RAID Level
+A brief overview of RAID configurations
+Disk size and throughput considerations
+Workload considerations
+Direct Attached Storage vs. Storage Area Networks
+Direct Attached Storage
+Storage Area Networks
+Diagnosing Disk I/O Issues
+Common Disk I/O Problems
+Sizing for capacity instead of I/O performance
+Incorrect workload isolation
+Incorrect partition alignment
+Incorrect bandwidth using SAN configurations
+Summary
+
+Chapter 3: High CPU Utilization
+Investigating CPU Pressure
+Performance Monitor
+SQL Trace
+Dynamic Management Views
+Common Causes of High CPU Usage
+Missing indexes
+Outdated statistics
+Non-SARGable predicates
+Implicit conversions
+Parameter sniffing
+Ad hoc non-parameterized queries
+Inappropriate parallelism
+TokenAndPermUserStore
+Windows Server and BIOS power saving options
+Summary
+Additional Resources
+
+Chapter 4: Memory Management
+The Self-Tuning Database Engine
+How SQL Server Allocates Memory
+32-bit Virtual Address Space limitations
+Using 64-bit SQL Server
+Memory configuration options with 64-bit SQL Server
+Diagnosing Memory Pressure
+Memory-related counters
+Memory-related DMVs
+Common Memory-Related Problems
+The SQL Server memory leak myth
+Paging problems
+OS instability due to Lock Pages in Memory
+plus unlimited max server memory
+App Domain is marked for unload due to memory pressure
+Error 701 and FAILED_VIRTUAL_RESERVE
+Over-provisioned virtual machines
+Memory settings for multiple instances
+Summary
+
+Chapter 5: Missing Indexes
+Index Selection and Design
+Index key column order
+Use of included columns
+Index width
+Identifying Missing Indexes
+Workload analysis with the Database Engine Tuning Advisor
+Missing index feature
+Missing indexes on foreign keys
+Identifying Unused Indexes
+Identifying Duplicate Indexes
+Summary
+
+Chapter 6: Blocking
+Locks and Concurrency (a Brief Review)
+Lock modes
+Lock types
+Lock escalation
+Concurrency and the transaction isolation levels
+Latches and latch contention
+Monitoring Blocking
+Using sysprocesses (SQL Server 2000 and later)
+Cumulative wait statistics with DBCC SQLPERF (waitstats)
+Dynamic Management Views
+Performance Monitor
+Automated Detection and Notification of Blocking
+The Sp_blocker_pss80 process
+SQL Trace
+Event notifications
+Extended Events
+Resolving Blocking
+Bad database design
+Inappropriate isolation level
+Poorly written queries
+Missing indexes
+Poor application design
+Outdated hardware
+Hints, Trace Flags and Other Last Resorts
+Locking hints
+Summary
+
+Chapter 7: Handling Deadlocks
+The Lock Monitor
+Capturing Deadlock Graphs
+Trace Flag 1204
+Trace Flag 1222
+SQL Profiler XML Deadlock Graph event
+Service Broker event notifications
+WMI Provider for server events
+Extended Events
+Reading Deadlock Graphs
+Interpreting Trace Flag 1204 deadlock graphs
+Interpreting Trace Flag 1222 deadlock graphs
+Interpreting XML deadlock graphs
+Common types of deadlock and how to eliminate them
+Bookmark lookup deadlock
+Range scans caused by SERIALIZABLE isolation
+Cascading constraint deadlocks
+Intra-query parallelism deadlocks
+Accessing objects in different orders
+Handling Deadlocks to Prevent Errors
+T-SQL TRY…CATCH blocks
+Handling ADO.NET SqlExceptions in .NET code
+Controlling Deadlock Behavior with Deadlock Priority
+Summary
+
+Chapter 8: Large or Full Transaction Log
+How the Transaction Log Works
+How SQL Server writes to the transaction log
+Understanding log truncation
+Sizing and growing the log
+Diagnosing a Runaway Transaction Log
+Excessive logging: index maintenance operations
+Lack of log space reuse
+Other possible causes of log growth
+Handling a "Transaction Log Full" Error
+Mismanagement or What Not To Do
+Detach database, delete log file
+Forcing log file truncation
+Scheduled shrinking of the transaction log
+Proper Log Management
+Summary
+
+Chapter 9: Truncated Tables, Dropped Objects and Other
+Accidents Waiting to Happen
+Example Case: The Missing Sales Order Data
+Recovering Lost Data
+Recovering from backup
+Recovering without a backup
+Finding the Culprit
+Prevention is Better than Cure
+Plan for recovery from all data losses
+Implement a change control process
+Implement an appropriate security model
+Access control measures
+Summary
+
+Appendix: What to Do When All Else Fails
+Microsoft Customer Support Services
+Online Resources
+Articles
+Blogs
+Forums
+Hiring a Consultant
+
+
+
+
+
+Prefácio de Paul Randal
+
+Para a maioria das pessoas, solucionar problemas de desempenho, corrupção ou outros problemas com o SQL Server é uma necessidade, não uma preferência. A menos que você seja um DBA avançado ou consultor com muitos anos de experiência em solução de problemas, a primeira pergunta que você costuma fazer a si mesmo é: por onde começo? Existem muitos livros sobre os aspectos internos do SQL Server, solução de problemas do SQL Server ou ambos - mas todos são organizados a partir da perspectiva da arquitetura ou dos aspectos internos do SQL Server.
+
+Com o crescente número de pessoas não DBAs lidando com o SQL Server, o que essas pessoas realmente precisam é de um livro organizado por área de problema - e é aí que este livro difere dos outros livros de solução de problemas disponíveis. Se você é um DBA acidental ou involuntário, foi solicitado a cuidar de um SQL Server e está lutando para descobrir um problema, este livro é para você. Por outro lado, se você é um DBA ou consultor experiente e deseja uma nova maneira de pensar na solução de problemas do SQL Server, este livro também será imensamente útil para você.
+
+O livro aborda muitos dos problemas mais comuns que as pessoas encontram ao lidar com o SQL Server. Para cada problema, ele oferece uma breve visão geral dos detalhes técnicos subjacentes antes de entrar nos detalhes de "Como eu trabalho para resolver o problema", que são os mais importantes para um profissional de TI com pouco tempo. Também há vários links para artigos e postagens de blog para os leitores mais audaciosos explorarem.
+
+Jonathan, Ted e Gail são todos MVPs altamente respeitados do SQL Server, blogueiros prolíficos (aprofundando-se bastante em suas postagens), e passam uma grande quantidade de tempo respondendo a pessoas inquisitivas e necessitadas de todo o mundo em diversos fóruns da Internet e no Twitter. Sua escrita é clara e precisa, o que é de suma importância ao transmitir detalhes de solução de problemas para pessoas que podem não estar familiarizadas com os tópicos descritos.
+
+Eu pessoalmente aprendi com esses três talentosos especialistas em SQL Server, e encorajo você a fazer o mesmo.
+
+Paul S. Randal, CEO - SQLskills.com
+
+Redmond, WA - Outubro de 2011
+
+
+
+
+
+Sobre os Autores
+Jonathan Kehayias
+Jonathan atualmente trabalha como Consultor Principal e Instrutor na SQLskills, uma das empresas de treinamento e consultoria em SQL Server mais conhecidas e respeitadas do mundo. Jonathan é um SQL Server MVP e um dos poucos Microsoft Certified Masters para o SQL Server 2008 fora da Microsoft. Jonathan frequentemente escreve em seu blog sobre SQL Server, apresenta palestras na PASS Summit, SQLBits, SQL Connections e eventos locais do SQL Saturday, e tem sido um dos principais respondentes de perguntas no fórum MSDN SQL Server Database Engine desde 2007.
+
+Jonathan é um especialista em ajuste de desempenho tanto para SQL Server quanto para hardware, e já arquitetou sistemas complexos como desenvolvedor, analista de negócios e DBA. Ele também possui ampla experiência em desenvolvimento (T-SQL, C# e ASP.Net), design de hardware e virtualização, expertise em Windows, experiência em Active Directory e administração do IIS.
+
+Além do SQL Server, Jonathan também é Sargento Instrutor no Exército dos Estados Unidos e é casado e tem dois filhos pequenos. Na maioria das noites, ele pode ser encontrado no parquinho, em uma piscina ou na praia com seus filhos.
+
+Jonathan pode ser encontrado online como @SQLPoolBoy no Twitter ou por meio de seu blog em http://sqlskills.com/blogs/jonathan.
+
+Ted Krueger
+Ted é um consultor sênior de SQL Server em uma respeitada empresa parceira da Microsoft. Ele é um MVP, autor, blogueiro, palestrante, voluntário e mentor. Trabalhando com o SQL Server por mais de uma década, as áreas de especialização de Ted são SSIS, alta disponibilidade, espelhamento e replicação, bem como a adoção de todos os outros recursos que acompanham esse poderoso servidor de banco de dados. Ele trabalha incansavelmente para educar e ajudar os outros na comunidade. Ele é um dos fundadores da comunidade técnica em http://LessThanDot.com. Ted também pode ser encontrado respondendo perguntas em fóruns, atuando como mentor regional da PASS, respondendo perguntas no Twitter e pescando e jogando golfe em seu tempo livre.
+
+Ted pode ser encontrado online como @onpnt no Twitter, ou por meio de seu blog em http://blogs.LessThanDot.com.
+
+Ted contribuiu com os Capítulos 3 e 6 deste livro.
+
+Sobre a Revisora Técnica
+
+Gail Shaw
+
+Gail é Consultora Sênior na Xpertease, sediada em Joanesburgo, África do Sul. Ela é especializada em ajuste de desempenho de bancos de dados e recuperação de banco de dados, com foco especial em tópicos como estratégias de indexação, planos de execução e escrever código T-SQL que tenha um bom desempenho e se adapte bem à escala.
+
+Gail é uma MVP do SQL Server e uma participante frequente nos fóruns SQL Server Central e SQLTeam. Ela escreve artigos para o SQLServerCentral e Simple-Talk e bloga sobre tudo relacionado ao desempenho de banco de dados em seu blog em http://sqlinthewild.co.za. Ela palestrou no TechEd Africa, em diversos eventos online 24 Horas de PASS e, em várias ocasiões, na Cúpula da Comunidade PASS. Na Cúpula da Comunidade PASS em 2009, sua apresentação sobre estatísticas ficou classificada em 7º lugar geral no evento.
+
+Gail é uma Aikido Shodan (faixa preta de 1º grau) e uma arqueira ávida. Em seu amplo tempo livre, ela está cursando um mestrado em Ciência da Computação na Universidade da África do Sul.
+
+Gail também contribuiu com material adicional ao longo do livro, especialmente nos Capítulos 3, 5 e 6.
+
+
+
+
+
+Agradecimentos
+
+Jonathan Kehayias
+
+Levar este livro à impressão exigiu mais do que simplesmente colocar pensamentos em texto, e várias pessoas contribuíram ao longo do caminho. Primeiramente, gostaria de agradecer à minha esposa, Sarah, e aos meus filhos, Charlotte e Michael, por sua habilidade e disposição em lidar com as horas tardias que passei trancado em nosso escritório em casa, assim como os fins de semana passados em frente ao meu laptop quando poderíamos estar fazendo tantas outras coisas. No último ano, mais do que o normal, Sarah passou muitas noites se perguntando se eu realmente iria conseguir ir para a cama ou não, e ela providenciou distrações para Michael e Charlotte em diversos fins de semana, especialmente nas últimas semanas antes da impressão. Sem o apoio deles, eu nunca teria conseguido passar pelas primeiras versões, muito menos pelas edições repetidas, enquanto trabalhávamos para a finalização do livro.
+
+Em segundo lugar, estão os revisores técnicos associados a este livro. A revisora técnica, Gail Shaw, contribuiu com muitas ideias e tópicos para o livro, além de adicionar exemplos e texto para aprimorar o conteúdo de vários capítulos. Desde o início do livro, eu sabia que queria ter um membro proeminente dos fóruns do SQL Server como minha revisora técnica, e embora nós respondamos principalmente a perguntas em sites diferentes, Gail estava no topo de uma lista muito curta de candidatos em potencial. Como Gail conseguiu encontrar tempo para ajudar com este livro é algo inexplicável, mas por seus esforços, sou eternamente grato.
+
+O editor-chefe do livro, Tony Davis, deve ser uma das pessoas mais pacientes que já conheci. Em todas as edições, atrasos e, em seguida, a corrida final para o fim, Tony trabalhou incansavelmente para manter o livro focado e progredindo em direção à impressão. Este livro é tanto trabalho deles quanto dos autores.
+
+Um último agradecimento vai para o meu amigo, Amit Banerjee, membro da Equipe de Escalada nos Serviços de Suporte ao Cliente da Microsoft para o SQL Server em Bangalore, Índia, que gentilmente revisou o Capítulo 4 do livro em busca de erros técnicos nas informações sobre a memória interna.
+
+Reconhecimento adicional é estendido a todos os mentores que tive ao longo dos anos, cuja lista é incrivelmente longa. Sem o comprometimento de MVPs do SQL Server como Arnie Rowland, Paul Randal, Aaron Bertrand, Louis Davidson, Geoff Hiten e inúmeros outros, eu jamais teria mantido o compromisso de responder perguntas nos fóruns.
+
+Ted Krueger
+
+Ser um colaborador deste livro foi uma grande honra para mim, e eu não teria conseguido sem o apoio da minha amada esposa, Michelle, e a paciência e brincadeiras dos meus filhos, Ethan e Cameron. A família faz tudo em uma pessoa, e a força fornecida pela minha família foi minha força motivadora em todo o processo.
+
+Agradeço especialmente à revisora técnica, Gail Shaw, cujos esforços incansáveis e conhecimento ajudaram a tornar este livro o que é. Agradeço também a Jonathan Kehayias por sua confiança e orientação ao me permitir escrever os Capítulos 3 e 6. Em todos os anos em que tenho trabalhado com o SQL Server, nenhuma outra pessoa me ensinou e ajudou mais do que o Jonathan. Ele dedica mais tempo e energia para ajudar a comunidade e compreender o SQL Server do que qualquer outra pessoa com quem já trabalhei, e faz isso de maneira altruísta.
+
+Por último, gostaria de agradecer à comunidade do SQL Server por compartilhar seu tempo e conhecimento. Eu já fiz parte de outras comunidades de desenvolvimento e engenharia, mas nenhuma conseguiu alcançar a mesma escala e energia de troca de conhecimento que acontece todos os dias na comunidade do SQL Server, por meio de fóruns, artigos, blogs e Twitter. Eu devo grande parte do que sei a essas pessoas: Replicação de Kendal Van Dyke, Planos de Execução de Grant Fritchey, SQL Server Internals de Paul Randal e muito mais.
+
+Sem o trabalho árduo deles, descobrir como domar esse sistema de banco de dados complexo seria uma tarefa muito mais difícil. Por minha vez, tenho feito o meu melhor para compartilhar o que sei com a comunidade.
+
+
+
+
+
+Introdução
+
+Grande parte dos últimos seis anos da minha vida profissional foi dedicada a ajudar as pessoas a resolver problemas de desempenho relacionados ao SQL Server, seja no local de trabalho, como consultor em clientes, ou em vários fóruns de comunidades online, respondendo às perguntas das pessoas.
+
+Ao longo desse tempo, fui exposto a alguns problemas estranhos e maravilhosos do SQL Server, mas principalmente vi os mesmos problemas e as mesmas confusões surgirem repetidamente. Era apenas uma questão de tempo antes de eu chegar à conclusão imprudente de que deveria escrever um livro para explicar quais eram os problemas mais comuns, por que eles ocorriam e oferecer soluções sensatas e práticas, voltadas para a remoção da causa raiz do problema, em vez de simplesmente "tapar os buracos".
+
+Acabou se revelando uma tarefa muito mais desafiadora do que eu imaginava, por várias razões. Em primeiro lugar, este é, por sua própria natureza, um livro abrangente, que aborda tópicos que vão desde problemas de CPU até gerenciamento de memória, índices ausentes e logs de transação completos. Em segundo lugar, é surpreendente como alguns dos tópicos mais simples se tornam complexos quando você tenta escrevê-los em texto. Em terceiro lugar, a tecnologia muda rapidamente, e o solucionador de problemas, assim como os conselhos que ele oferece, devem se adaptar em conformidade. Houve vários casos na escrita deste livro em que uma mudança tecnológica significava que eu tinha que voltar e adaptar meu conselho original, ou onde minha própria opinião sobre o conteúdo e as metodologias de solução de problemas haviam evoluído a ponto de certas seções precisarem ser completamente reescritas.
+
+Apesar das ocasionais dificuldades, o que espero ter conseguido é um livro que aborda de forma clara e concisa os problemas mais comuns associados às versões atualmente suportadas do SQL Server, ou seja, SQL Server 2005, 2008 e 2008 R2. O primeiro capítulo explica minha abordagem básica para solução de problemas de desempenho e as ferramentas que utilizo. Ele enfatiza, em particular, como é raro que um problema possa ser diagnosticado olhando apenas para um único ponto de dados.
+
+A arte de domar um SQL Server indisciplinado é a arte de reunir as várias informações de que você precisa e, em seguida, montar o "quebra-cabeça" para que você tenha uma visão completa do que está acontecendo dentro de um servidor e uma compreensão real da causa raiz do problema.
+
+Os oito capítulos seguintes abordam as áreas em que vejo problemas surgindo com frequência alarmante: E/S de disco, alto uso de CPU, gerenciamento inadequado de memória, índices ausentes, bloqueios e deadlocks, logs de transação completos e perda acidental de dados.
+
+Em cada caso, descrevo os problemas mais comuns, por que eles ocorrem, como podem ser diagnosticados usando ferramentas como contadores do Monitor de Desempenho, Visualizações de Gerenciamento Dinâmico, rastreamento no lado do servidor, entre outros, e como resolvê-los.
+
+Ao aplicar os passos básicos que utilizo diariamente para solucionar esses problemas de desempenho, espero que você também possa começar a resolver os problemas de desempenho em seu ambiente de forma mais rápida e precisa.
+
+Para quem é este livro?
+
+O público principal deste livro é qualquer pessoa que se encontrou responsável pelo SQL Server "por acidente"; em outras palavras, os DBAs acidentais/involuntários e administradores de sistema que tiveram a responsabilidade de cuidar de bancos de dados do SQL Server adicionada às suas funções, porque há um SQL Server em seu ambiente e alguém precisa cuidar dele.
+
+No entanto, os conceitos e metodologias de solução de problemas abordados neste livro podem ser aplicados por qualquer pessoa, incluindo administradores de banco de dados experientes, para identificar e resolver problemas comuns e aprender novas técnicas para gerenciar e manter o SQL Server. Qualquer pessoa que já tenha feito perguntas em um dos fóruns da comunidade provavelmente aprenderá algo novo com este livro.
+
+Exemplos de código
+
+Ao longo deste livro, há scripts demonstrando várias maneiras de coletar dados de diagnóstico, e em alguns lugares, a apresentação do código completo foi adiada devido a restrições de espaço. Todo o código necessário para experimentar os exemplos neste livro pode ser obtido no seguinte URL:
+
 http://www.simple-talk.com/RedGateBooks/JonathanKehayias/TroubleshootingSQLServer_Code.zip
-All examples should run on all versions of SQL Server from SQL Server 2005 upwards,
-unless specified otherwise.19
+
+Todos os exemplos devem ser executados em todas as versões do SQL Server a partir do SQL Server 2005, a menos que seja especificado de outra forma.
+
+
+
+
+
 Chapter 1: A Performance
 Troubleshooting Methodology
 Knowing where to start is the toughest part of solving a problem. As a Senior Database
