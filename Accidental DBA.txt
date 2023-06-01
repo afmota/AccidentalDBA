@@ -720,724 +720,309 @@ O ponto mais importante que quero enfatizar neste capítulo introdutório é que
 
 
 
-Chapter 2: Disk I/O Configuration
-Improper hardware configuration is a common cause of SQL Server performance and
-scalability problems. If you try to run SQL Server on workstation-grade hardware, you
-will run into problems, but even on server-grade hardware, performance problems can
-and will occur if one or more of the hardware components have been improperly sized
-and configured for the SQL Server workload.
-SQL Server is very different from other applications in terms of its disk usage characteristics and storage requirements, and the disk subsystem is one of the most commonly
-undersized and poorly-configured hardware components for SQL Server. Often the
-I/O workload can be substantially reduced by measures such as appropriate use of
-indexing, or ensuring queries don't read more data than strictly necessary. However, if
-I/O problems persist as indicated, for example, by high latency values for the Physical
-Disk\Disk sec/Reads and Physical Disk\Disk sec/Writes PerfMon counters, or
-specific I/O-related wait types in the DMVs, then you'll need to troubleshoot your disk
-I/O system. This task may be relatively straightforward, or grievously complex, depending
-on whether you're using simple, directly attached storage, or a vast and complex, enterprise-wide Storage Area Network (SAN).
-This chapter discusses the basics of disk I/O subsystem configuration for SQL Server, and
-the most common problems associated with the incorrectly sized or incorrectly designed
-disk configurations, covering topics such as:
-•	 Appropriate choice of hardware RAID level – there are many possible configurations,
-and the right one will depend largely on the nature of the SQL Server workload.
-•	 Storage capacity versus throughput – 1 TB of database storage can be satisfied with a
-single 1 TB disk drive, but the I/O throughput and performance are likely to be poor.43
-Chapter 2: Disk I/O Configuration
-•	 Workload type and distribution – specific considerations for data, log, and
-tempdb files.
-•	 Common disk I/O problems – such as disk partition misalignment and network
-bandwidth issues in SANs.
-By far the best way to deal with disk I/O issues is to work as hard as you can during
-the system design phase to prevent them from occurring. The only way to be sure that
-your disk I/O subsystem will meet your I/O performance and throughput requirements
-is to understand what those requirements are, and test the performance of your disk
-subsystem under realistic loads, using a tool such as SQLIO or IOmeter.
-Disk Configuration: Basic Considerations
-Memory scalability has improved substantially over recent years. It is now relatively
-inexpensive to over-provision RAM capacity for SQL Server, to help minimize disk I/O.
-Likewise, as powerful processors with eight, or even twelve, physical cores emerge onto
-the market, many modern servers often have spare CPU capacity which, again, can be
-used to help reduce pressure on the disk I/O system.
-The common theme here seems to be that the disk subsystem needs as much help as it
-can get. It's certainly true that, over a similar time period, performance improvements of
-the traditional magnetic disk drives which still underpin the vast majority of SQL Server
-installations have been relatively modest by comparison with improvements in memory
-and CPU. As such, great care needs to be taken when provisioning and configuring the
-disk subsystem hardware for SQL Server installations, in order to ensure that it meets the
-I/O workload requirements of the SQL Server database that runs on it.
-This section will briefly review some of the major considerations when sizing and configuring the disk subsystem, and we'll drill into each of these issues as we progress through
-the chapter.44
-Chapter 2: Disk I/O Configuration
-Disk size vs. disk throughput
-One of the most common mistakes made when planning and building a disk I/O
-subsystem for SQL Server is to think purely in terms of how much disk space is
-required, rather than the disk throughput required to support the transaction
-workload on the database.
-For conventional hard drives that have a rotating platter then, purely in terms of the
-disk mechanics, the limiting factors for performance and throughput, stated in IOPS
-and MB/sec, are:
-•	 rotations per minute – how quickly the platter spins to read data off of the disk
-•	 seek time in ms – the time it takes to reposition the drive head to locate data on the
-disk.
-If you need 1 TB of storage for a database then you can satisfy that with a single, 1 TB disk
-drive, but you'll find that both the rotational latency and disk head latency will be high,
-and the I/O performance and throughput correspondingly low. Such a single-disk set up
-would be inadvisable, regardless of the supported workload type, but would be especially
-problematic when the workload generated a large number of random read/write operations (such as would be typical for an OLTP workload), resulting in severe disk head
-latency issues.
-The way to mitigate disk latency issues, and vastly improve disk I/O performance and
-throughput, is to stripe the data across a large number of smaller disks, configured in
-one of the various available RAID configurations (discussed later), which can then be
-presented to Windows as a single hardware device.
-Of course, this can lead to a substantial increase in the complexity of the storage system,
-and means that the ultimate disk I/O throughput and performance is affected, not just
-by the physical disk characteristics, but also by issues such as the chosen RAID configuration, the architecture of the storage array (DAS or SAN, as discussed later), and the45
-Chapter 2: Disk I/O Configuration
-performance of other components of the storage array, such as Host Bus Adapters or
-RAID controllers, and so on.
-Solid state drives
-Modern solid state disks contain no moving parts, so they are not subject to the same throughput limitations as conventional disks, and they are gradually pushing the IOPS potential beyond the capabilities of
-most large, conventional disk arrays, in a single hardware device. They are still relatively new technology,
-and not currently in heavy use for transactional database systems, due to lifespan and cost considerations, and are not covered further in this chapter. However, they may redefine the storage space in the
-near future.
-Random versus sequential I/O
-The basic building block in SQL Server is known as a page, which is 8 KB in size. To
-minimize the number of I/O requests when reading data from disk, SQL Server employs
-a read-ahead mechanism that can read a number of contiguous pages, up to 128 pages on
-Standard Edition and 1,024 pages on Enterprise Edition, in a single I/O operation.
-At the same time, rather than continuously writing any data modifications to disk, the
-changes are made to data pages in the buffer pool, which are collected into contiguous
-blocks and written to disk in a single I/O operation, at CHECKPOINT, after the descriptions of the changes have been hardened to the transaction log.
-SQL Server databases perform a mix of random and sequential I/O operations depending
-on the activities being performed. Sequential I/O is any operation where the blocks can
-be read from, or written to, disk without having to reposition the disk head on the drive.
-Sequential I/O is used by SQL Server for read-ahead operations, and for all transaction
-log operations, and is the fastest type of I/O that can be performed using conventional
-disks. Random I/O is any operation where the disk head on the drive has to change
-positions on the platter, incurring seek latency as a part of the operation, which reduces46
-Chapter 2: Disk I/O Configuration
-the performance and number of operations in comparison to sequential I/O. Read
-operations in general, especially in OLTP systems, are random I/O operations, reading
-relatively small blocks of pages sequentially as a part of larger random I/O requests.
-For this reason, the chosen disk configuration should be heavily influenced by the type of
-file being stored on the disks, and the type of I/O activity to which it is subjected. In short,
-for optimum performance, the disk I/O subsystem for the log files should be configured
-differently than the disk I/O subsystem for the data files.
-The disk configuration for the database data files should be optimized for 64 KB random
-read I/O, and performance benchmarked for I/O sizes of 8 KB, 64 KB, 128 KB, and 256 KB
-to determine the potential performance and throughput capacity of the configuration. If
-the server is being used primarily for a large data warehouse or decision support system
-(DSS) database, the I/O subsystem should be benchmarked for larger I/O sizes up to 1024
-KB for read-ahead operations, depending on the database design, and how it is being
-used. However, the transaction log in SQL Server primarily performs sequential write
-operations in random sizes up to 60 KB.
-Choosing the Right RAID Level
-RAID, an acronym for Redundant Array of Independent Disks, is the technology used to
-achieve the following objectives:
-•	 increase levels of I/O performance, measured in Input/Output Operations Per Second
-(IOPS), which is roughly (MB/sec /IO size in KB)*1024
-•	 increase levels of I/O throughput, measured in Megabytes Per Second (MB/sec) which
-is roughly (IOPS*IO size in KB)/1024
-•	 increase storage capacity available in a single logical device – you can't purchase a
-single 5 TB disk yet, but you can have a 5 TB disk in Windows, for example, by using
-RAID to stripe six 1 TB drives in a RAID5 array47
-Chapter 2: Disk I/O Configuration
-•	 gain data redundancy through storing parity information across multiple disks, or
-using mirroring of the physical disks in the array.
-The choice of RAID level is heavily dependent on the nature of the workload that the disk
-array must support. For example, as discussed earlier, the difference in the nature of the
-I/O workloads for data and for log files means that different RAID configurations may be
-applicable in each case.
-Data files are subject primarily to random read activity and, due to the way that SQL
-Server batches write operations to disk with CHECKPOINT, this allows the use of RAID
-levels that trade-off write performance for higher read performance and better usage of
-the available disk storage capacity. The sequential activity for the log files is primarily for
-write activities during log buffer flushes, making write performance much more critical a
-consideration than it may be for the data files.
-Choosing the appropriate RAID level is often a difficult task and, unless money is no
-object, often involves some sort of compromise between factors such as the overall cost of
-the solution, storage capacity, disk throughput, and the degree of "protection" in case of a
-failure of one of the disks in the array.
-There are a number of RAID levels currently available on the market, each of which has
-its own associated costs and benefits. Over the following sections, we'll examine the
-most common standard RAID levels (0, 1, 5 and 6) as well as nested RAID levels, such as
-RAID 0+1 or 1+0, whereby one RAID array is used inside of a secondary RAID array. We'll
-explain, briefly, how each level works, and its relative merits and drawbacks for SQL
-Server systems.48
-Chapter 2: Disk I/O Configuration
-A brief overview of RAID configurations
-The most common RAID levels used with SQL Server are RAID 1, 5, 6 and 1+0, since these
-ensure that the data stored on the array will not be lost or damaged/corrupted if one of the
-disks in the array fails catastrophically. The protection of the data stored inside SQL Server
-should be considered as the most important factor in RAID level selection, followed closely
-by the desired performance characteristic for the disk array. The fastest disk array in the
-world won't be useful if it loses all your organization's information in a single failure.
+Capítulo 2: Configuração de E/S de disco
+
+A configuração inadequada do hardware é uma causa comum de problemas de desempenho e escalabilidade do SQL Server. Se você tentar executar o SQL Server em hardware de estação de trabalho, enfrentará problemas, mas mesmo em hardware de servidor, problemas de desempenho podem e ocorrerão se um ou mais componentes de hardware tiverem sido dimensionados e configurados de maneira inadequada para a carga de trabalho do SQL Server.
+
+O SQL Server é muito diferente de outras aplicações em termos de suas características de uso de disco e requisitos de armazenamento, e o subsistema de disco é um dos componentes de hardware mais comumente subdimensionados e mal configurados para o SQL Server. Frequentemente, a carga de trabalho de E/S pode ser substancialmente reduzida por medidas como o uso apropriado de indexação ou garantindo que as consultas não leiam mais dados do que estritamente necessário. No entanto, se os problemas de E/S persistirem, indicados, por exemplo, por valores de latência elevados para os contadores PerfMon Physical Disk\Disk sec/Reads e Physical Disk\Disk sec/Writes, ou tipos de espera relacionados a E/S específicos nas DMVs, então você precisará solucionar problemas em seu sistema de E/S de disco. Essa tarefa pode ser relativamente simples ou extremamente complexa, dependendo se você está usando armazenamento simples, conectado diretamente, ou uma vasta e complexa Rede de Área de Armazenamento (SAN) em toda a empresa.
+
+Este capítulo discute os fundamentos da configuração do subsistema de I/O de disco para o SQL Server, e os problemas mais comuns associados a configurações de disco incorretamente dimensionadas ou projetadas incorretamente, abordando tópicos como:
+
+Escolha apropriada do nível RAID de hardware - existem muitas configurações possíveis, e a escolha certa dependerá em grande parte da natureza da carga de trabalho do SQL Server.
+Capacidade de armazenamento versus throughput - 1 TB de armazenamento de banco de dados pode ser satisfeito com um único disco de 1 TB, mas o throughput e o desempenho de E/S são provavelmente pobres.
+Tipo e distribuição da carga de trabalho - considerações específicas para arquivos de dados, log e tempdb.
+Problemas comuns de E/S de disco - como desalinhamento de partição de disco e problemas de largura de banda de rede em SANs.
+
+De longe, a melhor maneira de lidar com problemas de E/S de disco é trabalhar o mais duro possível durante a fase de design do sistema para evitá-los. A única maneira de ter certeza de que seu subsistema de E/S de disco atenderá aos seus requisitos de desempenho e taxa de transferência de E/S é entender quais são esses requisitos e testar o desempenho do seu subsistema de disco sob cargas realistas, usando uma ferramenta como o SQLIO ou IOmeter.
+
+Configuração de disco: Considerações Básicas
+
+A escalabilidade da memória melhorou substancialmente nos últimos anos. É relativamente barato fornecer mais capacidade de RAM para o SQL Server, para ajudar a minimizar a entrada/saída do disco. Da mesma forma, com processadores potentes com oito ou até doze núcleos físicos surgindo no mercado, muitos servidores modernos frequentemente possuem capacidade de CPU ociosa que, novamente, pode ser usada para ajudar a reduzir a pressão no sistema de entrada/saída do disco.
+
+O tema comum aqui parece ser que o subsistema de disco precisa de toda a ajuda possível. Certamente, ao longo de um período de tempo semelhante, as melhorias de desempenho nos tradicionais discos rígidos magnéticos, que ainda sustentam a grande maioria das instalações do SQL Server, foram relativamente modestas em comparação com as melhorias em memória e CPU. Como tal, é preciso ter muito cuidado ao provisionar e configurar o hardware do subsistema de disco para instalações do SQL Server, a fim de garantir que atenda aos requisitos de carga de I/O do banco de dados do SQL Server que roda nele.
+
+Esta seção irá revisar brevemente algumas das principais considerações ao dimensionar e configurar o subsistema de disco e abordaremos cada um desses problemas conforme avançamos no capítulo.
+
+Tamanho do disco vs. throughput do disco
+
+Um dos erros mais comuns cometidos ao planejar e construir um subsistema de E/S de disco para o SQL Server é pensar puramente em termos de quanto espaço de disco é necessário, em vez do throughput do disco necessário para suportar a carga de trabalho transacional no banco de dados.
+
+Para discos rígidos convencionais que possuem um prato rotativo, os fatores limitantes para desempenho e taxa de transferência, expressos em IOPS e MB/s, são:
+
+rotações por minuto - a velocidade com que o prato gira para ler dados do disco.
+tempo de busca em ms - o tempo necessário para reposicionar a cabeça do disco para localizar dados no disco.
+
+Se você precisa de 1 TB de armazenamento para um banco de dados, você pode atender a essa demanda com um único disco rígido de 1 TB, mas você descobrirá que tanto a latência de rotação quanto a latência da cabeça de disco serão altas, e o desempenho e a taxa de transferência de E/S correspondentes serão baixos. Tal configuração de disco único seria desaconselhável, independentemente do tipo de carga de trabalho suportada, mas seria especialmente problemática quando a carga de trabalho gerasse um grande número de operações de leitura/gravação aleatórias (como seria típico para uma carga de trabalho OLTP), resultando em graves problemas de latência da cabeça de disco.
+
+A maneira de mitigar problemas de latência de disco e melhorar significativamente o desempenho e a taxa de transferência do disco é distribuir os dados em vários discos menores configurados em uma das várias configurações RAID disponíveis (discutidas posteriormente), que podem ser apresentados ao Windows como um único dispositivo de hardware.
+
+Claro, isso pode levar a um aumento substancial na complexidade do sistema de armazenamento, e significa que o desempenho e o throughput do I/O do disco final são afetados, não apenas pelas características físicas do disco, mas também por questões como a configuração RAID escolhida, a arquitetura da matriz de armazenamento (DAS ou SAN, conforme discutido posteriormente), e o desempenho de outros componentes da matriz de armazenamento, como os adaptadores de barramento do host ou controladores RAID, e assim por diante.
+
+Unidades de estado sólido
+
+Os discos de estado sólido modernos não possuem peças móveis, portanto, não estão sujeitos às mesmas limitações de throughput dos discos convencionais, e estão gradualmente empurrando o potencial de IOPS além das capacidades da maioria das grandes matrizes de discos convencionais, em um único dispositivo de hardware. Eles ainda são tecnologia relativamente nova e não são atualmente amplamente utilizados em sistemas de banco de dados transacionais, devido a considerações de custo e tempo de vida, e não são abordados mais neste capítulo. No entanto, eles podem redefinir o espaço de armazenamento no futuro próximo.
+
+Leitura aleatória versus leitura sequencial
+
+O bloco básico no SQL Server é conhecido como uma página, que tem tamanho de 8 KB. Para minimizar o número de solicitações de I/O ao ler dados do disco, o SQL Server usa um mecanismo de leitura antecipada que pode ler um número de páginas contíguas, até 128 páginas na edição Standard e 1.024 páginas na edição Enterprise, em uma única operação de I/O.
+
+Ao mesmo tempo, em vez de escrever continuamente todas as modificações de dados no disco, as alterações são feitas nas páginas de dados do buffer pool, que são coletadas em blocos contíguos e gravadas no disco em uma única operação de E/S, no CHECKPOINT, depois que as descrições das mudanças foram registradas no log de transações.
+
+As bases de dados do SQL Server realizam uma mistura de operações de I/O aleatórias e sequenciais, dependendo das atividades que estão sendo realizadas. I/O sequencial é qualquer operação em que os blocos podem ser lidos ou gravados no disco sem ter que reposicionar a cabeça do disco. O I/O sequencial é usado pelo SQL Server para operações de leitura antecipada e para todas as operações de log de transação, e é o tipo mais rápido de I/O que pode ser realizado usando discos convencionais. I/O aleatório é qualquer operação em que a cabeça do disco no drive tem que mudar de posição no prato, incorrendo em latência de busca como parte da operação, o que reduz o desempenho e o número de operações em comparação com o I/O sequencial. Operações de leitura em geral, especialmente em sistemas OLTP, são operações de I/O aleatórias, lendo blocos relativamente pequenos de páginas sequencialmente como parte de solicitações aleatórias maiores de I/O.
+
+Por esse motivo, a configuração de disco escolhida deve ser fortemente influenciada pelo tipo de arquivo armazenado nos discos e pelo tipo de atividade de I/O a que ele é submetido. Em resumo, para um desempenho ótimo, o subsistema de E/S de disco para os arquivos de log deve ser configurado de forma diferente do subsistema de E/S de disco para os arquivos de dados.
+
+A configuração de disco para os arquivos de dados do banco de dados deve ser otimizada para E/S de leitura aleatória de 64 KB e o desempenho deve ser testado para tamanhos de E/S de 8 KB, 64 KB, 128 KB e 256 KB para determinar a capacidade potencial de desempenho e throughput da configuração. Se o servidor estiver sendo usado principalmente para um grande armazém de dados ou um banco de dados de sistema de suporte à decisão (DSS), o subsistema de E/S deve ser testado para tamanhos de E/S maiores de até 1024 KB para operações de leitura adiante, dependendo do design do banco de dados e de como ele está sendo usado. No entanto, o log de transações no SQL Server realiza principalmente operações de gravação sequencial em tamanhos aleatórios de até 60 KB.
+
+Escolhendo o nível correto de RAID
+
+RAID, sigla para Redundant Array of Independent Disks, é a tecnologia usada para atingir os seguintes objetivos:
+
+• aumentar os níveis de desempenho de I/O, medidos em Operações de Entrada/Saída por Segundo (IOPS), que é aproximadamente (MB/seg / tamanho de IO em KB)1024
+• aumentar os níveis de throughput de I/O, medidos em Megabytes por Segundo (MB/seg) que é aproximadamente (IOPStamanho de IO em KB)/1024
+• aumentar a capacidade de armazenamento disponível em um único dispositivo lógico - ainda não é possível comprar um único disco de 5 TB, mas você pode ter um disco de 5 TB no Windows, por exemplo, usando RAID para distribuir seis unidades de 1 TB em um array RAID5
+• obter redundância de dados através do armazenamento de informações de paridade em vários discos, ou usando espelhamento dos discos físicos no array.
+
+A escolha do nível de RAID depende fortemente da natureza da carga de trabalho que o array de discos deve suportar. Por exemplo, como discutido anteriormente, a diferença na natureza das cargas de trabalho de I/O para os arquivos de dados e para os arquivos de log significa que diferentes configurações de RAID podem ser aplicáveis em cada caso.
+
+Os arquivos de dados estão sujeitos principalmente a atividade de leitura aleatória e, devido à forma como o SQL Server agrupa as operações de gravação em disco com o CHECKPOINT, isso permite o uso de níveis RAID que trocam o desempenho de gravação por um desempenho de leitura mais alto e melhor uso da capacidade de armazenamento em disco disponível. A atividade sequencial para os arquivos de log é principalmente para atividades de gravação durante os flushes do buffer de log, tornando o desempenho de gravação uma consideração muito mais crítica do que pode ser para os arquivos de dados.
+
+Escolher o nível RAID apropriado é frequentemente uma tarefa difícil e, a menos que o dinheiro não seja um problema, muitas vezes envolve algum tipo de compromisso entre fatores como o custo geral da solução, capacidade de armazenamento, throughput de disco e o grau de "proteção" em caso de falha de um dos discos na matriz.
+
+Existem vários níveis RAID disponíveis no mercado, cada um dos quais possui seus próprios custos e benefícios associados. Nas seções a seguir, examinaremos os níveis RAID padrão mais comuns (0, 1, 5 e 6), bem como os níveis RAID aninhados, como RAID 0+1 ou 1+0, em que uma matriz RAID é usada dentro de uma segunda matriz RAID. Explicaremos brevemente como funciona cada nível e seus méritos e desvantagens relativos para sistemas SQL Server.
+
+Uma breve visão geral das configurações RAID
+
+Os níveis RAID mais comuns usados com o SQL Server são RAID 1, 5, 6 e 1+0, já que estes garantem que os dados armazenados na matriz não serão perdidos ou danificados/corrompidos se um dos discos da matriz falhar catastroficamente. A proteção dos dados armazenados dentro do SQL Server deve ser considerada como o fator mais importante na seleção do nível RAID, seguida de perto pelo desempenho desejado para a característica da matriz de disco. A matriz de disco mais rápida do mundo não será útil se perder todas as informações da organização em uma única falha.
+
 RAID 0
-RAID 0, most commonly known as striping, provides improved I/O rates (in terms of
-IOPS) by striping the data across multiple drives, allowing the read and write operations to
-be shared amongst the drives inside the array. Figure 2.1 shows a RAID 0 implementation
-where A1, A2, and so on, represent logically sequential segments of data. We can see that,
-although A2 comes sequentially after A1, it is stored on a separate drive, allowing multiple
-segments to be accessed simultaneously.
-Disk 1
-A1
-A3
-A5
-RAID 0
-Disk 2
-A2
-A4
-A6
-Figure 2.1: RAID 0.
-This level of RAID provides the best performance for both read and write operations, but
-provides no redundancy or protection against data loss. In the event of a single disk failure
-in the array, all of the data is lost. As such, this RAID level is not appropriate for SQL
-Server implementations.49
-Chapter 2: Disk I/O Configuration
+
+RAID 0, mais conhecido como striping, oferece melhorias nas taxas de I/O (em termos de IOPS) através do fracionamento dos dados em várias unidades, permitindo que as operações de leitura e gravação sejam compartilhadas entre as unidades dentro do conjunto. A figura 2.1 mostra uma implementação RAID 0 onde A1, A2 e assim por diante representam segmentos de dados sequenciais logicamente. Podemos ver que, embora A2 venha após A1 sequencialmente, ele é armazenado em uma unidade separada, permitindo que vários segmentos sejam acessados ​​simultaneamente.
+
+***********************
+* Figura 2.1: RAID 0. *
+***********************
+
+Este nível de RAID fornece o melhor desempenho tanto para operações de leitura quanto de gravação, porém não oferece redundância ou proteção contra perda de dados. No caso de falha de um único disco na matriz, todos os dados são perdidos. Portanto, este nível de RAID não é adequado para implementações do SQL Server.
+
 RAID 1
-RAID 1, most commonly known as mirroring, provides protection against the loss of
-data from a single disk by mirroring the writes to a second disk, as shown in Figure 2.2. A
-RAID 1 configuration provides redundancy, but doesn't provide added write performance
-to the system, since the maximum throughput for the array is limited to the I/O capacity
-of a single disk. If you have a duplexing setup (an extension of mirroring where both
-disks in the mirror can be read simultaneously) then it's possible, in theory, to get a read
-performance benefit. In practice, however, the improvements are highly variable, though
-generally small, and dependent on the hardware implementation.
-While RAID 1 provides data redundancy, protecting it from a single disk loss, it effectively
-doubles the cost of storage.
-Disk 1
-A1
-A2
-A3
-RAID 1
-Disk 2
-A1
-A2
-A3
-Figure 2.2: RAID 1 implementation.
-For low I/O demands, RAID 1 can provide acceptable performance for SQL Server data
-files, but it generally doesn't meet the IOPS requirements associated with heavy, randomread operations, even on moderately-sized databases. In most cases, however, RAID 1 can
-be used for storing a single transaction log. The sequential nature of the transaction log
-activity means that the read/write head of each drive is relatively static, and moves in a
-progressive sweep across the disk head as writes occur. This minimizes I/O latency and
-allows for significantly higher IOPS than is possible for random I/O operations.50
-Chapter 2: Disk I/O Configuration
-If multiple transaction log files are placed on a single RAID 1 array, the net effect of the
-combined sequential I/O activity for each file will be random I/O at the physical level,
-and higher latency will result from the movement of the disk head to perform operations
-against each of the files being written to sequentially.
+
+RAID 1, mais comumente conhecido como espelhamento, oferece proteção contra a perda de dados de um único disco, espelhando as gravações em um segundo disco, como mostrado na Figura 2.2. Uma configuração RAID 1 fornece redundância, mas não oferece desempenho adicional de gravação para o sistema, uma vez que a taxa máxima de transferência para a matriz é limitada à capacidade de E/S de um único disco. Se você tiver uma configuração de duplicação (uma extensão do espelhamento em que ambos os discos do espelho podem ser lidos simultaneamente), teoricamente é possível obter um benefício de desempenho de leitura. Na prática, no entanto, as melhorias são altamente variáveis, embora geralmente pequenas, e dependentes da implementação de hardware.
+
+Embora o RAID 1 forneça redundância de dados, protegendo-o contra a perda de um único disco, ele efetivamente duplica o custo de armazenamento.
+
+*************************************
+* Figura 2.2: Implementação RAID 1. *
+*************************************
+
+Para demandas de E/S baixas, o RAID 1 pode oferecer um desempenho aceitável para arquivos de dados do SQL Server, mas geralmente não atende aos requisitos de IOPS associados a operações intensas e aleatórias de leitura, mesmo em bancos de dados de tamanho moderado. Na maioria dos casos, no entanto, o RAID 1 pode ser usado para armazenar um único log de transações. A natureza sequencial da atividade do log de transações significa que a cabeça de leitura/gravação de cada unidade é relativamente estática e se move em um varrimento progressivo pela cabeça do disco conforme as gravações ocorrem. Isso minimiza a latência de E/S e permite IOPS significativamente mais altos do que é possível para operações de E/S aleatórias.
+
+Se vários arquivos de log de transações forem colocados em um único conjunto RAID 1, o efeito líquido da atividade combinada de E/S sequencial para cada arquivo será uma E/S aleatória no nível físico, e haverá maior latência devido ao movimento da cabeça do disco para executar operações em cada um dos arquivos que estão sendo gravados sequencialmente.
+
 RAID 5 (and 6)
-RAID 5 is commonly known as "striping with parity;" the data is striped across multiples
-disks, as per RAID 0, but parity data is stored in order to provide protection from single
-disk failure. The minimum number of disks required for a RAID 5 array is three. The
-parity blocks containing the parity data are staggered across the stripes inside the array,
-as shown in Figure 2.3. So, for example, the Ap segment stores parity data arising from the
-comparison of data in segments A1 and A2. If Disk 2 were to fail, then the data in the A2
-segment could be reconstructed, by a comparison of the data in A1 with the parity data.
-RAID 5
-Disk 1
-A1
-B1
-Cp
-Disk 2
-A2
-Bp
-C1
-Disk 3
-Ap
-B2
-C2
-Figure 2.3: RAID 5 implementation.
-Note that the total storage capacity for a RAID 5 array is (n-1)*disk size, where n is the
-number of disks. So for a RAID 5 array of (say) 3 x 100 GB disks, we'd have 200 GB for data
-storage. For a 5-disk array, we'd have 400 GB for data storage, and so on.
-In this manner, RAID 5 provides redundancy with minimal reduction in storage capacity,
-which is one of the major reasons for its popularity. Striping the data across multiple disks
-improves read performance, but the need to maintain parity data incurs a performance51
-Chapter 2: Disk I/O Configuration
-penalty for writes; for example, each time data is updated in segment A1, the parity data
-must be recalculated and rewritten. Additionally, if one of the disks in a RAID 5 array fails
-physically, the array performance becomes degraded by the parity comparisons that have
-to be performed to read the data stored on the array. The level of degradation depends on
-the number of disks configured in the array; as the number of disks increases, the number
-of comparisons increases, reducing the performance further.
-For heavy read but low write databases, RAID 5 can be optimal for the data files. However,
-in circumstances where that database incurs heavy write activity, the cost of the parity
-calculations can reduce the performance of the system. For this same reason, RAID 5
-is not recommended for the database transaction log files, which primarily perform
-sequential writes and require the lowest write latency possible.
-RAID 6, is an extension of RAID 5 but, instead of a single distributed parity bit, it uses
-double-distributed parity bits, where the calculated parity data is stored on two separate
-disks in the array, allowing for a double disk failure in the array, while still protecting the
-data. So, for example, in Figure 2.4, parity data arising from the comparison of data in the
-A1 and A2 segments is stored in both the Aq and Ap parity data segments.
-Disk 1
-Dp
-RAID 6
-A1
-B1
-Cq
-Disk 2
-D1
-A2
-Bq
-Cp
-Disk 3
-D2
-Aq
-Bp
-C1
-Disk 4
-Dq
-Ap
-B2
-C2
-Figure 2.4: RAID 6 implementation for a 4-disk array.
-In RAID 6, the total storage capacity is (n-2)*disk size so, for this 4-disk array, we lose
-half the disk space for parity data storage. Also, the performance impact of the parity52
-Chapter 2: Disk I/O Configuration
-calculations will be relatively high. For these reasons, RAID 10 is a better RAID configuration to support double disk loss, when only four disks are in the array.
-Figure 2.5 shows a more typical RAID 6 implementation, involving a 7-disk array.
-Disk 5
-G4
-D3
-E3
-F3
-Cq
-Bp
-A5
-Disk 2
-G1
-D2
-Ep
-Fq
-C2
-B2
-A2
-Disk 3
-G2
-Dp
-Eq
-F1
-C3
-B3
-A3
-Disk 4
-G3
-Dq
-E2
-F2
-Cp
-B4
-A4
-Disk 6
-G5
-D4
-E4
-F4
-C4
-Bq
-Ap
-Disk 7
-Gp
-D5
-E5
-F5
-C5
-B5
-Aq
-Disk 1
-Gq
-D1
-E1
-Fp
-C1
-B1
-A1
-RAID 6
-Figure 2.5: RAID 6 implementation for a 7-disk array.
-RAID 6 is common for Storage Area Network (SAN) applications where the number of
-disks in a single array is higher than for most Direct Attached Storage (DAS) applications,
-increasing the possibility of multiple disk failures during the period of time when a single
-disk may be offline. RAID 6 has a performance penalty similar to RAID 5 for write operations, since the parity bit calculation impacts performance.
+
+O RAID 5 é comumente conhecido como "striping com paridade"; os dados são distribuídos em múltiplos discos, como no RAID 0, mas os dados de paridade são armazenados para fornecer proteção contra falha de um único disco. O número mínimo de discos necessários para um conjunto RAID 5 é três. Os blocos de paridade contendo os dados de paridade são distribuídos em intervalos entre as faixas dentro do conjunto, conforme mostrado na Figura 2.3. Por exemplo, o segmento Ap armazena os dados de paridade resultantes da comparação dos dados nos segmentos A1 e A2. Se o Disco 2 falhar, os dados no segmento A2 podem ser reconstruídos por meio da comparação dos dados em A1 com os dados de paridade.
+
+*************************************
+* Figura 2.3: Implementação RAID 5. *
+*************************************
+
+Observe que a capacidade total de armazenamento de um conjunto RAID 5 é (n-1) * tamanho do disco, onde n é o número de discos. Portanto, para um conjunto RAID 5 de (digamos) 3 discos de 100 GB, teríamos 200 GB de armazenamento de dados. Para um conjunto de 5 discos, teríamos 400 GB de armazenamento de dados, e assim por diante.
+
+Dessa forma, o RAID 5 oferece redundância com uma redução mínima na capacidade de armazenamento, o que é uma das principais razões para sua popularidade. A distribuição dos dados em vários discos melhora o desempenho de leitura, mas a necessidade de manter os dados de paridade implica em uma penalidade de desempenho para operações de gravação; por exemplo, cada vez que os dados são atualizados no segmento A1, os dados de paridade devem ser recalculados e regravados. Além disso, se um dos discos de um conjunto RAID 5 falhar fisicamente, o desempenho do conjunto fica comprometido devido às comparações de paridade que precisam ser realizadas para ler os dados armazenados no conjunto. O nível de degradação depende do número de discos configurados no conjunto; à medida que o número de discos aumenta, o número de comparações aumenta, reduzindo ainda mais o desempenho.
+
+Para bancos de dados com alta carga de leitura, mas baixa carga de gravação, o RAID 5 pode ser a opção ideal para os arquivos de dados. No entanto, em situações em que o banco de dados sofre intensa atividade de gravação, o custo dos cálculos de paridade pode reduzir o desempenho do sistema. Por essa mesma razão, o RAID 5 não é recomendado para os arquivos de log de transações do banco de dados, que executam principalmente gravações sequenciais e exigem a menor latência possível para gravação.
+
+O RAID 6 é uma extensão do RAID 5, mas em vez de um único bit de paridade distribuída, ele utiliza dois bits de paridade distribuída, em que os dados de paridade calculados são armazenados em dois discos separados no conjunto, permitindo uma falha dupla de disco no conjunto, enquanto ainda protege os dados. Por exemplo, na Figura 2.4, os dados de paridade resultantes da comparação dos dados nos segmentos A1 e A2 são armazenados tanto nos segmentos de dados de paridade Aq quanto Ap.
+
+*********************************************************************
+* Figura 2.4: Implementação do RAID 6 para um conjunto de 4 discos. *
+*********************************************************************
+
+No RAID 6, a capacidade total de armazenamento é (n-2) * tamanho do disco, portanto, para esse conjunto de 4 discos, perdemos metade do espaço em disco para o armazenamento dos dados de paridade. Além disso, o impacto no desempenho dos cálculos de paridade será relativamente alto. Por esses motivos, o RAID 10 é uma configuração RAID melhor para suportar a perda de dois discos quando apenas quatro discos estão no conjunto.
+
+A Figura 2.5 mostra uma implementação mais típica do RAID 6, envolvendo um conjunto de 7 discos.
+
+*********************************************************************
+* Figura 2.5: Implementação do RAID 6 para um conjunto de 7 discos. *
+*********************************************************************
+
+O RAID 6 é comum em aplicações de Storage Area Network (SAN), onde o número de discos em um único conjunto é maior do que na maioria das aplicações de Direct Attached Storage (DAS), aumentando a possibilidade de múltiplas falhas de disco durante o período em que um único disco pode estar offline. O RAID 6 possui uma penalidade de desempenho semelhante ao RAID 5 para operações de gravação, uma vez que o cálculo do bit de paridade afeta o desempenho.
+
 RAID 10
-RAID 10, or RAID 1+0, is a nested RAID level known as a "striped pair of mirrors." It
-provides redundancy by first mirroring each disk, using RAID 1, and then striping those
-mirrored disks, with RAID 0, to improve performance. There is a significant monetary
-cost increase associated with this configuration since only half of the disk space is
-available for use. However, this configuration offers the best configuration for redundancy since, potentially, it allows for multiple disk failures while still leaving the system
-operational, and without degrading system performance.53
-Chapter 2: Disk I/O Configuration
-In the configuration shown in Figure 2.6, each of the RAID 1 mirrored pairs could sustain
-a single disk failure and the array would continue to remain operational. However, if
-both of the disks in a single RAID 1 mirrored pair were to fail at the same time, the system
-would no longer be operational.
-Disk 1
-A1
-A4
-A7
-RAID 1
-Disk 2
-A1
-A4
-A7
-Disk 3
-A2
-A5
-A8
-RAID 1
-Disk 4
-A2
-A5
-A8
-RAID 0
-RAID 1+0
-Disk 5
-A3
-A6
-A9
-RAID 1
-Disk 6
-A3
-A6
-A9
-Figure 2.6: RAID 1+0 implementation.
-Since no parity calculations must occur, RAID 1+0 is the fastest RAID configuration
-for writes that also provides redundancy, offering performance near to, or matching,
-the performance of a RAID 0 configuration. However, for the number of spindles
-that comprise the array, read performance will generally be lower than a RAID 5 array
-configured with the same number of physical disks.
+
+O RAID 10, ou RAID 1+0, é um nível de RAID aninhado conhecido como "par espelhado listrado". Ele fornece redundância ao primeiro espelhar cada disco, usando o RAID 1, e depois listar esses discos espelhados, com RAID 0, para melhorar o desempenho. Há um aumento significativo no custo monetário associado a essa configuração, uma vez que apenas metade do espaço em disco está disponível para uso. No entanto, essa configuração oferece a melhor configuração de redundância, pois, potencialmente, permite várias falhas de disco enquanto ainda mantém o sistema em operação, sem degradar o desempenho do sistema.
+
+Na configuração mostrada na Figura 2.6, cada um dos pares espelhados RAID 1 poderia suportar a falha de um único disco e o conjunto continuaria operacional. No entanto, se ambos os discos em um único par espelhado RAID 1 falhassem ao mesmo tempo, o sistema deixaria de ser operacional.
+
+***************************************
+* Figure 2.6: Implementação RAID 1+0. *
+***************************************
+
+Como não há cálculos de paridade a serem realizados, o RAID 1+0 é a configuração de RAID mais rápida para gravações que também oferece redundância, proporcionando um desempenho próximo ou equivalente ao desempenho de uma configuração RAID 0. No entanto, em termos do número de discos que compõem o conjunto, o desempenho de leitura geralmente será menor do que um conjunto RAID 5 configurado com o mesmo número de discos físicos.
+
 RAID 01
-RAID 01 or RAID 0+1, is a nested RAID level also known as "mirrored pairs of striped
-disks." In a RAID 0+1 configuration, the nested levels are the opposite of the RAID 1+0,
-with the disks first being striped in a RAID 0 and then mirrored using RAID 1. However,
-this type of configuration only allows for a single disk loss from one side of the array,
-since a single disk failure in a RAID 0 array causes that array to fail. A loss of a single disk
-in both of the RAID 0 striped arrays would result in total data loss. The higher risk of
-data loss in RAID 01 means that, in most circumstances, RAID 1+0 is preferable for SQL
-Server installations.54
-Chapter 2: Disk I/O Configuration
-Disk 1
-A1
-A4
-A7
-RAID 0
-Disk 2
-A2
-A5
-A8
-RAID 1
-RAID 0+1
-Disk 3
-A3
-A6
-A9
-Disk 4
-A1
-A4
-A7
-RAID 0
-Disk 5
-A2
-A5
-A8
-Disk 6
-A3
-A6
-A9
-Figure 2.7: RAID 0+1 implementation.
-Disk size and throughput considerations
-Modern hard disks are much larger in size than previously available, making larger capacities possible with fewer disks. However, as discussed earlier, purchasing a small number
-of large disks may not be the best option in terms of I/O performance and throughput.
-For example, consider a database that is 400 GB in size and performs a balanced mix of
-random read and write operations. The number of possible RAID and disk configurations
-for this database exceeds the space available for this entire book. However, a few potential
-configurations are as follows:
-1. RAID 1 using 2 x 600 GB 15 K RPM disks
-2. RAID 5 using 3 x 300 GB 15 K RPM disks
-3. RAID 5 using 5 x 146 GB 15 K RPM disks
-4. RAID 10 using 8 x 146 GB 15 K RPM disks
-5. RAID 10 using 14 x 73 GB 15 K RPM disks.55
-Chapter 2: Disk I/O Configuration
-Based on the above RAID configurations, the following I/O throughput rates would be
-theoretically possible based on a 64 K random I/O workload for SQL Server:
-1. 185 IOPS at 11.5 MB/sec
-2. 222 IOPS at 14 MB/sec
-3. 345 IOPS at 22 MB/sec
-4. 816 IOPS at 51 MB/sec
-5. 1609 IOPS at 101 MB/sec.
-Hopefully, the message is clear: the number of disk heads, and the RAID configuration,
-will have a direct and dramatic impact on the potential I/O capacity of the RAID array.
-Remember, though, that these numbers are theoretical, meaning that they are
-solely based on the potential I/O capacity of the disks in a given configuration.
-They take no account of other factors that can and will have an impact on overall
-throughput, including:
-•	 RAID controller cache size and configuration for read and write caching, which can
-improve read-ahead pre-fetch if more cache is dedicated to reads, or absorb heavy
-bursts of write activity if more cache is dedicated to writes.
-•	 RAID stripe size, which determines the amount of data that is written to, or read
-from, a single disk in a stripe before advancing to the next disk in the stripe.
-•	 Partition alignment, which ensures that the starting offset of a disk partition is
-aligned with the RAID stripe size and sector offset for the disk, so that read and write
-operations don't cross sector boundaries, incurring an additional I/O operation to
-complete. See Incorrect partition alignment, later in this chapter, for further details.
-•	 NTFS format allocation unit sizes; the 4 K default for NTFS is good for file servers
-and the operating system drives, but not database data files which perform better using
-a 64 K allocation unit.56
-Chapter 2: Disk I/O Configuration
-The only way to be sure that your selected disk configuration will cope gracefully with the
-workload placed on it by your databases is to perform proper benchmarking of the I/O
-subsystem, prior to usage. Never rely on theoretical calculations for your values of either
-IOPS or MB/s throughput. You need to simulate a realistic I/O workload, using multiple
-workers, and get the actual numbers.
-A number of tools exist for measuring the I/O throughput of a given configuration, but
-the two most common tools used for benchmarking storage configurations for SQL
-Server are SQLIO and IOmeter.
-SQLIO has to be one of the worst-named tools in the world, since it leads to the
-common misconception that it simulates the I/O workload of SQL Server. The truth is
-that the tool has absolutely nothing to do with SQL Server; it is simply an I/O stress tool
-that generates I/O based on the command-like parameters that are passed to the tool.
-IOmeter is also an I/O stress testing tool, originally developed by Intel and later released
-as an open source project. Of the two, IOmeter is the most flexible, and can generate
-mixed I/O workloads that more closely reflect what might be generated by SQL Server.
-IOmeter also has a graphical user interface that is used for configuring the tests and
-monitoring their progress.
-Downloading SQLIO or IOmeter
-SQLIO can be downloaded for free from Microsoft's website at http://www.microsoft.com/download/en/details.aspx?id=20163.
-IOmeter can be downloaded for free from http://www.iometer.org/.
-Microsoft provides a separate tool for testing the reliability and integrity of a disk configuration, named SQLIOSim. This tool tests the storage using the same disk operations
-that SQL Server would perform for reads, writes, checkpoints, backups, and read-ahead
-operations, to ensure that the storage meets the reliability requirements for SQL Server.
-Unlike SQLIO and IOmeter, SQLIOSim uses separate data and log files to simulate the
-reading and writing activity of SQL Server, using the same types of I/O patterns for each57
-Chapter 2: Disk I/O Configuration
-file that would occur under normal operations. This tool should be used to validate that
-the I/O subsystem functions correctly under heavy loads, but it should not be used for
-performance benchmarking the configuration.
-Downloading SQLIOSim
-SQLIOSim can be downloaded from Microsoft's website at http://support.microsoft.com/
-kb/231619/en-us.
-Workload considerations
-As discussed previously, there are many factors that will influence the choices you make
-for your disk I/O subsystem, and especially the RAID level, such as how often the data is
-written compared to read, and whether the I/O is largely sequential or random in nature.
-Also important is the need to correctly distribute your workload across the hardware
-resources, by placing data and log files on separate, dedicated disks, and making special
-consideration for the tempdb database.
-Data files
-The appropriate disk configuration for the data files of a database depends heavily on
-the read-to-write ratio for the database. SQL Server tracks the I/O usage of the database
-files for an instance and makes this information available in the sys.dm_io_virtual_
-file_stats Dynamic Management Function. While this information can be used
-to determine if your overall workload is heavier for reads vs. writes, the information
-contained in the output is based on the operations that have occurred since the last
-time the SQL Server instance started up, so it is important to ensure that your normal
-representative workload for the server has occurred, before using this information to
-determine your workload division.58
-Chapter 2: Disk I/O Configuration
-For a database that is primarily read-only, RAID 5 or RAID 6 can offer good read performance, while also maximizing the available storage. RAID 5 or 6 arrays are commonly
-used for data warehouses, or for storing data where write latency doesn't impact overall
-system performance.
-However, for highly transactional databases where the number of writes is comparable to
-the number of reads, using a RAID 5 or RAID 6 configuration for the data files disks can
-cause a bottleneck during checkpoint operations, when "dirty pages" in the buffer cache
-are written to the data file.
-For OLTP implementations of heavy-write databases, RAID 1+0 provides the best performance since it doesn't perform parity calculations during write operations. Of course,
-RAID 1+0 arrays bring a much higher implementation cost, since the available storage is
-exactly half of the configured disks in the array.
-Log files
-For databases that are subject to a substantial amount of write activity, the sizing and
-configuration of the disks for the transaction log file, and hence the performance of log
-writes, can be critical to the overall performance of the system. This is because all data
-changes must first be hardened in the log file before a transaction commit (either implicit
-or explicit) can be considered complete, and before the data pages can be written to disk
-(in the case where CHECKPOINT or LAZY WRITER write a dirty data page to disk before
-the transaction commits).
-Since the transaction log is written to sequentially, RAID 1 can be used in most situations. For highly transactional databases, the transaction log for each database should be
-located on dedicated physical disks. Having the log files for multiple highly transactional
-databases on the same physical disks can result in write I/O bottlenecks, often shown by
-high WRITELOG waits in sys.dm_os_wait_stats, and by high io_write_stall_ms
-values in sys.dm_io_virtual_file_stats() for the transaction log file. These waits
-are caused by the disk head having to be repositioned across the disk platters to perform59
-Chapter 2: Disk I/O Configuration
-the writes, and can be worse when multiple transaction log files are physically interleaved,
-or physically fragmented on disk.
-Special considerations for tempdb
-The tempdb database in SQL Server is a special database that is used by the database
-engine during the execution of user requests, for performing sorts that exceed the
-memory allocated to the sort, hash operations, and to store data for temporary tables
-and table variables. In SQL Server 2005 and 2008, it is also used to maintain version store
-information, for trigger execution, online index operations, when using the SNAPSHOT
-and READ COMMITTED SNAPSHOT Isolation levels (a.k.a. row versioning), and in SQL
-Server 2008 for maintaining Change Tracking information. In addition to the general
-usage of tempdb, some maintenance operations, such as DBCC CHECKDB and index
-rebuilds performed ONLINE or using the SORT_IN_TEMPDB option, can make heavy use
-of tempdb.
-The tempdb database is a global resource, used in the manner described above by all
-sessions connected to a SQL Server instance. One of the best descriptions of tempdb
-was made by SQL Server MVP Brent Ozar, who described it as being "like a public toilet,
-anyone can abuse it with all sorts of horrific things you probably wouldn't approve of." As
-such, special consideration is needed with regard to disk configuration, in order to avoid
-contention on this resource.
-As a general rule, the tempdb database files should be physically separate from the user
-data files and transaction log files, on a dedicated disk array. Since tempdb is a writeheavy database, RAID 1 or RAID 1+0 are usually the configurations best able to support
-the concurrent workload of tempdb.
-However, since tempdb is used for temporary storage only, Solid State Disks and
-even RamDisks (disks created by software drivers using RAM from the server, or from
-specialized hardware devices) can be used to significantly improve the I/O characteristics60
-Chapter 2: Disk I/O Configuration
-of the tempdb database, removing the rotating media and disk head from the configuration, and so reducing the seek latency for both reads and writes.
-The tempdb database is subject to specific problems that generally don't affect standard
-user databases, specifically PFS, GAM, and SGAM contention, associated with the
-consistent creation and destruction of temporary objects (see http://blogs.msdn.com/
-sqlserverstorageengine/archive/2009/01/04/what-is-allocation-bottleneck.aspx
-for more details). To minimize the impact of this problem and, in most cases, to eliminate
-it, multiple data files can be created for the tempdb database that are the same size, and
-are configured with the same AutoGrowth settings. When a database has multiple files in
-the same filegroup, allocations are made from each file, using a proportionate fill factor,
-which causes the files to be used equally in proportion to their size and available free
-space. Since each file has its own PFS, GAM and SGAM pages, creating multiple files for
-tempdb will reduce contention on these pages when allocations are made.
-Tip: configuring a single file per processor, or not!
-SQL Server MVP Paul Randal provides guidance on the PFS, GAM, SGAM problem with tempdb and the
-appropriate number of files to configure based on the number of processors on his blog posts:
-"Search Engine Q&A #12: Should you create multiple files for a user DB on a multi-core box?"
-(http://www.sqlskills.com/blogs/paul/post/Search-Engine-QA-12-Should-you-create-multiple-files-for-a-user-DB-on-a-multi-core-box.aspx) and "A SQL Server DBA myth a day: (12/30)
-tempdb should always have one data file per processor core" (http://sqlskills.com/BLOGS/PAUL/
-post/A-SQL-Server-DBA-myth-a-day-(1230)-tempdb-should-always-have-one-data-file-perprocessor-core.aspx).61
-Chapter 2: Disk I/O Configuration
-Direct Attached Storage vs. Storage Area
-Networks
-The two most common configurations used for SQL Server storage are Direct Attached
-Storage (DAS) and Storage Area Networks (SAN), and each has its own pros and cons that
-must be understood in order to arrive at an appropriate implementation for SQL Server.
-Direct Attached Storage
-DAS is the traditional method of providing storage for servers, where the disks used by
-the server are directly attached to the server. The disks are either built into the server
-chassis, or are housed in external expansion bays that are plugged in to the server using a
-RAID controller.
-DAS implementations are cheap to build, provide predictable performance characteristics,
-since the disks are dedicated to a single server, and require the least amount of experience
-and knowledge to implement properly. However, depending on the specific implementation, DAS solutions will not have the advanced feature set that may be available when
-using a SAN, such as support for failover clustering, disk array snapshots, and cross-data
-center, array-based replication (a redundancy feature, which allows data written to the
-array to be replicated to a second SAN).
-With DAS solutions, performance troubleshooting is greatly simplified, since the number
-of components is reduced, and there is only a single system utilizing the I/O subsystem.62
-Chapter 2: Disk I/O Configuration
-Storage Area Networks
-SAN implementations are a more advanced configuration for enterprise-wide storage
-requirements. The storage is centrally managed in a shared environment, allowing
-for higher usage density of the available storage. In other words, SANs are designed to
-optimize storage usage, not necessarily optimize storage performance. However, SANs do
-offer a significantly more advanced feature set than is generally available through DAS. A
-basic example of a typical SAN environment is shown in Figure 2.8.
-Figure 2.8: Typical SAN implementation.
-However, the shared storage implementation also adds to the complexity of troubleshooting performance problems. Depending on the specific implementation, storage can
-be optimized for I/O performance, and/or it can be optimized solely for capacity, or it
-can be entirely proprietary to the SAN vendor, in which case little control exists for the
-physical implementation of the environment.63
-Chapter 2: Disk I/O Configuration
-One of the biggest problems with SAN-based storage arrays, for many SQL Server DBAs,
-is the manner in which the physical implementation of the storage array is "abstracted."
-When accessing data in a SAN array, all Windows sees is a "single physical disk," presented
-as a Logical Unit Number (LUN). However, a SAN might be using 50 LUNs from a
-shared pool of disks that are also being used by the rest of the enterprise. This can have
-performance ramifications for SQL Server. Unless a DBA has worked directly with a SAN
-administrator to plan out the I/O configuration of the LUNs being used by a SQL Server,
-the DBA has no idea how the physical hardware is actually being used.
-Depending on the vendor, the SAN implementation, and the workload requirements,
-sharing storage at the physical level can result in acceptable performance but can become
-a nightmare for troubleshooting when problem arise, where one team points the finger at
-the other and vice versa.
-As a general recommendation, when using SAN-based storage for SQL Server, the same
-I/O considerations must be made that would be made when using a DAS implementation.
-The underlying storage for the data files should be optimized for random I/O and segregated physically from the underlying storage for the transaction log files, which should be
-optimized for sequential I/O. The I/O throughput must be able to sustain the workload
-requirements, and any bottlenecks in the system must be fully understood before actually
-implementing the configuration for production usage.
-For SAN implementations, the "SAN fabric" is the network that is configured to provide
-access from the server to the physical disks which back the LUNs being presented to
-the server. This SAN fabric consists of multiple switched interconnections that provide
-redundancy to the configuration. There are multiple components, such as Host Bus
-Adapters (HBAs), storage controllers, and network switches, in the connection between
-the server and the SAN, any of which could become a potential bottleneck to your overall
-I/O capacity.
-SAN-based implementations make use of HBAs, which are purpose-built network cards
-that provide access to the storage network (Fabric + Array, in Figure 2.8), via fiber optic
-cables (FC), standard network Ethernet (iSCSI), or a hybrid mix of the two known as64
-Chapter 2: Disk I/O Configuration
-Fiber Channel over Ethernet (FCOE). Depending on the specific implementation being
-used, and whether or not multi-path I/O has been configured appropriately for the
-environment, the I/O performance and throughput may be limited to the port speed of a
-single HBA in server.
+
+RAID 01 ou RAID 0+1, é um nível de RAID aninhado também conhecido como "pares espelhados de discos listrados". Em uma configuração RAID 0+1, os níveis aninhados são o oposto do RAID 1+0, em que os discos são primeiro listrados em um RAID 0 e depois espelhados usando RAID 1. No entanto, esse tipo de configuração permite apenas a perda de um único disco de um lado do conjunto, uma vez que uma falha de disco em um conjunto RAID 0 causa a falha desse conjunto. A perda de um único disco em ambos os conjuntos listrados RAID 0 resultaria em perda total de dados. O maior risco de perda de dados no RAID 01 significa que, na maioria dos casos, o RAID 1+0 é preferível para instalações do SQL Server.
+
+***************************************
+* Figure 2.7: Implementação RAID 0+1. *
+***************************************
+
+Considerações sobre o tamanho do disco e taxa de transferência
+
+Os discos rígidos modernos são muito maiores em tamanho do que os disponíveis anteriormente, possibilitando maiores capacidades com menos discos. No entanto, como discutido anteriormente, a compra de um pequeno número de discos grandes pode não ser a melhor opção em termos de desempenho de E/S e taxa de transferência. Por exemplo, considere um banco de dados com tamanho de 400 GB que realiza uma mistura equilibrada de operações de leitura e gravação aleatórias. O número de possíveis configurações de RAID e discos para esse banco de dados excede o espaço disponível para todo este livro. No entanto, algumas configurações potenciais são as seguintes:
+
+1. RAID 1 usando 2 discos de 600 GB e 15.000 RPM.
+2. RAID 5 usando 3 discos de 300 GB e 15.000 RPM.
+3. RAID 5 usando 5 discos de 146 GB e 15.000 RPM.
+4. RAID 10 usando 8 discos de 146 GB e 15.000 RPM.
+5. RAID 10 usando 14 discos de 73 GB e 15.000 RPM.
+
+Com base nas configurações de RAID acima, as seguintes taxas de transferência de E/S seriam teoricamente possíveis com base em uma carga de trabalho de E/S aleatória de 64 KB para o SQL Server:
+
+1. 185 IOPS a 11,5 MB/s
+2. 222 IOPS a 14 MB/s
+3. 345 IOPS a 22 MB/s
+4. 816 IOPS a 51 MB/s
+5. 1609 IOPS a 101 MB/s
+
+Esperançosamente, a mensagem está clara: o número de cabeças de disco e a configuração do RAID terão um impacto direto e dramático na capacidade potencial de E/S do conjunto RAID.
+
+No entanto, lembre-se de que esses números são teóricos, o que significa que são baseados apenas na capacidade potencial de E/S dos discos em uma determinada configuração. Eles não levam em consideração outros fatores que podem e terão impacto na taxa de transferência geral, incluindo:
+
+Tamanho e configuração do cache do controlador RAID para leitura e gravação em cache, que podem melhorar a pré-busca de leitura se mais cache for dedicado a leituras, ou absorver rajadas intensas de atividade de gravação se mais cache for dedicado a gravações.
+Tamanho de stripe do RAID, que determina a quantidade de dados que é gravada ou lida de um único disco em uma stripe antes de avançar para o próximo disco na stripe.
+Alinhamento de partição, que garante que o deslocamento inicial de uma partição de disco esteja alinhado com o tamanho de stripe do RAID e o deslocamento do setor para o disco, de modo que as operações de leitura e gravação não cruzem limites de setor, incorrendo em uma operação adicional de E/S para ser concluída. Consulte "Alinhamento incorreto de partição", mais adiante neste capítulo, para obter mais detalhes.
+Tamanhos de unidade de alocação do formato NTFS; o valor padrão de 4 KB para NTFS é bom para servidores de arquivos e unidades do sistema operacional, mas não é adequado para arquivos de dados do banco de dados, que têm um melhor desempenho usando uma unidade de alocação de 64 KB.
+
+A única maneira de ter certeza de que a configuração de disco selecionada lidará adequadamente com a carga de trabalho imposta por seus bancos de dados é realizar testes adequados do subsistema de E/S antes de usá-lo. Nunca confie em cálculos teóricos para os valores de IOPS ou taxa de transferência em MB/s. Você precisa simular uma carga de trabalho de E/S realista, usando vários processos, e obter os números reais.
+
+Existem várias ferramentas disponíveis para medir a taxa de transferência de E/S de uma determinada configuração, mas as duas ferramentas mais comuns usadas para testar as configurações de armazenamento para o SQL Server são o SQLIO e o IOmeter.
+
+O SQLIO é um dos piores nomes para uma ferramenta, pois leva à ideia equivocada de que ele simula a carga de trabalho de E/S do SQL Server. A verdade é que essa ferramenta não tem absolutamente nada a ver com o SQL Server; é apenas uma ferramenta de estresse de E/S que gera operações de E/S com base nos parâmetros de comando fornecidos à ferramenta. O IOmeter também é uma ferramenta de teste de estresse de E/S, originalmente desenvolvida pela Intel e posteriormente lançada como um projeto de código aberto. Das duas ferramentas, o IOmeter é o mais flexível e pode gerar cargas de trabalho de E/S mistas que se aproximam mais do que poderia ser gerado pelo SQL Server. O IOmeter também possui uma interface gráfica do usuário que é usada para configurar os testes e monitorar seu progresso.
+
+Baixando o SQLIO ou IOmeter
+
+O SQLIO pode ser baixado gratuitamente no site da Microsoft em http://www.microsoft.com/download/en/details.aspx?id=20163.
+
+O IOmeter pode ser baixado gratuitamente em http://www.iometer.org/.
+
+A Microsoft fornece uma ferramenta separada para testar a confiabilidade e integridade de uma configuração de disco, chamada SQLIOSim. Essa ferramenta testa o armazenamento usando as mesmas operações de disco que o SQL Server executaria para leituras, gravações, checkpoints, backups e operações de leitura antecipada, para garantir que o armazenamento atenda aos requisitos de confiabilidade do SQL Server. Ao contrário do SQLIO e IOmeter, o SQLIOSim usa arquivos de dados e log separados para simular a atividade de leitura e gravação do SQL Server, usando os mesmos tipos de padrões de E/S para cada arquivo que ocorreriam durante as operações normais. Essa ferramenta deve ser usada para validar se o subsistema de E/S funciona corretamente sob cargas pesadas, mas não deve ser usada para testes de desempenho da configuração.
+
+Baixando o SQLIOSim
+
+O SQLIOSim pode ser baixado no site da Microsoft em http://support.microsoft.com/kb/231619/en-us.
+
+Considerações sobre a carga de trabalho
+
+Conforme discutido anteriormente, há muitos fatores que influenciarão as escolhas que você faz para o subsistema de E/S de disco, especialmente o nível RAID, como a frequência com que os dados são gravados em comparação com a leitura e se a E/S é predominantemente sequencial ou aleatória. Também é importante distribuir corretamente sua carga de trabalho pelos recursos de hardware, colocando arquivos de dados e log em discos separados e dedicados, e dando consideração especial ao banco de dados tempdb.
+
+Arquivos de dados
+
+A configuração de disco apropriada para os arquivos de dados de um banco de dados depende muito da proporção de leitura para gravação do banco de dados. O SQL Server acompanha o uso de E/S dos arquivos de banco de dados para uma instância e disponibiliza essas informações na função de Gerenciamento Dinâmico sys.dm_io_virtual_file_stats. Embora essas informações possam ser usadas para determinar se sua carga de trabalho geral é mais intensa em leituras ou gravações, as informações contidas na saída são baseadas nas operações que ocorreram desde a última inicialização da instância do SQL Server. Portanto, é importante garantir que sua carga de trabalho representativa normal para o servidor tenha ocorrido antes de usar essas informações para determinar a divisão da carga de trabalho.
+
+Para um banco de dados que é principalmente somente leitura, o RAID 5 ou RAID 6 pode oferecer um bom desempenho de leitura, ao mesmo tempo em que maximiza o armazenamento disponível. Arrays RAID 5 ou 6 são comumente usados em data warehouses ou para armazenar dados onde a latência de gravação não afeta o desempenho geral do sistema.
+
+No entanto, para bancos de dados altamente transacionais, onde o número de gravações é comparável ao número de leituras, o uso de uma configuração RAID 5 ou RAID 6 para os discos dos arquivos de dados pode causar um gargalo durante as operações de checkpoint, quando as "páginas sujas" no cache de buffer são gravadas no arquivo de dados.
+
+Para implementações OLTP de bancos de dados com intensa gravação, o RAID 1+0 oferece o melhor desempenho, pois não realiza cálculos de paridade durante as operações de gravação. No entanto, os arrays RAID 1+0 têm um custo de implementação muito mais alto, uma vez que o armazenamento disponível é exatamente a metade dos discos configurados no array.
+
+Arquivos de log
+
+Para bancos de dados sujeitos a uma quantidade substancial de atividade de gravação, o dimensionamento e a configuração dos discos para o arquivo de log de transações, e, portanto, o desempenho das gravações de log, podem ser fundamentais para o desempenho geral do sistema. Isso ocorre porque todas as alterações nos dados devem primeiro ser registradas no arquivo de log antes que uma transação de confirmação (implícita ou explícita) possa ser considerada concluída e antes que as páginas de dados possam ser gravadas no disco (no caso em que um CHECKPOINT ou o LAZY WRITER gravam uma página de dados suja no disco antes que a transação seja confirmada).
+
+Uma vez que o log de transações é gravado sequencialmente, o RAID 1 pode ser usado na maioria das situações. Para bancos de dados altamente transacionais, o log de transações de cada banco de dados deve estar localizado em discos físicos dedicados. Ter os arquivos de log de vários bancos de dados altamente transacionais nos mesmos discos físicos pode resultar em gargalos de E/S de gravação, frequentemente indicados por altos tempos de espera WRITELOG em sys.dm_os_wait_stats e por altos valores de io_write_stall_ms em sys.dm_io_virtual_file_stats() para o arquivo de log de transações. Essas esperas são causadas pelo reposicionamento da cabeça de disco através dos pratos do disco para realizar as gravações e podem ser piores quando vários arquivos de log de transações são fisicamente intercalados ou fisicamente fragmentados no disco.
+
+Considerações especiais para o tempdb
+
+O banco de dados tempdb no SQL Server é um banco de dados especial usado pelo mecanismo de banco de dados durante a execução de solicitações do usuário, para realizar classificações que excedem a memória alocada para a classificação, operações de hash e armazenar dados para tabelas temporárias e variáveis de tabela. No SQL Server 2005 e 2008, também é usado para manter informações do armazenamento de versão, para a execução de gatilhos, operações de índice online ao usar os níveis de isolamento SNAPSHOT e READ COMMITTED SNAPSHOT (também conhecidos como controle de versão de linha) e, no SQL Server 2008, para manter informações de Rastreamento de Mudanças. Além do uso geral do tempdb, algumas operações de manutenção, como DBCC CHECKDB e a reconstrução de índices realizada ONLINE ou usando a opção SORT_IN_TEMPDB, podem fazer uso intensivo do tempdb.
+
+O banco de dados tempdb é um recurso global, utilizado da maneira descrita acima por todas as sessões conectadas a uma instância do SQL Server. Uma das melhores descrições do tempdb foi feita pelo SQL Server MVP Brent Ozar, que o descreveu como sendo "como um banheiro público, qualquer um pode abusar dele com todo tipo de coisas horríveis que você provavelmente não aprovaria". Portanto, é necessário ter considerações especiais em relação à configuração do disco, a fim de evitar conflitos nesse recurso.
+
+Como regra geral, os arquivos do banco de dados tempdb devem estar fisicamente separados dos arquivos de dados do usuário e dos arquivos de log de transações, em um conjunto de discos dedicado. Como o tempdb é um banco de dados com muitas operações de escrita, as configurações RAID 1 ou RAID 1+0 geralmente são as mais adequadas para suportar a carga de trabalho simultânea do tempdb.
+
+No entanto, como o tempdb é usado apenas para armazenamento temporário, discos de estado sólido (SSDs) e até mesmo RamDisks (discos criados por drivers de software usando RAM do servidor ou de dispositivos de hardware especializados) podem ser usados para melhorar significativamente as características de E/S do banco de dados tempdb, removendo a mídia rotativa e a cabeça do disco da configuração e, assim, reduzindo a latência de busca tanto para leituras quanto para gravações.
+
+O banco de dados tempdb está sujeito a problemas específicos que geralmente não afetam bancos de dados de usuário padrão, especificamente a contenção de PFS, GAM e SGAM, associada à criação e destruição consistentes de objetos temporários (consulte http://blogs.msdn.com/sqlserverstorageengine/archive/2009/01/04/what-is-allocation-bottleneck.aspx para mais detalhes). Para minimizar o impacto desse problema e, na maioria dos casos, eliminá-lo, vários arquivos de dados podem ser criados para o banco de dados tempdb, que têm o mesmo tamanho e são configurados com as mesmas configurações de AutoCrescimento. Quando um banco de dados possui vários arquivos no mesmo grupo de arquivos, as alocações são feitas a partir de cada arquivo, usando um fator de preenchimento proporcional, o que faz com que os arquivos sejam usados igualmente em proporção ao seu tamanho e espaço livre disponível. Como cada arquivo tem suas próprias páginas de PFS, GAM e SGAM, criar vários arquivos para o tempdb reduzirá a contenção nessas páginas quando as alocações forem feitas.
+
+Dica: configurando um único arquivo por processador, ou não!
+
+O MVP do SQL Server, Paul Randal, fornece orientações sobre o problema do PFS, GAM e SGAM com o tempdb e o número apropriado de arquivos a serem configurados com base no número de processadores em suas postagens no blog: "Search Engine Q&A #12: Should you create multiple files for a user DB on a multi-core box?" (http://www.sqlskills.com/blogs/paul/post/Search-Engine-QA-12-Should-you-create-multiple-files-for-a-user-DB-on-a-multi-core-box.aspx) e "A SQL Server DBA myth a day: (12/30) tempdb should always have one data file per processor core" (http://sqlskills.com/BLOGS/PAUL/post/A-SQL-Server-DBA-myth-a-day-(1230)-tempdb-should-always-have-one-data-file-perprocessor-core.aspx).
+
+
+Direct Attached Storage vs. Storage Area Networks
+
+As duas configurações mais comuns utilizadas para o armazenamento do SQL Server são o Direct Attached Storage (DAS) e as Storage Area Networks (SAN), e cada uma delas possui suas próprias vantagens e desvantagens que devem ser compreendidas para se chegar a uma implementação adequada para o SQL Server.
+
+Direct Attached Storage (DAS)
+
+O DAS é o método tradicional de fornecer armazenamento para servidores, onde os discos usados pelo servidor são conectados diretamente a ele. Os discos podem estar incorporados ao chassi do servidor ou serem colocados em compartimentos de expansão externos que são conectados ao servidor usando um controlador RAID.
+
+As implementações de DAS são baratas de serem construídas, proporcionam características de desempenho previsíveis, uma vez que os discos são dedicados a um único servidor, e exigem o mínimo de experiência e conhecimento para serem implementadas corretamente. No entanto, dependendo da implementação específica, as soluções de DAS não terão o conjunto avançado de recursos disponíveis ao usar um SAN, como suporte para clustering de failover, snapshots de conjuntos de discos e replicação baseada em matriz entre data centers (um recurso de redundância que permite que os dados escritos na matriz sejam replicados para um segundo SAN).
+
+Com soluções de DAS, a solução de problemas de desempenho é simplificada, uma vez que o número de componentes é reduzido e há apenas um sistema utilizando o subsistema de E/S.
+
+Storage Area Networks (SAN)
+
+As implementações de SAN são uma configuração mais avançada para requisitos de armazenamento em toda a empresa. O armazenamento é gerenciado centralmente em um ambiente compartilhado, permitindo uma maior densidade de uso do armazenamento disponível. Em outras palavras, os SANs são projetados para otimizar o uso de armazenamento, não necessariamente otimizar o desempenho do armazenamento. No entanto, os SANs oferecem um conjunto de recursos significativamente mais avançado do que geralmente está disponível por meio do DAS. Um exemplo básico de um ambiente SAN típico é mostrado na Figura 2.8.
+
+***********************************************
+* Figura 2.8: Implementação típica de um SAN. *
+***********************************************
+
+No entanto, a implementação de armazenamento compartilhado também adiciona complexidade à solução de problemas de desempenho. Dependendo da implementação específica, o armazenamento pode ser otimizado para desempenho de E/S e/ou pode ser otimizado exclusivamente para capacidade, ou pode ser totalmente proprietário do fornecedor do SAN, caso em que há pouco controle sobre a implementação física do ambiente.
+
+Um dos maiores problemas com as matrizes de armazenamento baseadas em SAN, para muitos DBAs do SQL Server, é a maneira como a implementação física da matriz de armazenamento é "abstraída". Ao acessar dados em uma matriz SAN, o Windows vê apenas um "disco físico único", apresentado como um Número de Unidade Lógica (LUN). No entanto, um SAN pode estar usando 50 LUNs de um pool compartilhado de discos que também estão sendo usados pelo restante da empresa. Isso pode ter ramificações de desempenho para o SQL Server. A menos que um DBA tenha trabalhado diretamente com um administrador de SAN para planejar a configuração de E/S das LUNs usadas por um SQL Server, o DBA não tem ideia de como o hardware físico está sendo usado na realidade.
+
+Depending on the vendor, the SAN implementation, and the workload requirements, sharing storage at the physical level can result in acceptable performance but can become a nightmare for troubleshooting when problem arise, where one team points the finger at the other and vice versa.
+
+Como recomendação geral, ao utilizar armazenamento baseado em SAN para o SQL Server, as mesmas considerações de E/S devem ser feitas como se fosse uma implementação de DAS. O armazenamento subjacente para os arquivos de dados deve ser otimizado para E/S aleatória e segregado fisicamente do armazenamento subjacente para os arquivos de log de transação, que devem ser otimizados para E/S sequencial. O throughput de E/S deve ser capaz de sustentar os requisitos de carga de trabalho, e quaisquer gargalos no sistema devem ser plenamente compreendidos antes de implementar a configuração para uso em produção.
+
+Para implementações de SAN, o "SAN fabric" é a rede que é configurada para fornecer acesso do servidor aos discos físicos que dão suporte às LUNs apresentadas ao servidor. Esse SAN fabric consiste em várias interconexões comutadas que fornecem redundância à configuração. Existem vários componentes, como Adaptadores de Barramento do Host (HBAs), controladores de armazenamento e switches de rede, na conexão entre o servidor e o SAN, qualquer um dos quais poderia se tornar um gargalo potencial para a capacidade geral de E/S.
+
+As implementações baseadas em SAN (Storage Area Network) fazem uso de HBAs (Host Bus Adapters), que são placas de rede específicas projetadas para fornecer acesso à rede de armazenamento (Fabric + Array, na Figura 2.8), por meio de cabos de fibra óptica (FC), Ethernet de rede padrão (iSCSI) ou uma combinação híbrida dos dois conhecida como Fiber Channel over Ethernet (FCoE). Dependendo da implementação específica utilizada e se a E/S de múltiplos caminhos (multi-path I/O) foi configurada adequadamente para o ambiente, o desempenho de E/S e a taxa de transferência podem ser limitados à velocidade da porta de um único HBA no servidor.
+
 Multi-path I/O
-Multi-path I/O (MPIO) provides multiple, redundant paths from a single server to the SAN implementation. Depending on the configuration of the MPIO, one of the benefits can also be load balancing across
-the connections, which can result in performance improvements compared to using a single connection.
-Different MPIO implementations have different characteristics, and it is best to work with your specific
-hardware vendor to configure MPIO in your environment.
-The HBAs of the servers connect to network switches that, in turn, connect to the
-storage controllers on the SAN. The storage controllers manage the physical disks which
-comprise the actual storage available to the SAN implementation. Each of the storage
-controllers can have one or more connections into the network, and each one maintains
-its own cache for frequently read data, and/or to handle writes immediately, allowing
-deferred flushes to the physical disks, which can be slower than writing directly to cache.
-These caches can be mirrored to other controllers over high-speed connections, to allow
-failure to occur with minimal to no impact on the environment. In this way, multiple
-storage controllers work together as a sort of "failover cluster" for the SAN, providing
-high availability.
-When using SAN-based storage implementations, the slowest point in the overall
-configuration will be the bottleneck for the system. For example, consider a SAN using
-a 4 Gb/sec HBA and connecting to a 4 Gb/sec switch that connects to a 2 Gb/sec storage
-controller port. Even if the physical disks in the array are capable of 8 Gb/sec of I/O, the 2
-Gb/sec storage controller port will be the bottleneck in the implementation.
-This is the reason that troubleshooting SAN-based implementations for SQL Server can
-be incredibly difficult. Any time a SAN is being used with SQL Server, troubleshooting65
-Chapter 2: Disk I/O Configuration
-the performance problems in the environment requires additional support from the SAN
-administrator.
-Diagnosing Disk I/O Issues
-My primary tool for investigating disk I/O issues is PerfMon and specifically the
-Physical Disk\Disk sec/Reads and Physical Disk\Disk sec/Writes counters.
-The key for performance is having the lowest latency possible and my guideline latency
-values for each of these counters are as follows:
-•	 Less than 10 ms = good performance
-•	 Between 10 ms and 20 ms = slow performance
-•	 Between 20 ms and 50 ms = poor performance
-•	 Greater than 50 ms = significant performance problem.
-In addition to the performance counters, high wait times for PAGEIOLATCH_*, ASYNC_
-IO_COMPLETION, IO_COMPLETION, or WRITELOG waits can be signs of disk I/O bottlenecks on the server. The query to retrieve the wait statistics for an instance of SQL Server
-is included in the Wait Statistics: the Basis for Troubleshooting section of Chapter 1.
+
+Multi-path I/O (MPIO) fornece múltiplos caminhos redundantes de um único servidor para a implementação SAN. Dependendo da configuração do MPIO, um dos benefícios também pode ser o balanceamento de carga entre as conexões, o que pode resultar em melhorias de desempenho em comparação com o uso de uma única conexão. Diferentes implementações de MPIO têm características distintas, e é melhor trabalhar com o fornecedor de hardware específico para configurar o MPIO em seu ambiente.
+
+As HBAs dos servidores se conectam a switches de rede que, por sua vez, se conectam aos controladores de armazenamento na SAN. Os controladores de armazenamento gerenciam os discos físicos que compõem o armazenamento real disponível para a implementação da SAN. Cada um dos controladores de armazenamento pode ter uma ou mais conexões com a rede, e cada um mantém seu próprio cache para dados frequentemente lidos e/ou para lidar com gravações imediatamente, permitindo que as gravações sejam adiadas para os discos físicos, que podem ser mais lentos do que gravar diretamente no cache. Esses caches podem ser espelhados para outros controladores por meio de conexões de alta velocidade, para permitir que falhas ocorram com impacto mínimo ou nulo no ambiente. Dessa forma, vários controladores de armazenamento trabalham juntos como uma espécie de "cluster de failover" para a SAN, proporcionando alta disponibilidade.
+
+Ao utilizar implementações de armazenamento baseadas em SAN, o ponto mais lento na configuração geral será o gargalo para o sistema. Por exemplo, considere uma SAN que utiliza um HBA de 4 Gb/s e se conecta a um switch de 4 Gb/s, que por sua vez se conecta a uma porta do controlador de armazenamento de 2 Gb/s. Mesmo que os discos físicos da matriz sejam capazes de realizar E/S de 8 Gb/s, a porta do controlador de armazenamento de 2 Gb/s será o gargalo na implementação.
+
+Essa é a razão pela qual solucionar problemas em implementações de SAN para o SQL Server pode ser extremamente difícil. Sempre que uma SAN está sendo utilizada com o SQL Server, solucionar problemas de desempenho no ambiente requer suporte adicional do administrador da SAN.
+
+Diagnosticando problemas de E/S de disco
+
+Minha principal ferramenta para investigar problemas de E/S de disco é o PerfMon e, especificamente, os contadores Physical Disk\Disk sec/Reads e Physical Disk\Disk sec/Writes. A chave para o desempenho é ter a latência mais baixa possível e meus valores de referência para latência para cada um desses contadores são os seguintes:
+
+Menos de 10 ms = bom desempenho
+Entre 10 ms e 20 ms = desempenho lento
+Entre 20 ms e 50 ms = desempenho ruim
+Mais de 50 ms = problema significativo de desempenho.
+
+Além dos contadores de desempenho, tempos de espera elevados para PAGEIOLATCH_*, ASYNC_IO_COMPLETION, IO_COMPLETION ou waits WRITELOG podem ser sinais de gargalos de E/S de disco no servidor. A consulta para recuperar as estatísticas de espera para uma instância do SQL Server está incluída na seção "Estatísticas de Espera: A Base para Solução de Problemas" do Capítulo 1.
+
 Common Disk I/O Problems
-As with many of the problems covered throughout this book, the first port of call when
-attempting to resolve I/O issues is to ensure that a lack of indexing (Chapter 5), or poorly
-written queries, isn't causing a needlessly excessive amount of I/O. If your database design
-and query workload are as tuned as they can be, and the I/O problem persists, then you're
-probably suffering from a disk misconfiguration issue. Based on the questions I see in66
-Chapter 2: Disk I/O Configuration
-online technical forums, and on my experience as a consultant, the following
-misconfigurations are at the heart of many of the disk I/O issues that I see:
-•	 sizing for capacity instead of I/O performance
-•	 incorrect workload isolation
-•	 incorrect partition alignment
-•	 incorrect bandwidth using SAN configurations.
-Each of these problems and the steps necessary to troubleshoot them will be covered in
-the remaining sections of this chapter.
-Sizing for capacity instead of I/O performance
-As previously covered in this chapter, proper sizing of the disk subsystem for SQL Server
-is primarily a matter of performance, and not actual storage capacity. Often, unless an
-experienced DBA is involved in the purchasing decisions, the key factor used in provisioning hardware is the size of the database, and not the workload I/O performance
-requirements.
-A 800 GB database can be stored on a single 1TB drive, but the chances of a single 1TB
-drive being able to supply the I/O capacity that will deliver satisfactory performance
-under concurrent user access, are slim at best. The key to high-performance disk configurations is having lots of physical disks working together, using RAID, to provide both the
-required I/O capacity and the necessary storage space.
-With SAN implementations, it is more likely that you will get the number of disks
-necessary to handle the I/O performance requirements. However, since most SAN
-implementations are not dedicated to SQL Server alone, you also have to account for the
-shared I/O performance requirements of the other servers, using the same physical disks,
-and the potential impact that this shared I/O will have on SQL Server performance.67
-Chapter 2: Disk I/O Configuration
+
+Assim como em muitos dos problemas abordados ao longo deste livro, o primeiro passo ao tentar resolver problemas de E/S é garantir que a falta de indexação (Capítulo 5) ou consultas mal escritas não estejam causando uma quantidade desnecessariamente excessiva de E/S. Se o design do seu banco de dados e a carga de trabalho das consultas estiverem otimizados o máximo possível e o problema de E/S persistir, provavelmente você está enfrentando um problema de configuração inadequada do disco. Com base nas perguntas que vejo em fóruns técnicos online e na minha experiência como consultor, as seguintes configurações incorretas são a causa de muitos dos problemas de E/S de disco que encontro:
+
+dimensionamento para capacidade em vez de desempenho de E/S
+isolação inadequada da carga de trabalho
+alinhamento incorreto de partições
+largura de banda incorreta ao utilizar configurações de SAN.
+
+Cada um desses problemas e as etapas necessárias para solucioná-los serão abordados nas seções restantes deste capítulo.
+
+Dimensionamento para capacidade em vez de desempenho de E/S
+
+Como já abordado anteriormente neste capítulo, o dimensionamento adequado do subsistema de disco para o SQL Server é principalmente uma questão de desempenho e não de capacidade real de armazenamento. Muitas vezes, a menos que um DBA experiente esteja envolvido nas decisões de compra, o fator chave utilizado no provisionamento de hardware é o tamanho do banco de dados e não os requisitos de desempenho de E/S da carga de trabalho.
+
+Um banco de dados de 800 GB pode ser armazenado em um único disco de 1 TB, mas as chances de um único disco de 1 TB ser capaz de fornecer a capacidade de E/S necessária para obter um desempenho satisfatório durante o acesso simultâneo de usuários são mínimas, na melhor das hipóteses. A chave para configurações de disco de alto desempenho é ter muitos discos físicos trabalhando juntos, usando RAID, para fornecer tanto a capacidade de E/S necessária quanto o espaço de armazenamento necessário.
+
+Com implementações de SAN, é mais provável que você obtenha o número de discos necessário para lidar com os requisitos de desempenho de E/S. No entanto, uma vez que a maioria das implementações de SAN não é dedicada apenas ao SQL Server, você também precisa considerar os requisitos de desempenho de E/S compartilhados pelos outros servidores que usam os mesmos discos físicos e o impacto potencial que essa E/S compartilhada terá no desempenho do SQL Server.
+
 Troubleshooting problems with I/O performance requires monitoring the performance
 counters for the disk I/O subsystem, as well as monitoring the virtual file and wait stats
 for the database instance, to determine the impact the I/O subsystem may be having on
