@@ -946,44 +946,24 @@ Banda larga incorreta usando configurações SAN
 Em ambientes SAN, onde o armazenamento está conectado por meio de uma conexão de rede, um dos maiores fatores limitantes para o desempenho de armazenamento é a largura de banda disponível para a conexão. Isso é verdade independentemente se a conexão é Fibre Channel ou iSCSI, usando Ethernet tradicional para a conectividade.
 Quando comecei a trabalhar com ambientes SAN para o SQL Server, a tecnologia predominante em uso era o Fibre Channel, e a velocidade padrão da porta era de 2 Gb/s para um único caminho. Na época, hardware mais recente que suportava conexões de 4 Gb/s para um único caminho estava sendo implementado em ambientes. Logo depois, o iSCSI de 1 Gb/s começou a aparecer em ambientes de pequenas e médias empresas como uma implementação de custo mais baixo de armazenamento compartilhado para a empresa.
 Para mim, uma das coisas mais difíceis de entender ao trabalhar com SANs foi o impacto que os caminhos para o SAN tinham no desempenho do armazenamento, especialmente em ambientes de múltiplos caminhos, onde a expectativa era que vários caminhos para o SAN melhorariam o desempenho geral das conexões de armazenamento.
-When using SAN multi-path technologies, the initial benchmarking and validation of
-the storage configuration is incredibly important. You need to verify whether or not the
-multiple paths to the SAN really are being used in conjunction with each other to improve
-the performance.
-Typically, a 1 Gb/sec connection to a SAN will be capable of a maximum throughput of
-90–95 MB/sec, assuming the underlying storage configuration will support this level of
-throughput. So, theoretically, two 1 Gb/sec connections should provide 180–190 Mb/sec
-of throughput. However, depending on the exact multi-path configuration, this may not
-be an accurate expectation.71
-Chapter 2: Disk I/O Configuration
-A full discussion of multi-path configurations of SANs is beyond our remit, but the
-key point in determining the available bandwidth is appropriate benchmarking of the
-storage subsystem using tools like SQLIO or IOmeter. If the storage performance is
-not meeting the expectations for the configuration, you will have to determine where
-exactly the bottleneck in the configuration lies, and continue troubleshooting from there.
-It could be that the number of disks underlying the storage array cannot support the
-throughput requirements, or that the SAN caching is the bottleneck, or that the multipath configuration is not functioning as expected and you are only getting an actual
-single path to the SAN for I/O.
-Summary
-Proper configuration of the hardware, as well as the SQL Server database engine, is
-critical to the optimum performance of the overall system. Incorrect hardware configurations, generally in the disk I/O subsystem, often result in a system that fails to meet
-performance expectations.
-The best strategy with regard to disk I/O configuration problems could be summarized as
-"avoid them as far as possible, through appropriate planning and testing."
-•	 Don't consider only storage capacity when provisioning the disk subsystem; I/O
-performance and throughput are critical.
-•	 Make sure your files are separated according to the type of I/O workload. Data files, log
-files, and tempdb files should all be on separate disks, and configured appropriately for
-the given workload type.
-•	 Test the performance of your disk subsystem under realistic loads; it's the only way to
-be sure will meet your I/O performance and throughput requirements.72
-Chapter 2: Disk I/O Configuration
-If your system does suffer from disk I/O issues, there are very few quick fixes. First, you
-need to ensure that you're not wasting I/O cycles, either through poorly designed queries,
-lack of indexing, or through hardware-related "bugs" such as disk partition misalignment.
-Beyond that, you probably need to add I/O capacity, or work out what component is
-causing the I/O bottleneck. If you are using DAS, this may be relatively straightforward. If
-you're using a SAN, it helps if you are friendly with your SAN administrator.73
+Ao usar tecnologias de múltiplos caminhos em uma SAN, o benchmarking e a validação inicial da configuração de armazenamento são extremamente importantes. É necessário verificar se os vários caminhos para o SAN estão realmente sendo usados em conjunto para melhorar o desempenho.
+Normalmente, uma conexão de 1 Gb/s para uma SAN será capaz de uma taxa de transferência máxima de 90 a 95 MB/s, supondo que a configuração de armazenamento subjacente suporte esse nível de taxa de transferência. Portanto, teoricamente, duas conexões de 1 Gb/s deveriam fornecer uma taxa de transferência de 180 a 190 Mb/s. No entanto, dependendo da configuração exata de múltiplos caminhos, essa pode não ser uma expectativa precisa.
+Uma discussão completa sobre as configurações de múltiplos caminhos de SAN está além do nosso escopo, mas o ponto chave para determinar a largura de banda disponível é o benchmarking apropriado do subsistema de armazenamento usando ferramentas como SQLIO ou IOmeter. Se o desempenho do armazenamento não atender às expectativas da configuração, você terá que determinar exatamente onde está o gargalo na configuração e continuar a solução de problemas a partir daí. Pode ser que o número de discos subjacentes à matriz de armazenamento não possa atender aos requisitos de taxa de transferência, ou que o cache da SAN seja o gargalo, ou que a configuração de múltiplos caminhos não esteja funcionando como esperado e você esteja obtendo apenas um único caminho real para a SAN para operações de E/S.
+
+Resumo
+
+A configuração adequada do hardware, assim como do mecanismo de banco de dados do SQL Server, é fundamental para o desempenho ideal do sistema como um todo. Configurações incorretas de hardware, geralmente no subsistema de E/S de disco, frequentemente resultam em um sistema que não atende às expectativas de desempenho.
+A melhor estratégia em relação aos problemas de configuração de E/S de disco pode ser resumida como "evite-os o máximo possível, por meio de um planejamento e teste apropriados".
+- Não considere apenas a capacidade de armazenamento ao provisionar o subsistema de disco; o desempenho e a taxa de transferência de E/S são cruciais.
+- Certifique-se de que seus arquivos sejam separados de acordo com o tipo de carga de trabalho de E/S. Arquivos de dados, arquivos de log e arquivos tempdb devem estar em discos separados e configurados adequadamente para o tipo de carga de trabalho específico.
+- Teste o desempenho do seu subsistema de disco sob cargas realistas; é a única maneira de ter certeza de que atenderá aos requisitos de desempenho e taxa de transferência de E/S.
+Se o seu sistema estiver enfrentando problemas de E/S de disco, existem poucas soluções rápidas. Primeiro, você precisa garantir que não está desperdiçando ciclos de E/S, seja por meio de consultas mal projetadas, falta de indexação ou por "falhas" relacionadas ao hardware, como o desalinhamento de partições de disco.
+Além disso, provavelmente será necessário adicionar capacidade de E/S ou descobrir qual componente está causando o gargalo de E/S. Se você estiver usando DAS (Direct-Attached Storage), isso pode ser relativamente simples. Se você estiver usando uma SAN (Storage Area Network), é útil ter uma boa relação com o administrador da SAN.
+
+
+
+
+
 Chapter 3: High CPU Utilization
 A CPU-bound system is relatively easy to spot, but not always as easy to diagnose. If you
 notice that one or more of the CPUs are working at close to maximum capacity, along
