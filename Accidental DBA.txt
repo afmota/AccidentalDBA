@@ -217,17 +217,12 @@ Hiring a Consultant
 Prefácio de Paul Randal
 
 Para a maioria das pessoas, solucionar problemas de desempenho, corrupção ou outros problemas com o SQL Server é uma necessidade, não uma preferência. A menos que você seja um DBA avançado ou consultor com muitos anos de experiência em solução de problemas, a primeira pergunta que você costuma fazer a si mesmo é: por onde começo? Existem muitos livros sobre os aspectos internos do SQL Server, solução de problemas do SQL Server ou ambos - mas todos são organizados a partir da perspectiva da arquitetura ou dos aspectos internos do SQL Server.
-
 Com o crescente número de pessoas não DBAs lidando com o SQL Server, o que essas pessoas realmente precisam é de um livro organizado por área de problema - e é aí que este livro difere dos outros livros de solução de problemas disponíveis. Se você é um DBA acidental ou involuntário, foi solicitado a cuidar de um SQL Server e está lutando para descobrir um problema, este livro é para você. Por outro lado, se você é um DBA ou consultor experiente e deseja uma nova maneira de pensar na solução de problemas do SQL Server, este livro também será imensamente útil para você.
-
 O livro aborda muitos dos problemas mais comuns que as pessoas encontram ao lidar com o SQL Server. Para cada problema, ele oferece uma breve visão geral dos detalhes técnicos subjacentes antes de entrar nos detalhes de "Como eu trabalho para resolver o problema", que são os mais importantes para um profissional de TI com pouco tempo. Também há vários links para artigos e postagens de blog para os leitores mais audaciosos explorarem.
-
 Jonathan, Ted e Gail são todos MVPs altamente respeitados do SQL Server, blogueiros prolíficos (aprofundando-se bastante em suas postagens), e passam uma grande quantidade de tempo respondendo a pessoas inquisitivas e necessitadas de todo o mundo em diversos fóruns da Internet e no Twitter. Sua escrita é clara e precisa, o que é de suma importância ao transmitir detalhes de solução de problemas para pessoas que podem não estar familiarizadas com os tópicos descritos.
-
 Eu pessoalmente aprendi com esses três talentosos especialistas em SQL Server, e encorajo você a fazer o mesmo.
 
 Paul S. Randal, CEO - SQLskills.com
-
 Redmond, WA - Outubro de 2011
 
 
@@ -235,20 +230,18 @@ Redmond, WA - Outubro de 2011
 
 
 Sobre os Autores
+
 Jonathan Kehayias
+
 Jonathan atualmente trabalha como Consultor Principal e Instrutor na SQLskills, uma das empresas de treinamento e consultoria em SQL Server mais conhecidas e respeitadas do mundo. Jonathan é um SQL Server MVP e um dos poucos Microsoft Certified Masters para o SQL Server 2008 fora da Microsoft. Jonathan frequentemente escreve em seu blog sobre SQL Server, apresenta palestras na PASS Summit, SQLBits, SQL Connections e eventos locais do SQL Saturday, e tem sido um dos principais respondentes de perguntas no fórum MSDN SQL Server Database Engine desde 2007.
-
 Jonathan é um especialista em ajuste de desempenho tanto para SQL Server quanto para hardware, e já arquitetou sistemas complexos como desenvolvedor, analista de negócios e DBA. Ele também possui ampla experiência em desenvolvimento (T-SQL, C# e ASP.Net), design de hardware e virtualização, expertise em Windows, experiência em Active Directory e administração do IIS.
-
 Além do SQL Server, Jonathan também é Sargento Instrutor no Exército dos Estados Unidos e é casado e tem dois filhos pequenos. Na maioria das noites, ele pode ser encontrado no parquinho, em uma piscina ou na praia com seus filhos.
-
 Jonathan pode ser encontrado online como @SQLPoolBoy no Twitter ou por meio de seu blog em http://sqlskills.com/blogs/jonathan.
 
 Ted Krueger
+
 Ted é um consultor sênior de SQL Server em uma respeitada empresa parceira da Microsoft. Ele é um MVP, autor, blogueiro, palestrante, voluntário e mentor. Trabalhando com o SQL Server por mais de uma década, as áreas de especialização de Ted são SSIS, alta disponibilidade, espelhamento e replicação, bem como a adoção de todos os outros recursos que acompanham esse poderoso servidor de banco de dados. Ele trabalha incansavelmente para educar e ajudar os outros na comunidade. Ele é um dos fundadores da comunidade técnica em http://LessThanDot.com. Ted também pode ser encontrado respondendo perguntas em fóruns, atuando como mentor regional da PASS, respondendo perguntas no Twitter e pescando e jogando golfe em seu tempo livre.
-
 Ted pode ser encontrado online como @onpnt no Twitter, ou por meio de seu blog em http://blogs.LessThanDot.com.
-
 Ted contribuiu com os Capítulos 3 e 6 deste livro.
 
 Sobre a Revisora Técnica
@@ -256,11 +249,8 @@ Sobre a Revisora Técnica
 Gail Shaw
 
 Gail é Consultora Sênior na Xpertease, sediada em Joanesburgo, África do Sul. Ela é especializada em ajuste de desempenho de bancos de dados e recuperação de banco de dados, com foco especial em tópicos como estratégias de indexação, planos de execução e escrever código T-SQL que tenha um bom desempenho e se adapte bem à escala.
-
 Gail é uma MVP do SQL Server e uma participante frequente nos fóruns SQL Server Central e SQLTeam. Ela escreve artigos para o SQLServerCentral e Simple-Talk e bloga sobre tudo relacionado ao desempenho de banco de dados em seu blog em http://sqlinthewild.co.za. Ela palestrou no TechEd Africa, em diversos eventos online 24 Horas de PASS e, em várias ocasiões, na Cúpula da Comunidade PASS. Na Cúpula da Comunidade PASS em 2009, sua apresentação sobre estatísticas ficou classificada em 7º lugar geral no evento.
-
 Gail é uma Aikido Shodan (faixa preta de 1º grau) e uma arqueira ávida. Em seu amplo tempo livre, ela está cursando um mestrado em Ciência da Computação na Universidade da África do Sul.
-
 Gail também contribuiu com material adicional ao longo do livro, especialmente nos Capítulos 3, 5 e 6.
 
 
@@ -272,23 +262,16 @@ Agradecimentos
 Jonathan Kehayias
 
 Levar este livro à impressão exigiu mais do que simplesmente colocar pensamentos em texto, e várias pessoas contribuíram ao longo do caminho. Primeiramente, gostaria de agradecer à minha esposa, Sarah, e aos meus filhos, Charlotte e Michael, por sua habilidade e disposição em lidar com as horas tardias que passei trancado em nosso escritório em casa, assim como os fins de semana passados em frente ao meu laptop quando poderíamos estar fazendo tantas outras coisas. No último ano, mais do que o normal, Sarah passou muitas noites se perguntando se eu realmente iria conseguir ir para a cama ou não, e ela providenciou distrações para Michael e Charlotte em diversos fins de semana, especialmente nas últimas semanas antes da impressão. Sem o apoio deles, eu nunca teria conseguido passar pelas primeiras versões, muito menos pelas edições repetidas, enquanto trabalhávamos para a finalização do livro.
-
 Em segundo lugar, estão os revisores técnicos associados a este livro. A revisora técnica, Gail Shaw, contribuiu com muitas ideias e tópicos para o livro, além de adicionar exemplos e texto para aprimorar o conteúdo de vários capítulos. Desde o início do livro, eu sabia que queria ter um membro proeminente dos fóruns do SQL Server como minha revisora técnica, e embora nós respondamos principalmente a perguntas em sites diferentes, Gail estava no topo de uma lista muito curta de candidatos em potencial. Como Gail conseguiu encontrar tempo para ajudar com este livro é algo inexplicável, mas por seus esforços, sou eternamente grato.
-
 O editor-chefe do livro, Tony Davis, deve ser uma das pessoas mais pacientes que já conheci. Em todas as edições, atrasos e, em seguida, a corrida final para o fim, Tony trabalhou incansavelmente para manter o livro focado e progredindo em direção à impressão. Este livro é tanto trabalho deles quanto dos autores.
-
 Um último agradecimento vai para o meu amigo, Amit Banerjee, membro da Equipe de Escalada nos Serviços de Suporte ao Cliente da Microsoft para o SQL Server em Bangalore, Índia, que gentilmente revisou o Capítulo 4 do livro em busca de erros técnicos nas informações sobre a memória interna.
-
 Reconhecimento adicional é estendido a todos os mentores que tive ao longo dos anos, cuja lista é incrivelmente longa. Sem o comprometimento de MVPs do SQL Server como Arnie Rowland, Paul Randal, Aaron Bertrand, Louis Davidson, Geoff Hiten e inúmeros outros, eu jamais teria mantido o compromisso de responder perguntas nos fóruns.
 
 Ted Krueger
 
 Ser um colaborador deste livro foi uma grande honra para mim, e eu não teria conseguido sem o apoio da minha amada esposa, Michelle, e a paciência e brincadeiras dos meus filhos, Ethan e Cameron. A família faz tudo em uma pessoa, e a força fornecida pela minha família foi minha força motivadora em todo o processo.
-
 Agradeço especialmente à revisora técnica, Gail Shaw, cujos esforços incansáveis e conhecimento ajudaram a tornar este livro o que é. Agradeço também a Jonathan Kehayias por sua confiança e orientação ao me permitir escrever os Capítulos 3 e 6. Em todos os anos em que tenho trabalhado com o SQL Server, nenhuma outra pessoa me ensinou e ajudou mais do que o Jonathan. Ele dedica mais tempo e energia para ajudar a comunidade e compreender o SQL Server do que qualquer outra pessoa com quem já trabalhei, e faz isso de maneira altruísta.
-
 Por último, gostaria de agradecer à comunidade do SQL Server por compartilhar seu tempo e conhecimento. Eu já fiz parte de outras comunidades de desenvolvimento e engenharia, mas nenhuma conseguiu alcançar a mesma escala e energia de troca de conhecimento que acontece todos os dias na comunidade do SQL Server, por meio de fóruns, artigos, blogs e Twitter. Eu devo grande parte do que sei a essas pessoas: Replicação de Kendal Van Dyke, Planos de Execução de Grant Fritchey, SQL Server Internals de Paul Randal e muito mais.
-
 Sem o trabalho árduo deles, descobrir como domar esse sistema de banco de dados complexo seria uma tarefa muito mais difícil. Por minha vez, tenho feito o meu melhor para compartilhar o que sei com a comunidade.
 
 
@@ -298,25 +281,17 @@ Sem o trabalho árduo deles, descobrir como domar esse sistema de banco de dados
 Introdução
 
 Grande parte dos últimos seis anos da minha vida profissional foi dedicada a ajudar as pessoas a resolver problemas de desempenho relacionados ao SQL Server, seja no local de trabalho, como consultor em clientes, ou em vários fóruns de comunidades online, respondendo às perguntas das pessoas.
-
 Ao longo desse tempo, fui exposto a alguns problemas estranhos e maravilhosos do SQL Server, mas principalmente vi os mesmos problemas e as mesmas confusões surgirem repetidamente. Era apenas uma questão de tempo antes de eu chegar à conclusão imprudente de que deveria escrever um livro para explicar quais eram os problemas mais comuns, por que eles ocorriam e oferecer soluções sensatas e práticas, voltadas para a remoção da causa raiz do problema, em vez de simplesmente "tapar os buracos".
-
 Acabou se revelando uma tarefa muito mais desafiadora do que eu imaginava, por várias razões. Em primeiro lugar, este é, por sua própria natureza, um livro abrangente, que aborda tópicos que vão desde problemas de CPU até gerenciamento de memória, índices ausentes e logs de transação completos. Em segundo lugar, é surpreendente como alguns dos tópicos mais simples se tornam complexos quando você tenta escrevê-los em texto. Em terceiro lugar, a tecnologia muda rapidamente, e o solucionador de problemas, assim como os conselhos que ele oferece, devem se adaptar em conformidade. Houve vários casos na escrita deste livro em que uma mudança tecnológica significava que eu tinha que voltar e adaptar meu conselho original, ou onde minha própria opinião sobre o conteúdo e as metodologias de solução de problemas haviam evoluído a ponto de certas seções precisarem ser completamente reescritas.
-
 Apesar das ocasionais dificuldades, o que espero ter conseguido é um livro que aborda de forma clara e concisa os problemas mais comuns associados às versões atualmente suportadas do SQL Server, ou seja, SQL Server 2005, 2008 e 2008 R2. O primeiro capítulo explica minha abordagem básica para solução de problemas de desempenho e as ferramentas que utilizo. Ele enfatiza, em particular, como é raro que um problema possa ser diagnosticado olhando apenas para um único ponto de dados.
-
 A arte de domar um SQL Server indisciplinado é a arte de reunir as várias informações de que você precisa e, em seguida, montar o "quebra-cabeça" para que você tenha uma visão completa do que está acontecendo dentro de um servidor e uma compreensão real da causa raiz do problema.
-
 Os oito capítulos seguintes abordam as áreas em que vejo problemas surgindo com frequência alarmante: E/S de disco, alto uso de CPU, gerenciamento inadequado de memória, índices ausentes, bloqueios e deadlocks, logs de transação completos e perda acidental de dados.
-
 Em cada caso, descrevo os problemas mais comuns, por que eles ocorrem, como podem ser diagnosticados usando ferramentas como contadores do Monitor de Desempenho, Visualizações de Gerenciamento Dinâmico, rastreamento no lado do servidor, entre outros, e como resolvê-los.
-
 Ao aplicar os passos básicos que utilizo diariamente para solucionar esses problemas de desempenho, espero que você também possa começar a resolver os problemas de desempenho em seu ambiente de forma mais rápida e precisa.
 
 Para quem é este livro?
 
 O público principal deste livro é qualquer pessoa que se encontrou responsável pelo SQL Server "por acidente"; em outras palavras, os DBAs acidentais/involuntários e administradores de sistema que tiveram a responsabilidade de cuidar de bancos de dados do SQL Server adicionada às suas funções, porque há um SQL Server em seu ambiente e alguém precisa cuidar dele.
-
 No entanto, os conceitos e metodologias de solução de problemas abordados neste livro podem ser aplicados por qualquer pessoa, incluindo administradores de banco de dados experientes, para identificar e resolver problemas comuns e aprender novas técnicas para gerenciar e manter o SQL Server. Qualquer pessoa que já tenha feito perguntas em um dos fóruns da comunidade provavelmente aprenderá algo novo com este livro.
 
 Exemplos de código
@@ -334,29 +309,19 @@ Todos os exemplos devem ser executados em todas as versões do SQL Server a part
 Capítulo 1: Uma metodologia de solução de problemas de desempenho
 
 Saber por onde começar é a parte mais difícil de resolver um problema. Como Administrador de Banco de Dados Sênior, eu me orgulhava de ser capaz de identificar a causa raiz dos problemas em meus servidores e rapidamente restaurar os serviços ao funcionamento normal. A capacidade de fazer isso se deve em parte a um conhecimento sólido do ambiente do seu SQL Server, em parte ao uso das ferramentas e scripts corretos e em parte ao aprendizado de observar o que deve ser observado, com base em lições bem aprendidas no passado.
-
 Definir uma metodologia específica para solucionar problemas com o SQL Server é difícil, porque, é claro, o caminho exato para resolver o problema dependerá da natureza específica do problema e do ambiente. Uma das chaves para uma solução de problemas precisa não é apenas coletar e examinar todas as informações relevantes, mas também descobrir o que elas estão dizendo coletivamente. Há um famoso provérbio antigo, registrado no livro "A dialogue conteining the nomber in effect of all the prouerbes in the englishe tongue" de John Heywood, que resume isso muito bem: Eu vejo, mas não consigo ver a floresta por causa das árvores.
-
 Se você coletar e examinar individualmente cinco peças separadas de dados de desempenho, é possível que cada uma possa levá-lo a um caminho separado. Vistas em conjunto, elas provavelmente o levarão ao sexto e correto caminho para resolver o problema. Se há uma lição a ser aprendida deste capítulo, bem como deste livro, é que focar em uma única informação pode muitas vezes levar a um diagnóstico incorreto de um problema.
-
 O que tento oferecer neste capítulo não é um conjunto de tábuas de pedra que prescrevem os passos exatos a serem tomados para resolver todos os problemas do SQL Server, mas sim uma abordagem básica e um conjunto de ferramentas que me serviram bem repetidamente nos seis anos em que trabalhei com o SQL Server, solucionando problemas de desempenho. Ele cobre uma descrição de alto nível da minha abordagem básica, seguida de seções mais detalhadas sobre cada uma das minhas áreas de foco, incluindo estatísticas de espera, estatísticas de arquivos virtuais, contadores de desempenho relacionados ao SQL Server e análise do cache de plano.
 
 Definindo uma Metodologia de Solução de Problemas
 
 Como notei na introdução deste capítulo, definir uma metodologia de solução de problemas é difícil, porque a metodologia real que eu aplico depende inteiramente do problema específico que estou tentando solucionar para um ambiente específico. No entanto, minha abordagem básica e as ferramentas que uso permanecem constantes, independentemente de o problema ser usuários reclamando de desempenho lento ou se estou apenas realizando uma verificação padrão de saúde do servidor.
-
 Quando estou examinando um servidor pela primeira vez, preciso estabelecer uma imagem de sua saúde geral e há vários itens nos quais me concentrarei para obter essa imagem. Para cada informação que coletar, a examinarei em relação aos pontos de dados anteriores, para validar ou refutar quaisquer indicadores anteriores quanto à natureza do problema.
-
 Bastante cedo em qualquer análise, darei uma olhada nas estatísticas de espera, na Visualização de Gerenciamento Dinâmico (DMV) sys.dm_os_wait_stats, para identificar quaisquer esperas de recursos principais no sistema, no nível do sistema operacional. Digamos que identifique esperas de PAGEIOLATCH_SH muito altas, o que indica que as sessões estão experimentando atrasos na obtenção de uma trava para uma página de buffer. Isso acontece quando muitas sessões, ou talvez uma sessão em particular, estão solicitando muitas páginas de dados que não estão disponíveis no pool de buffers (e, portanto, é necessário I/O físico para recuperá-las). O SQL Server deve alocar uma página de buffer para cada uma e colocar uma trava nessa página enquanto ela é recuperada do disco. O gargalo aqui é o I/O de disco; o subsistema de disco simplesmente não pode retornar páginas com rapidez suficiente para satisfazer todas as solicitações de página e, portanto, as sessões estão esperando por travas, e o desempenho está sofrendo. No entanto, isso não significa necessariamente que um subsistema de disco lento seja a causa do gargalo; pode ser simplesmente vítima de um I/O excessivo causado por um problema em outro lugar no sistema.
-
 Neste ponto, quero validar essas informações examinando as estatísticas virtuais de arquivos em sys.dm_io_virtual_file_stats. Especificamente, procurarei evidências de alta latência associada às operações de leitura e gravação sendo executadas pelo SQL Server. Ao mesmo tempo, estarei me aprofundando mais no problema, uma vez que as estatísticas virtuais de arquivos me dirão quantas atividades de I/O estão sendo realizadas pelo SQL Server e como a carga de I/O é distribuída entre arquivos e bancos de dados na instância do SQL Server. Para corroborar ainda mais esses dados, também posso verificar os valores dos contadores de desempenho Physical Disk\Avg. Disk Reads/sec e Physical Disk\Avg. Disk Writes/sec. Então, neste estágio, digamos que eu tenha confirmado a alta latência associada às operações de leitura e gravação e descobri que um banco de dados específico está experimentando um nível muito alto de I/O principalmente baseado em leitura.
-
 Meu próximo passo será investigar as estatísticas de execução das consultas contra esse banco de dados, que são mantidas em sys.dm_exec_query_stats para os planos de execução que estão em cache. Eu identificarei as consultas que têm as leituras físicas acumuladas mais altas e, em seguida, revisarei seus planos de execução associados, procurando oportunidades de ajuste de desempenho, seja adicionando índices ausentes (consulte o Capítulo 5) ao banco de dados ou fazendo alterações no código SQL, a fim de otimizar a maneira como o mecanismo do banco de dados acessa os dados.
-
 Pode ser que o código esteja otimizado até onde pode ser, mas uma consulta de relatório comumente executada simplesmente precisa ler 6 GB de dados do banco de dados para agregação, como parte de sua execução. Se a maioria desses dados não estiver no cache de buffer, isso causará alto E/S físico e será responsável pelas altas esperas PAGEIOLATCH_SH. Nesse ponto, podemos precisar olhar para nossa configuração de hardware e ver se a raiz real do nosso problema é a falta de memória instalada no servidor. Para verificar isso, examinarei os contadores de memória do PerfMon (consulte o Capítulo 4). Se eu ver que a expectativa de vida da página está constantemente oscilando e o sistema está experimentando valores não nulos para Free List Stalls/sec e altos Lazy Writes/sec, então posso ter certeza de que o pool de buffer para a instância está dimensionado inadequadamente para a quantidade de dados que está sendo usada pela carga de trabalho. Isso não significa necessariamente que o servidor precisa de mais memória; pode ser que as consultas sejam ineficientes e estejam lendo muito mais dados do que o necessário. Para identificar a solução apropriada, serão necessárias análises mais aprofundadas. Este é apenas um dos muitos exemplos possíveis, mas é um exemplo do mundo real que encontrei muitas vezes ao solucionar problemas de desempenho com o SQL Server.
-
 Existem vários pontos nesse processo de solução de problemas em que seria muito fácil chegar à conclusão errada sobre a natureza do problema. Por exemplo, após revisar as estatísticas de arquivos virtuais e os contadores de desempenho para os discos físicos no servidor, seria fácil concluir que o subsistema de E/S de disco para o servidor estava dimensionado inadequadamente para a quantidade de trabalho sendo realizado e que discos adicionais precisavam ser comprados para lidar com as demandas de E/S de disco do servidor. Infelizmente, aumentar o tamanho de um subsistema de E/S de disco pode ser uma solução extremamente cara se o problema estiver relacionado a um índice ausente em uma consulta comumente executada ou à pressão de memória no pool de buffer. É possível que comprar uma configuração de disco grande o suficiente possa mascarar temporariamente o problema, mas, como a causa raiz subjacente não foi resolvida, pode-se ter certeza de que o mesmo problema ocorrerá mais tarde, à medida que o sistema continua a crescer.
-
 Depois de fornecer uma visão geral da minha abordagem básica, as seções a seguir aprofundarão um pouco mais nas áreas específicas de foco, como estatísticas de espera, estatísticas virtuais de arquivos, contadores de desempenho e uso do cache de plano. Vou explicar as informações que eles oferecem individualmente e como todas essas informações se inter-relacionam para ajudá-lo a obter uma compreensão completa do que está acontecendo dentro de um servidor.
 
 Não se esqueça do óbvio
@@ -366,15 +331,10 @@ Apenas um lembrete suave: antes de se empolgar coletando dados diagnósticos, ce
 Wait Statistics: a Base para Resolução de Problemas
 
 Um dos primeiros itens que verifico ao resolver problemas de desempenho em um SQL Server são as estatísticas de espera, que são registradas pelo SQLOS durante as operações normais de qualquer SQL Server.
-
 O SQLOS é um pseudo-sistema operacional que funciona como parte do mecanismo de banco de dados do SQL Server e fornece agendamento de threads, gerenciamento de memória e outras funções para o SQL Server. Normalmente, tais serviços seriam fornecidos pelo sistema operacional para quaisquer processos em execução dentro do sistema operacional. A razão pela qual o SQL Server fornece seu próprio ambiente de pseudo-sistema operacional é que ele sabe como agendar suas tarefas melhor do que o sistema operacional Windows, e o agendamento cooperativo implementado pelo SQLOS permite níveis mais altos de concorrência do que o agendamento preemptivo fornecido pelo sistema operacional Windows.
-
 Como exemplo disso, toda vez que o SQL Server tem que esperar enquanto executa uma operação ou instrução, o tempo gasto esperando é rastreado pelo SQLOS como tempo de espera. Esses dados são expostos, para cada instância do SQL Server instalado em um servidor, na DMV sys.dm_os_wait_stats. A causa e a duração das várias esperas que o SQL Server está experimentando podem fornecer informações significativas sobre a causa dos problemas de desempenho, desde que você entenda exatamente o que as estatísticas de espera estão indicando e saiba como correlacionar as informações de espera com outras informações de solução de problemas, como os contadores do PerfMon e outras DMVs.
-
 Uma das razões pelas quais as estatísticas de espera são um bom ponto de partida para solucionar problemas de desempenho do SQL Server é que, muitas vezes, os usuários não definem bem os detalhes do problema ao relatá-lo. Na maioria das vezes, a descrição do problema se limita a "o processo x, y ou z está mais lento do que o normal, você pode consertá-lo?". Uma das maneiras mais fáceis de solucionar um problema desconhecido de desempenho é verificar onde e por que o SQL Server teve que esperar para continuar a execução de suas várias tarefas. Geralmente, patches do Windows Server e do SQL Server serão regularmente aplicados ao servidor, então você saberá há quanto tempo o servidor foi reiniciado e, portanto, por que período as estatísticas se acumularam (a menos que alguém as tenha apagado manualmente - veja mais adiante). Idealmente, você desejará que esse período seja superior a cerca de duas semanas (para garantir que as estatísticas cubram toda a carga de trabalho), mas não tão longo que os dados se tornem difíceis de analisar. Nesse último caso, você também pode considerar capturar os valores, esperar um período, capturar novamente e comparar os dois.
-
 Diagnosticar estatísticas de espera para uma única instância do SQL Server não é uma tarefa simples. Muitas vezes, as informações fornecidas pelas estatísticas de espera são apenas um sintoma do problema real. Para usar essa informação de espera de forma eficaz, é necessário entender a diferença entre esperas de recursos (ou seja, rastreáveis a um recurso de hardware) e esperas não relacionadas a recursos no sistema, bem como os outros resultados fornecidos pelo SQL Server, em relação às informações de espera que estão sendo rastreadas pela instância do SQL Server em geral.
-
 Como parte das operações normais do SQL Server, existem várias condições de espera que não apresentam problemas e geralmente são esperadas no servidor. Essas condições de espera podem ser consultadas no geral nas sessões do sistema da DMV sys.dm_os_waiting_tasks, conforme mostrado no exemplo 1.1.
 
 SELECT DISTINCT
@@ -452,9 +412,7 @@ ASYNC_NETWORK_IO
 Essa espera geralmente é atribuída erroneamente a um gargalo de rede. De fato, a causa mais comum dessa espera é um aplicativo cliente que está processando as linhas do conjunto de resultados vindos do SQL Server uma a uma (o cliente aceita uma linha, processa, aceita a próxima linha e assim por diante). Para corrigir esse tipo de espera, geralmente é necessário alterar o código do lado do cliente para ler o conjunto de resultados o mais rápido possível e, em seguida, realizar o processamento.
 
 Essas explicações básicas de cada um dos principais tipos de espera não o tornarão um especialista em análise de tipos de espera, mas a presença de qualquer um desses tipos de espera no topo da saída do Exemplo 1.2 certamente ajudará a direcionar suas investigações subsequentes. Por exemplo, se você ver espera PAGEIOLATCH_*, provavelmente desejará concentrar sua próxima análise nas estatísticas de arquivo virtual, conforme explicado no exemplo anterior.
-
 Por outro lado, se os principais tipos de espera no sistema são esperas LCK_, então você não vai querer perder tempo olhando para a configuração de E/S de disco, mas sim se concentrar em descobrir o que pode estar causando bloqueios dentro dos bancos de dados no servidor. Quando aparecem esperas LCK_, eu tendo a pular imediatamente para uma solução de problemas mais avançada desse problema específico e começar a procurar bloqueios no sistema usando o DMV sys.dm_exec_requests e outros métodos descritos no Capítulo 6, em vez de aderir estritamente à minha metodologia normal. No entanto, dependendo do que eu encontrar, posso voltar para ver quais outros problemas existem no sistema.
-
 Após corrigir qualquer problema no servidor, a fim de validar que o problema foi realmente corrigido, as estatísticas de espera sendo rastreadas pelo servidor podem ser redefinidas usando o código na Listagem 1.3.
 
 DBCC SQLPERF('sys.dm_os_wait_stats', clear)
@@ -466,7 +424,6 @@ Uma das ressalvas associadas à limpeza das estatísticas de espera no servidor 
 Virtual File Statistics
 
 Uma armadilha comum na minha experiência, ao usar as estatísticas de espera como fonte principal de dados para solução de problemas, é que a maioria dos servidores SQL apresentará sinais do que parece ser um gargalo de E/S de disco. Infelizmente, as estatísticas de espera não informam o que está causando a E/S e é fácil diagnosticar erroneamente a causa raiz.
-
 Essa é a razão pela qual uma análise das estatísticas virtuais de arquivos, juntamente com as estatísticas de espera, é quase sempre recomendada. As estatísticas virtuais de arquivos são expostas através da função sys.dm_io_virtual_file_stats, que, ao receber um file_id (e possivelmente database_id), fornecerá estatísticas cumulativas de E/S físicas, o número de leituras e gravações em cada arquivo de dados e o número de leituras e gravações em cada arquivo de log, para as várias bancos de dados na instância, a partir das quais é possível calcular a proporção de leituras para gravações. Isso também mostra o número de pausas de E/S e o tempo de pausa associado às solicitações, que é o tempo total que as sessões aguardaram a conclusão da E/S no arquivo.
 
 SELECT  DB_NAME(vfs.database_id) AS database_name ,
@@ -498,27 +455,18 @@ ORDER BY avg_total_latency DESC
 Exemplo 1.4: Virtual file statistics.
 
 O que eu estou procurando principalmente nos resultados são padrões de atividade no arquivo, seja leitura intensa ou escrita intensa, e a latência média associada à E/S, pois isso direcionará uma investigação adicional e possíveis soluções.
-
 Se os arquivos de dados e log estiverem em um array de discos compartilhados no servidor e a média de latência total calculada for a mesma em todos os bancos de dados e maior do que o aceitável para a carga de trabalho específica, o problema pode ser que a carga de trabalho tenha excedido a capacidade do subsistema de E/S do disco.
-
 No entanto, se o servidor hospeda um banco de dados que é usado para arquivar dados em armazenamento mais lento, para relatórios ano a ano, pode ser que ter espera PAGEIOLATCH_* no banco de dados seja totalmente normal, e as informações io_stall para os arquivos de banco de dados específicos podem nos levar a determinar que as esperas são mais provavelmente atribuíveis ao processo de arquivamento. Isso destaca o fato de que é útil ter um conhecimento sólido da configuração subjacente e do tipo de carga de trabalho para o servidor, enquanto você está solucionando o problema.
-
 Se um determinado arquivo está sujeito a uma atividade de leitura muito intensa (por exemplo, uma proporção de 10:1 ou mais para a relação leitura/escrita) e apresenta alta latência média, então eu posso recomendar uma mudança no RAID para a matriz de discos, por exemplo, de RAID 10 para RAID 5, oferecendo mais fusos para compartilhar a E/S de leitura.
-
 Esperançosamente, esta discussão destacou o elemento chave da resolução efetiva de problemas, que é examinar muitos "pontos de dados" juntos, para chegar a um diagnóstico verdadeiro. A descoberta de pressão de I/O, revelada por esperas relacionadas a I/O, pode ser causada por capacidade inadequada ou configuração do subsistema de disco, mas sua causa raiz é mais provável de estar em outro lugar, como um gargalo de memória no buffer pool, ou varreduras excessivas de índice e / ou tabela devido a consultas mal escritas (consulte a seção Uso do Cache de Plano deste capítulo) e falta de indexação.
 
 Contadores de desempenho
 
 Muitos artigos, white papers e posts em blogs na Internet tentam fornecer listas detalhadas dos contadores de desempenho importantes que devem ser monitorados para instâncias do SQL Server, juntamente com diretrizes gerais para valores aceitáveis ​​para esses contadores. No entanto, se você tentar coletar e analisar os valores de todos os contadores disponíveis, rapidamente encontrará uma tarefa avassaladora.
-
 Pessoalmente, pelo menos nas fases iniciais da minha investigação, eu confio em um pequeno conjunto de contadores, diretamente relacionados ao SQL Server. Em um estágio mais avançado do processo de solução de problemas, posso começar a coletar contadores do Windows, a fim de verificar as informações que já tenho ou para ajudar a isolar um problema de caso extremo para uma causa específica.
-
 Uma das minhas ferramentas favoritas, quando chego ao ponto em que preciso coletar um conjunto maior de contadores, coletando informações do Windows e do SQL Server, é a ferramenta Performance Analysis of Logs (PAL), que foi disponibilizada gratuitamente pela Microsoft em http://pal.codeplex.com.
-
 A ferramenta fornece modelos integrados que podem ser exportados para criar um conjunto de coletor de desempenho no Windows, cada conjunto contendo os contadores-chave para um produto específico. Ele inclui um modelo para o SQL Server 2005 e 2008. O maior benefício dessa ferramenta é que ela também possui modelos de limite integrados que podem ser usados para processar os dados do contador de desempenho depois que eles foram coletados. Eles podem ser usados para produzir um relatório detalhado, dividindo os dados em fatias de tempo e automatizando a análise dos dados em períodos de tempo e atividade. Se você quiser saber mais sobre todos os contadores relacionados ao desempenho do SQL Server, o que eles significam e quais são os valores limite atualmente recomendados pela Microsoft para esses contadores, eu recomendaria baixar a ferramenta e dar uma olhada em todas as informações contidas no arquivo de limite do SQL Server.
-
 No entanto, os contadores que investigo inicialmente estão limitados àqueles relacionados a áreas específicas do SQL Server e são aqueles que provaram ao longo dos anos fornecer informações críticas para determinar como continuar com o processo de solução de problemas. Os contadores estão todos disponíveis dentro do SQL Server por meio da DMV sys.dm_os_performance_counters e podem ser consultados apenas usando T-SQL.
-
 Uma das dificuldades ao consultar diretamente os dados brutos dos contadores de desempenho é que alguns deles são cumulativos, aumentando de valor com o tempo, e a análise dos dados requer a captura de duas capturas de tela dos dados e, em seguida, o cálculo da diferença entre elas. A consulta no Exemplo 1.5 realiza automaticamente as capturas de tela e os cálculos, permitindo que a saída seja analisada diretamente. Existem outros contadores de desempenho, não considerados no Exemplo 1.5, que têm um contador base secundário associado pelo qual o contador principal precisa ser dividido para chegar ao seu valor real.
 
 DECLARE @CounterPrefix NVARCHAR(30)
@@ -662,21 +610,13 @@ SQLServer:SQL Statistics\SQL Compilations/sec
 SQLServer:SQL Statistics\SQL Re-Compilations/sec
 
 Os dois contadores de Access Methods fornecem informações sobre as maneiras pelas quais as tabelas estão sendo acessadas no banco de dados. O mais importante é o contador Full Scans/sec, que pode nos dar uma ideia do número de varreduras de índices e tabelas que estão ocorrendo no sistema.
-
 Se o subsistema de I/O de disco for o gargalo (o que, lembre-se, é mais frequentemente causado pela pressão exercida por um problema em outro lugar) e este contador estiver mostrando que há varreduras ocorrendo, pode ser um sinal de que há índices faltando ou código ineficiente no banco de dados. Quantas varreduras são problemáticas? Isso depende inteiramente do tamanho dos objetos sendo varridos e do tipo de carga de trabalho sendo executada. Em geral, quero que o número de Index Searches/sec seja maior que o número de Full Scans/sec por um fator de 800-1000. Se o número de Full Scans/sec for muito alto, consulte o Capítulo 5, Índices Ausentes para determinar se há índices faltando no banco de dados, resultando em operações de I/O excessivas.
-
 Os contadores Buffer Manager e Memory Manager podem ser usados, como um grupo, para identificar se o SQL Server está enfrentando pressão de memória. Os valores dos contadores Page Life Expectancy, Free List Stalls/sec e Lazy Writes/sec, quando correlacionados, validarão ou refutarão a teoria de que o cache de buffer está sob pressão de memória.
-
 Muitas referências online lhe dirão que se o contador de desempenho Page Life Expectancy (PLE) cair abaixo de 300, que é o número de segundos que uma página permanecerá no cache de dados, então você tem pressão de memória. No entanto, esse valor de referência para o contador PLE foi definido em um momento em que a maioria dos servidores SQL tinha apenas 4 GB de RAM e a porção de cache de dados do pool de buffers era geralmente de 1,6 GB. Em servidores modernos, onde é comum que os servidores SQL tenham 32 GB ou mais de RAM instalada e um cache de dados significativamente maior, ter 1,6 GB de dados percorrendo esse cache a cada 5 minutos não é necessariamente um evento significativo.
-
 Em resumo, o valor apropriado para esse contador depende do tamanho do cache de dados do SQL Server, e um valor fixo de 300 não se aplica mais. Em vez disso, eu avalio o valor do contador PLE com base na memória instalada no servidor. Para fazer isso, eu tomo o valor base de 300 apresentado pela maioria dos recursos e determino um múltiplo desse valor com base no tamanho do cache de buffer configurado, que é a opção "max server memory" em "sp_configure" no SQL Server, dividido por 4 GB. Portanto, para um servidor com 32 GB alocados para o pool de buffer, o valor de PLE deve ser pelo menos (32/4)*300 = 2400. Consulte o Capítulo 4, Gerenciamento de Memória, para obter uma discussão mais detalhada sobre configuração e considerações de memória.
-
 Se o valor do PLE estiver consistentemente abaixo desse valor e o servidor estiver experimentando altas gravações preguiçosas por segundo (Lazy Writes/sec), que são despejos de página da memória cache fora do processo normal de CHECKPOINT, então o servidor provavelmente está experimentando pressão de memória na cache de dados, o que também aumentará o E/S de disco sendo executado pelo SQL Server. Neste ponto, os contadores de Métodos de Acesso devem ser investigados para determinar se estão sendo realizadas varreduras excessivas em tabelas ou índices no SQL Server.
-
 Os contadores "General Statistics\Processes Blocked", "Locks\Lock Waits/sec" e "Locks\Lock Wait Time (ms)" fornecem informações sobre bloqueios no instância do SQL Server, no momento da coleta de dados. Se esses contadores retornarem um valor diferente de zero em coletas repetidas de dados, então bloqueios estão ocorrendo ativamente em um dos bancos de dados e as informações contidas no Capítulo 6, Bloqueio devem ser usadas para solucionar os problemas mais a fundo.
-
 Os três contadores de Estatísticas SQL fornecem informações sobre com que frequência o SQL Server está compilando ou recompilando um plano de execução, em relação ao número de lotes sendo executados no servidor. Quanto maior o número de SQL Compilations/sec em relação ao Batch Requests/sec, mais provável é que o SQL Server esteja experimentando uma carga de trabalho ad hoc que não esteja fazendo uso ideal do armazenamento em cache de plano. Quanto maior o número de SQL Re-Compilations/sec em relação ao Batch Requests/sec, mais provável é que haja uma ineficiência no design do código que esteja forçando uma recompilação do código sendo executado no SQL Server. Em qualquer caso, a investigação do Cache de Plano, conforme detalhado na próxima seção, deve identificar por que o servidor precisa compilar consistentemente planos de execução para a carga de trabalho.
-
 O contador de desempenho Memory Manager\Memory Grants Pending fornece informações sobre o número de processos aguardando uma concessão de memória de espaço de trabalho na instância. Se este contador tiver um valor alto, o SQL Server pode se beneficiar de memória adicional, mas pode haver ineficiências de consulta na instância que estão causando requisitos excessivos de concessão de memória, por exemplo, classificações ou hashes grandes que podem ser resolvidos ajustando a indexação ou consultas que estão sendo executadas.
 
 Uso do cache de plano
@@ -699,21 +639,17 @@ ORDER BY avg_physical_reads DESC
 Listagem 1.6: Estatísticas de execução do SQL Server.
 
 As informações armazenadas no cache de plano podem ser usadas para identificar as consultas mais caras com base nas operações físicas de E/S para leitura e gravação, ou com base em diferentes critérios, dependendo do tipo mais problemático de E/S para a instância, descoberto como resultado de análises anteriores das estatísticas de espera e de arquivos virtuais.
-
 Além disso, a função sys.dm_exec_query_plan() pode ser aplicada cruzadamente usando a coluna plan_handle da exibição de gerenciamento dinâmico sys.dm_exec_query_stats para obter o plano de execução armazenado no cache de plano. Analisando esses planos, podemos identificar operações problemáticas que são candidatas à otimização de desempenho.
 
 Otimização de desempenho de consulta
 
 Uma discussão completa sobre a otimização de desempenho de consulta está além do escopo deste livro. Na verdade, vários livros notáveis foram escritos apenas sobre esse tópico, incluindo "SQL Server 2008 Query Performance Tuning Distilled" (http://www.amazon.com/Server-Performance-Tuning-Distilled-Experts/dp/1430219025) e "Inside Microsoft SQL Server 2008: T-SQL Querying" (http://www.amazon.com/Inside-Microsoft®-SQL-Server®-2008/dp/0735626030).
-
 As informações na exibição de gerenciamento dinâmico sys.dm_exec_query_stats também podem ser usadas para identificar os comandos que consumiram mais tempo de CPU, que tiveram o tempo de execução mais longo ou que foram executados com mais frequência.
-
 No SQL Server 2008, foram adicionadas duas colunas adicionais, query_hash e query_plan_hash, na exibição de gerenciamento dinâmico sys.dm_exec_query_stats. O query_hash é um hash sobre o texto do comando para permitir que comandos semelhantes sejam agregados juntos. O query_plan_hash é um hash do formato do plano de consulta que permite que consultas com planos de execução semelhantes sejam agregadas juntas. Juntos, eles permitem que as informações contidas nesta exibição de gerenciamento dinâmico sejam agregadas para cargas de trabalho ad hoc, a fim de determinar o impacto total de comandos semelhantes que têm valores literais compilados diferentes.
 
 Resumo
 
 Este capítulo delineou minha abordagem básica para investigar problemas de desempenho no SQL Server. Essa abordagem é mais ou menos a mesma, independentemente se é um servidor que eu conheço bem ou se estou investigando pela primeira vez, sem conhecimento prévio da saúde e configuração da instância do SQL Server. Com base nas informações coletadas usando esta metodologia, é possível realizar um diagnóstico mais avançado das áreas problemáticas identificadas, utilizando as informações contidas nos capítulos subsequentes deste livro.
-
 O ponto mais importante que quero enfatizar neste capítulo introdutório é que nenhuma única informação no SQL Server deve ser usada para identificar um problema específico. A arte de controlar um SQL Server problemático é a arte de reunir as várias peças do quebra-cabeça para que você tenha uma compreensão completa do que está acontecendo dentro de um servidor. Se você se concentrar apenas no que está imediatamente à sua frente, na maioria dos casos, perderá o item mais importante, que é a verdadeira causa raiz de um problema específico no SQL Server.
 
 
@@ -723,39 +659,30 @@ O ponto mais importante que quero enfatizar neste capítulo introdutório é que
 Capítulo 2: Configuração de E/S de disco
 
 A configuração inadequada do hardware é uma causa comum de problemas de desempenho e escalabilidade do SQL Server. Se você tentar executar o SQL Server em hardware de estação de trabalho, enfrentará problemas, mas mesmo em hardware de servidor, problemas de desempenho podem e ocorrerão se um ou mais componentes de hardware tiverem sido dimensionados e configurados de maneira inadequada para a carga de trabalho do SQL Server.
-
 O SQL Server é muito diferente de outras aplicações em termos de suas características de uso de disco e requisitos de armazenamento, e o subsistema de disco é um dos componentes de hardware mais comumente subdimensionados e mal configurados para o SQL Server. Frequentemente, a carga de trabalho de E/S pode ser substancialmente reduzida por medidas como o uso apropriado de indexação ou garantindo que as consultas não leiam mais dados do que estritamente necessário. No entanto, se os problemas de E/S persistirem, indicados, por exemplo, por valores de latência elevados para os contadores PerfMon Physical Disk\Disk sec/Reads e Physical Disk\Disk sec/Writes, ou tipos de espera relacionados a E/S específicos nas DMVs, então você precisará solucionar problemas em seu sistema de E/S de disco. Essa tarefa pode ser relativamente simples ou extremamente complexa, dependendo se você está usando armazenamento simples, conectado diretamente, ou uma vasta e complexa Rede de Área de Armazenamento (SAN) em toda a empresa.
-
 Este capítulo discute os fundamentos da configuração do subsistema de I/O de disco para o SQL Server, e os problemas mais comuns associados a configurações de disco incorretamente dimensionadas ou projetadas incorretamente, abordando tópicos como:
-
 Escolha apropriada do nível RAID de hardware - existem muitas configurações possíveis, e a escolha certa dependerá em grande parte da natureza da carga de trabalho do SQL Server.
 Capacidade de armazenamento versus throughput - 1 TB de armazenamento de banco de dados pode ser satisfeito com um único disco de 1 TB, mas o throughput e o desempenho de E/S são provavelmente pobres.
 Tipo e distribuição da carga de trabalho - considerações específicas para arquivos de dados, log e tempdb.
 Problemas comuns de E/S de disco - como desalinhamento de partição de disco e problemas de largura de banda de rede em SANs.
-
 De longe, a melhor maneira de lidar com problemas de E/S de disco é trabalhar o mais duro possível durante a fase de design do sistema para evitá-los. A única maneira de ter certeza de que seu subsistema de E/S de disco atenderá aos seus requisitos de desempenho e taxa de transferência de E/S é entender quais são esses requisitos e testar o desempenho do seu subsistema de disco sob cargas realistas, usando uma ferramenta como o SQLIO ou IOmeter.
 
 Configuração de disco: Considerações Básicas
 
 A escalabilidade da memória melhorou substancialmente nos últimos anos. É relativamente barato fornecer mais capacidade de RAM para o SQL Server, para ajudar a minimizar a entrada/saída do disco. Da mesma forma, com processadores potentes com oito ou até doze núcleos físicos surgindo no mercado, muitos servidores modernos frequentemente possuem capacidade de CPU ociosa que, novamente, pode ser usada para ajudar a reduzir a pressão no sistema de entrada/saída do disco.
-
 O tema comum aqui parece ser que o subsistema de disco precisa de toda a ajuda possível. Certamente, ao longo de um período de tempo semelhante, as melhorias de desempenho nos tradicionais discos rígidos magnéticos, que ainda sustentam a grande maioria das instalações do SQL Server, foram relativamente modestas em comparação com as melhorias em memória e CPU. Como tal, é preciso ter muito cuidado ao provisionar e configurar o hardware do subsistema de disco para instalações do SQL Server, a fim de garantir que atenda aos requisitos de carga de I/O do banco de dados do SQL Server que roda nele.
-
 Esta seção irá revisar brevemente algumas das principais considerações ao dimensionar e configurar o subsistema de disco e abordaremos cada um desses problemas conforme avançamos no capítulo.
 
 Tamanho do disco vs. throughput do disco
 
 Um dos erros mais comuns cometidos ao planejar e construir um subsistema de E/S de disco para o SQL Server é pensar puramente em termos de quanto espaço de disco é necessário, em vez do throughput do disco necessário para suportar a carga de trabalho transacional no banco de dados.
-
 Para discos rígidos convencionais que possuem um prato rotativo, os fatores limitantes para desempenho e taxa de transferência, expressos em IOPS e MB/s, são:
 
 rotações por minuto - a velocidade com que o prato gira para ler dados do disco.
 tempo de busca em ms - o tempo necessário para reposicionar a cabeça do disco para localizar dados no disco.
 
 Se você precisa de 1 TB de armazenamento para um banco de dados, você pode atender a essa demanda com um único disco rígido de 1 TB, mas você descobrirá que tanto a latência de rotação quanto a latência da cabeça de disco serão altas, e o desempenho e a taxa de transferência de E/S correspondentes serão baixos. Tal configuração de disco único seria desaconselhável, independentemente do tipo de carga de trabalho suportada, mas seria especialmente problemática quando a carga de trabalho gerasse um grande número de operações de leitura/gravação aleatórias (como seria típico para uma carga de trabalho OLTP), resultando em graves problemas de latência da cabeça de disco.
-
 A maneira de mitigar problemas de latência de disco e melhorar significativamente o desempenho e a taxa de transferência do disco é distribuir os dados em vários discos menores configurados em uma das várias configurações RAID disponíveis (discutidas posteriormente), que podem ser apresentados ao Windows como um único dispositivo de hardware.
-
 Claro, isso pode levar a um aumento substancial na complexidade do sistema de armazenamento, e significa que o desempenho e o throughput do I/O do disco final são afetados, não apenas pelas características físicas do disco, mas também por questões como a configuração RAID escolhida, a arquitetura da matriz de armazenamento (DAS ou SAN, conforme discutido posteriormente), e o desempenho de outros componentes da matriz de armazenamento, como os adaptadores de barramento do host ou controladores RAID, e assim por diante.
 
 Unidades de estado sólido
@@ -765,13 +692,9 @@ Os discos de estado sólido modernos não possuem peças móveis, portanto, não
 Leitura aleatória versus leitura sequencial
 
 O bloco básico no SQL Server é conhecido como uma página, que tem tamanho de 8 KB. Para minimizar o número de solicitações de I/O ao ler dados do disco, o SQL Server usa um mecanismo de leitura antecipada que pode ler um número de páginas contíguas, até 128 páginas na edição Standard e 1.024 páginas na edição Enterprise, em uma única operação de I/O.
-
 Ao mesmo tempo, em vez de escrever continuamente todas as modificações de dados no disco, as alterações são feitas nas páginas de dados do buffer pool, que são coletadas em blocos contíguos e gravadas no disco em uma única operação de E/S, no CHECKPOINT, depois que as descrições das mudanças foram registradas no log de transações.
-
 As bases de dados do SQL Server realizam uma mistura de operações de I/O aleatórias e sequenciais, dependendo das atividades que estão sendo realizadas. I/O sequencial é qualquer operação em que os blocos podem ser lidos ou gravados no disco sem ter que reposicionar a cabeça do disco. O I/O sequencial é usado pelo SQL Server para operações de leitura antecipada e para todas as operações de log de transação, e é o tipo mais rápido de I/O que pode ser realizado usando discos convencionais. I/O aleatório é qualquer operação em que a cabeça do disco no drive tem que mudar de posição no prato, incorrendo em latência de busca como parte da operação, o que reduz o desempenho e o número de operações em comparação com o I/O sequencial. Operações de leitura em geral, especialmente em sistemas OLTP, são operações de I/O aleatórias, lendo blocos relativamente pequenos de páginas sequencialmente como parte de solicitações aleatórias maiores de I/O.
-
 Por esse motivo, a configuração de disco escolhida deve ser fortemente influenciada pelo tipo de arquivo armazenado nos discos e pelo tipo de atividade de I/O a que ele é submetido. Em resumo, para um desempenho ótimo, o subsistema de E/S de disco para os arquivos de log deve ser configurado de forma diferente do subsistema de E/S de disco para os arquivos de dados.
-
 A configuração de disco para os arquivos de dados do banco de dados deve ser otimizada para E/S de leitura aleatória de 64 KB e o desempenho deve ser testado para tamanhos de E/S de 8 KB, 64 KB, 128 KB e 256 KB para determinar a capacidade potencial de desempenho e throughput da configuração. Se o servidor estiver sendo usado principalmente para um grande armazém de dados ou um banco de dados de sistema de suporte à decisão (DSS), o subsistema de E/S deve ser testado para tamanhos de E/S maiores de até 1024 KB para operações de leitura adiante, dependendo do design do banco de dados e de como ele está sendo usado. No entanto, o log de transações no SQL Server realiza principalmente operações de gravação sequencial em tamanhos aleatórios de até 60 KB.
 
 Escolhendo o nível correto de RAID
@@ -784,11 +707,8 @@ RAID, sigla para Redundant Array of Independent Disks, é a tecnologia usada par
 • obter redundância de dados através do armazenamento de informações de paridade em vários discos, ou usando espelhamento dos discos físicos no array.
 
 A escolha do nível de RAID depende fortemente da natureza da carga de trabalho que o array de discos deve suportar. Por exemplo, como discutido anteriormente, a diferença na natureza das cargas de trabalho de I/O para os arquivos de dados e para os arquivos de log significa que diferentes configurações de RAID podem ser aplicáveis em cada caso.
-
 Os arquivos de dados estão sujeitos principalmente a atividade de leitura aleatória e, devido à forma como o SQL Server agrupa as operações de gravação em disco com o CHECKPOINT, isso permite o uso de níveis RAID que trocam o desempenho de gravação por um desempenho de leitura mais alto e melhor uso da capacidade de armazenamento em disco disponível. A atividade sequencial para os arquivos de log é principalmente para atividades de gravação durante os flushes do buffer de log, tornando o desempenho de gravação uma consideração muito mais crítica do que pode ser para os arquivos de dados.
-
 Escolher o nível RAID apropriado é frequentemente uma tarefa difícil e, a menos que o dinheiro não seja um problema, muitas vezes envolve algum tipo de compromisso entre fatores como o custo geral da solução, capacidade de armazenamento, throughput de disco e o grau de "proteção" em caso de falha de um dos discos na matriz.
-
 Existem vários níveis RAID disponíveis no mercado, cada um dos quais possui seus próprios custos e benefícios associados. Nas seções a seguir, examinaremos os níveis RAID padrão mais comuns (0, 1, 5 e 6), bem como os níveis RAID aninhados, como RAID 0+1 ou 1+0, em que uma matriz RAID é usada dentro de uma segunda matriz RAID. Explicaremos brevemente como funciona cada nível e seus méritos e desvantagens relativos para sistemas SQL Server.
 
 Uma breve visão geral das configurações RAID
@@ -808,7 +728,6 @@ Este nível de RAID fornece o melhor desempenho tanto para operações de leitur
 RAID 1
 
 RAID 1, mais comumente conhecido como espelhamento, oferece proteção contra a perda de dados de um único disco, espelhando as gravações em um segundo disco, como mostrado na Figura 2.2. Uma configuração RAID 1 fornece redundância, mas não oferece desempenho adicional de gravação para o sistema, uma vez que a taxa máxima de transferência para a matriz é limitada à capacidade de E/S de um único disco. Se você tiver uma configuração de duplicação (uma extensão do espelhamento em que ambos os discos do espelho podem ser lidos simultaneamente), teoricamente é possível obter um benefício de desempenho de leitura. Na prática, no entanto, as melhorias são altamente variáveis, embora geralmente pequenas, e dependentes da implementação de hardware.
-
 Embora o RAID 1 forneça redundância de dados, protegendo-o contra a perda de um único disco, ele efetivamente duplica o custo de armazenamento.
 
 *************************************
@@ -816,7 +735,6 @@ Embora o RAID 1 forneça redundância de dados, protegendo-o contra a perda de u
 *************************************
 
 Para demandas de E/S baixas, o RAID 1 pode oferecer um desempenho aceitável para arquivos de dados do SQL Server, mas geralmente não atende aos requisitos de IOPS associados a operações intensas e aleatórias de leitura, mesmo em bancos de dados de tamanho moderado. Na maioria dos casos, no entanto, o RAID 1 pode ser usado para armazenar um único log de transações. A natureza sequencial da atividade do log de transações significa que a cabeça de leitura/gravação de cada unidade é relativamente estática e se move em um varrimento progressivo pela cabeça do disco conforme as gravações ocorrem. Isso minimiza a latência de E/S e permite IOPS significativamente mais altos do que é possível para operações de E/S aleatórias.
-
 Se vários arquivos de log de transações forem colocados em um único conjunto RAID 1, o efeito líquido da atividade combinada de E/S sequencial para cada arquivo será uma E/S aleatória no nível físico, e haverá maior latência devido ao movimento da cabeça do disco para executar operações em cada um dos arquivos que estão sendo gravados sequencialmente.
 
 RAID 5 (and 6)
@@ -828,11 +746,8 @@ O RAID 5 é comumente conhecido como "striping com paridade"; os dados são dist
 *************************************
 
 Observe que a capacidade total de armazenamento de um conjunto RAID 5 é (n-1) * tamanho do disco, onde n é o número de discos. Portanto, para um conjunto RAID 5 de (digamos) 3 discos de 100 GB, teríamos 200 GB de armazenamento de dados. Para um conjunto de 5 discos, teríamos 400 GB de armazenamento de dados, e assim por diante.
-
 Dessa forma, o RAID 5 oferece redundância com uma redução mínima na capacidade de armazenamento, o que é uma das principais razões para sua popularidade. A distribuição dos dados em vários discos melhora o desempenho de leitura, mas a necessidade de manter os dados de paridade implica em uma penalidade de desempenho para operações de gravação; por exemplo, cada vez que os dados são atualizados no segmento A1, os dados de paridade devem ser recalculados e regravados. Além disso, se um dos discos de um conjunto RAID 5 falhar fisicamente, o desempenho do conjunto fica comprometido devido às comparações de paridade que precisam ser realizadas para ler os dados armazenados no conjunto. O nível de degradação depende do número de discos configurados no conjunto; à medida que o número de discos aumenta, o número de comparações aumenta, reduzindo ainda mais o desempenho.
-
 Para bancos de dados com alta carga de leitura, mas baixa carga de gravação, o RAID 5 pode ser a opção ideal para os arquivos de dados. No entanto, em situações em que o banco de dados sofre intensa atividade de gravação, o custo dos cálculos de paridade pode reduzir o desempenho do sistema. Por essa mesma razão, o RAID 5 não é recomendado para os arquivos de log de transações do banco de dados, que executam principalmente gravações sequenciais e exigem a menor latência possível para gravação.
-
 O RAID 6 é uma extensão do RAID 5, mas em vez de um único bit de paridade distribuída, ele utiliza dois bits de paridade distribuída, em que os dados de paridade calculados são armazenados em dois discos separados no conjunto, permitindo uma falha dupla de disco no conjunto, enquanto ainda protege os dados. Por exemplo, na Figura 2.4, os dados de paridade resultantes da comparação dos dados nos segmentos A1 e A2 são armazenados tanto nos segmentos de dados de paridade Aq quanto Ap.
 
 *********************************************************************
@@ -840,7 +755,6 @@ O RAID 6 é uma extensão do RAID 5, mas em vez de um único bit de paridade dis
 *********************************************************************
 
 No RAID 6, a capacidade total de armazenamento é (n-2) * tamanho do disco, portanto, para esse conjunto de 4 discos, perdemos metade do espaço em disco para o armazenamento dos dados de paridade. Além disso, o impacto no desempenho dos cálculos de paridade será relativamente alto. Por esses motivos, o RAID 10 é uma configuração RAID melhor para suportar a perda de dois discos quando apenas quatro discos estão no conjunto.
-
 A Figura 2.5 mostra uma implementação mais típica do RAID 6, envolvendo um conjunto de 7 discos.
 
 *********************************************************************
@@ -852,7 +766,6 @@ O RAID 6 é comum em aplicações de Storage Area Network (SAN), onde o número 
 RAID 10
 
 O RAID 10, ou RAID 1+0, é um nível de RAID aninhado conhecido como "par espelhado listrado". Ele fornece redundância ao primeiro espelhar cada disco, usando o RAID 1, e depois listar esses discos espelhados, com RAID 0, para melhorar o desempenho. Há um aumento significativo no custo monetário associado a essa configuração, uma vez que apenas metade do espaço em disco está disponível para uso. No entanto, essa configuração oferece a melhor configuração de redundância, pois, potencialmente, permite várias falhas de disco enquanto ainda mantém o sistema em operação, sem degradar o desempenho do sistema.
-
 Na configuração mostrada na Figura 2.6, cada um dos pares espelhados RAID 1 poderia suportar a falha de um único disco e o conjunto continuaria operacional. No entanto, se ambos os discos em um único par espelhado RAID 1 falhassem ao mesmo tempo, o sistema deixaria de ser operacional.
 
 ***************************************
@@ -888,24 +801,18 @@ Com base nas configurações de RAID acima, as seguintes taxas de transferência
 5. 1609 IOPS a 101 MB/s
 
 Esperançosamente, a mensagem está clara: o número de cabeças de disco e a configuração do RAID terão um impacto direto e dramático na capacidade potencial de E/S do conjunto RAID.
-
 No entanto, lembre-se de que esses números são teóricos, o que significa que são baseados apenas na capacidade potencial de E/S dos discos em uma determinada configuração. Eles não levam em consideração outros fatores que podem e terão impacto na taxa de transferência geral, incluindo:
-
 Tamanho e configuração do cache do controlador RAID para leitura e gravação em cache, que podem melhorar a pré-busca de leitura se mais cache for dedicado a leituras, ou absorver rajadas intensas de atividade de gravação se mais cache for dedicado a gravações.
 Tamanho de stripe do RAID, que determina a quantidade de dados que é gravada ou lida de um único disco em uma stripe antes de avançar para o próximo disco na stripe.
 Alinhamento de partição, que garante que o deslocamento inicial de uma partição de disco esteja alinhado com o tamanho de stripe do RAID e o deslocamento do setor para o disco, de modo que as operações de leitura e gravação não cruzem limites de setor, incorrendo em uma operação adicional de E/S para ser concluída. Consulte "Alinhamento incorreto de partição", mais adiante neste capítulo, para obter mais detalhes.
 Tamanhos de unidade de alocação do formato NTFS; o valor padrão de 4 KB para NTFS é bom para servidores de arquivos e unidades do sistema operacional, mas não é adequado para arquivos de dados do banco de dados, que têm um melhor desempenho usando uma unidade de alocação de 64 KB.
-
 A única maneira de ter certeza de que a configuração de disco selecionada lidará adequadamente com a carga de trabalho imposta por seus bancos de dados é realizar testes adequados do subsistema de E/S antes de usá-lo. Nunca confie em cálculos teóricos para os valores de IOPS ou taxa de transferência em MB/s. Você precisa simular uma carga de trabalho de E/S realista, usando vários processos, e obter os números reais.
-
 Existem várias ferramentas disponíveis para medir a taxa de transferência de E/S de uma determinada configuração, mas as duas ferramentas mais comuns usadas para testar as configurações de armazenamento para o SQL Server são o SQLIO e o IOmeter.
-
 O SQLIO é um dos piores nomes para uma ferramenta, pois leva à ideia equivocada de que ele simula a carga de trabalho de E/S do SQL Server. A verdade é que essa ferramenta não tem absolutamente nada a ver com o SQL Server; é apenas uma ferramenta de estresse de E/S que gera operações de E/S com base nos parâmetros de comando fornecidos à ferramenta. O IOmeter também é uma ferramenta de teste de estresse de E/S, originalmente desenvolvida pela Intel e posteriormente lançada como um projeto de código aberto. Das duas ferramentas, o IOmeter é o mais flexível e pode gerar cargas de trabalho de E/S mistas que se aproximam mais do que poderia ser gerado pelo SQL Server. O IOmeter também possui uma interface gráfica do usuário que é usada para configurar os testes e monitorar seu progresso.
 
 Baixando o SQLIO ou IOmeter
 
 O SQLIO pode ser baixado gratuitamente no site da Microsoft em http://www.microsoft.com/download/en/details.aspx?id=20163.
-
 O IOmeter pode ser baixado gratuitamente em http://www.iometer.org/.
 
 A Microsoft fornece uma ferramenta separada para testar a confiabilidade e integridade de uma configuração de disco, chamada SQLIOSim. Essa ferramenta testa o armazenamento usando as mesmas operações de disco que o SQL Server executaria para leituras, gravações, checkpoints, backups e operações de leitura antecipada, para garantir que o armazenamento atenda aos requisitos de confiabilidade do SQL Server. Ao contrário do SQLIO e IOmeter, o SQLIOSim usa arquivos de dados e log separados para simular a atividade de leitura e gravação do SQL Server, usando os mesmos tipos de padrões de E/S para cada arquivo que ocorreriam durante as operações normais. Essa ferramenta deve ser usada para validar se o subsistema de E/S funciona corretamente sob cargas pesadas, mas não deve ser usada para testes de desempenho da configuração.
@@ -921,29 +828,21 @@ Conforme discutido anteriormente, há muitos fatores que influenciarão as escol
 Arquivos de dados
 
 A configuração de disco apropriada para os arquivos de dados de um banco de dados depende muito da proporção de leitura para gravação do banco de dados. O SQL Server acompanha o uso de E/S dos arquivos de banco de dados para uma instância e disponibiliza essas informações na função de Gerenciamento Dinâmico sys.dm_io_virtual_file_stats. Embora essas informações possam ser usadas para determinar se sua carga de trabalho geral é mais intensa em leituras ou gravações, as informações contidas na saída são baseadas nas operações que ocorreram desde a última inicialização da instância do SQL Server. Portanto, é importante garantir que sua carga de trabalho representativa normal para o servidor tenha ocorrido antes de usar essas informações para determinar a divisão da carga de trabalho.
-
 Para um banco de dados que é principalmente somente leitura, o RAID 5 ou RAID 6 pode oferecer um bom desempenho de leitura, ao mesmo tempo em que maximiza o armazenamento disponível. Arrays RAID 5 ou 6 são comumente usados em data warehouses ou para armazenar dados onde a latência de gravação não afeta o desempenho geral do sistema.
-
 No entanto, para bancos de dados altamente transacionais, onde o número de gravações é comparável ao número de leituras, o uso de uma configuração RAID 5 ou RAID 6 para os discos dos arquivos de dados pode causar um gargalo durante as operações de checkpoint, quando as "páginas sujas" no cache de buffer são gravadas no arquivo de dados.
-
 Para implementações OLTP de bancos de dados com intensa gravação, o RAID 1+0 oferece o melhor desempenho, pois não realiza cálculos de paridade durante as operações de gravação. No entanto, os arrays RAID 1+0 têm um custo de implementação muito mais alto, uma vez que o armazenamento disponível é exatamente a metade dos discos configurados no array.
 
 Arquivos de log
 
 Para bancos de dados sujeitos a uma quantidade substancial de atividade de gravação, o dimensionamento e a configuração dos discos para o arquivo de log de transações, e, portanto, o desempenho das gravações de log, podem ser fundamentais para o desempenho geral do sistema. Isso ocorre porque todas as alterações nos dados devem primeiro ser registradas no arquivo de log antes que uma transação de confirmação (implícita ou explícita) possa ser considerada concluída e antes que as páginas de dados possam ser gravadas no disco (no caso em que um CHECKPOINT ou o LAZY WRITER gravam uma página de dados suja no disco antes que a transação seja confirmada).
-
 Uma vez que o log de transações é gravado sequencialmente, o RAID 1 pode ser usado na maioria das situações. Para bancos de dados altamente transacionais, o log de transações de cada banco de dados deve estar localizado em discos físicos dedicados. Ter os arquivos de log de vários bancos de dados altamente transacionais nos mesmos discos físicos pode resultar em gargalos de E/S de gravação, frequentemente indicados por altos tempos de espera WRITELOG em sys.dm_os_wait_stats e por altos valores de io_write_stall_ms em sys.dm_io_virtual_file_stats() para o arquivo de log de transações. Essas esperas são causadas pelo reposicionamento da cabeça de disco através dos pratos do disco para realizar as gravações e podem ser piores quando vários arquivos de log de transações são fisicamente intercalados ou fisicamente fragmentados no disco.
 
 Considerações especiais para o tempdb
 
 O banco de dados tempdb no SQL Server é um banco de dados especial usado pelo mecanismo de banco de dados durante a execução de solicitações do usuário, para realizar classificações que excedem a memória alocada para a classificação, operações de hash e armazenar dados para tabelas temporárias e variáveis de tabela. No SQL Server 2005 e 2008, também é usado para manter informações do armazenamento de versão, para a execução de gatilhos, operações de índice online ao usar os níveis de isolamento SNAPSHOT e READ COMMITTED SNAPSHOT (também conhecidos como controle de versão de linha) e, no SQL Server 2008, para manter informações de Rastreamento de Mudanças. Além do uso geral do tempdb, algumas operações de manutenção, como DBCC CHECKDB e a reconstrução de índices realizada ONLINE ou usando a opção SORT_IN_TEMPDB, podem fazer uso intensivo do tempdb.
-
 O banco de dados tempdb é um recurso global, utilizado da maneira descrita acima por todas as sessões conectadas a uma instância do SQL Server. Uma das melhores descrições do tempdb foi feita pelo SQL Server MVP Brent Ozar, que o descreveu como sendo "como um banheiro público, qualquer um pode abusar dele com todo tipo de coisas horríveis que você provavelmente não aprovaria". Portanto, é necessário ter considerações especiais em relação à configuração do disco, a fim de evitar conflitos nesse recurso.
-
 Como regra geral, os arquivos do banco de dados tempdb devem estar fisicamente separados dos arquivos de dados do usuário e dos arquivos de log de transações, em um conjunto de discos dedicado. Como o tempdb é um banco de dados com muitas operações de escrita, as configurações RAID 1 ou RAID 1+0 geralmente são as mais adequadas para suportar a carga de trabalho simultânea do tempdb.
-
 No entanto, como o tempdb é usado apenas para armazenamento temporário, discos de estado sólido (SSDs) e até mesmo RamDisks (discos criados por drivers de software usando RAM do servidor ou de dispositivos de hardware especializados) podem ser usados para melhorar significativamente as características de E/S do banco de dados tempdb, removendo a mídia rotativa e a cabeça do disco da configuração e, assim, reduzindo a latência de busca tanto para leituras quanto para gravações.
-
 O banco de dados tempdb está sujeito a problemas específicos que geralmente não afetam bancos de dados de usuário padrão, especificamente a contenção de PFS, GAM e SGAM, associada à criação e destruição consistentes de objetos temporários (consulte http://blogs.msdn.com/sqlserverstorageengine/archive/2009/01/04/what-is-allocation-bottleneck.aspx para mais detalhes). Para minimizar o impacto desse problema e, na maioria dos casos, eliminá-lo, vários arquivos de dados podem ser criados para o banco de dados tempdb, que têm o mesmo tamanho e são configurados com as mesmas configurações de AutoCrescimento. Quando um banco de dados possui vários arquivos no mesmo grupo de arquivos, as alocações são feitas a partir de cada arquivo, usando um fator de preenchimento proporcional, o que faz com que os arquivos sejam usados igualmente em proporção ao seu tamanho e espaço livre disponível. Como cada arquivo tem suas próprias páginas de PFS, GAM e SGAM, criar vários arquivos para o tempdb reduzirá a contenção nessas páginas quando as alocações forem feitas.
 
 Dica: configurando um único arquivo por processador, ou não!
@@ -958,9 +857,7 @@ As duas configurações mais comuns utilizadas para o armazenamento do SQL Serve
 Direct Attached Storage (DAS)
 
 O DAS é o método tradicional de fornecer armazenamento para servidores, onde os discos usados pelo servidor são conectados diretamente a ele. Os discos podem estar incorporados ao chassi do servidor ou serem colocados em compartimentos de expansão externos que são conectados ao servidor usando um controlador RAID.
-
 As implementações de DAS são baratas de serem construídas, proporcionam características de desempenho previsíveis, uma vez que os discos são dedicados a um único servidor, e exigem o mínimo de experiência e conhecimento para serem implementadas corretamente. No entanto, dependendo da implementação específica, as soluções de DAS não terão o conjunto avançado de recursos disponíveis ao usar um SAN, como suporte para clustering de failover, snapshots de conjuntos de discos e replicação baseada em matriz entre data centers (um recurso de redundância que permite que os dados escritos na matriz sejam replicados para um segundo SAN).
-
 Com soluções de DAS, a solução de problemas de desempenho é simplificada, uma vez que o número de componentes é reduzido e há apenas um sistema utilizando o subsistema de E/S.
 
 Storage Area Networks (SAN)
@@ -972,25 +869,17 @@ As implementações de SAN são uma configuração mais avançada para requisito
 ***********************************************
 
 No entanto, a implementação de armazenamento compartilhado também adiciona complexidade à solução de problemas de desempenho. Dependendo da implementação específica, o armazenamento pode ser otimizado para desempenho de E/S e/ou pode ser otimizado exclusivamente para capacidade, ou pode ser totalmente proprietário do fornecedor do SAN, caso em que há pouco controle sobre a implementação física do ambiente.
-
 Um dos maiores problemas com as matrizes de armazenamento baseadas em SAN, para muitos DBAs do SQL Server, é a maneira como a implementação física da matriz de armazenamento é "abstraída". Ao acessar dados em uma matriz SAN, o Windows vê apenas um "disco físico único", apresentado como um Número de Unidade Lógica (LUN). No entanto, um SAN pode estar usando 50 LUNs de um pool compartilhado de discos que também estão sendo usados pelo restante da empresa. Isso pode ter ramificações de desempenho para o SQL Server. A menos que um DBA tenha trabalhado diretamente com um administrador de SAN para planejar a configuração de E/S das LUNs usadas por um SQL Server, o DBA não tem ideia de como o hardware físico está sendo usado na realidade.
-
-Depending on the vendor, the SAN implementation, and the workload requirements, sharing storage at the physical level can result in acceptable performance but can become a nightmare for troubleshooting when problem arise, where one team points the finger at the other and vice versa.
-
+Dependendo do fornecedor, da implementação do SAN e dos requisitos da carga de trabalho, compartilhar armazenamento no nível físico pode resultar em desempenho aceitável, mas pode se tornar um pesadelo para solucionar problemas quando surgem, onde uma equipe aponta o dedo para a outra e vice-versa.
 Como recomendação geral, ao utilizar armazenamento baseado em SAN para o SQL Server, as mesmas considerações de E/S devem ser feitas como se fosse uma implementação de DAS. O armazenamento subjacente para os arquivos de dados deve ser otimizado para E/S aleatória e segregado fisicamente do armazenamento subjacente para os arquivos de log de transação, que devem ser otimizados para E/S sequencial. O throughput de E/S deve ser capaz de sustentar os requisitos de carga de trabalho, e quaisquer gargalos no sistema devem ser plenamente compreendidos antes de implementar a configuração para uso em produção.
-
 Para implementações de SAN, o "SAN fabric" é a rede que é configurada para fornecer acesso do servidor aos discos físicos que dão suporte às LUNs apresentadas ao servidor. Esse SAN fabric consiste em várias interconexões comutadas que fornecem redundância à configuração. Existem vários componentes, como Adaptadores de Barramento do Host (HBAs), controladores de armazenamento e switches de rede, na conexão entre o servidor e o SAN, qualquer um dos quais poderia se tornar um gargalo potencial para a capacidade geral de E/S.
-
 As implementações baseadas em SAN (Storage Area Network) fazem uso de HBAs (Host Bus Adapters), que são placas de rede específicas projetadas para fornecer acesso à rede de armazenamento (Fabric + Array, na Figura 2.8), por meio de cabos de fibra óptica (FC), Ethernet de rede padrão (iSCSI) ou uma combinação híbrida dos dois conhecida como Fiber Channel over Ethernet (FCoE). Dependendo da implementação específica utilizada e se a E/S de múltiplos caminhos (multi-path I/O) foi configurada adequadamente para o ambiente, o desempenho de E/S e a taxa de transferência podem ser limitados à velocidade da porta de um único HBA no servidor.
 
 Multi-path I/O
 
 Multi-path I/O (MPIO) fornece múltiplos caminhos redundantes de um único servidor para a implementação SAN. Dependendo da configuração do MPIO, um dos benefícios também pode ser o balanceamento de carga entre as conexões, o que pode resultar em melhorias de desempenho em comparação com o uso de uma única conexão. Diferentes implementações de MPIO têm características distintas, e é melhor trabalhar com o fornecedor de hardware específico para configurar o MPIO em seu ambiente.
-
 As HBAs dos servidores se conectam a switches de rede que, por sua vez, se conectam aos controladores de armazenamento na SAN. Os controladores de armazenamento gerenciam os discos físicos que compõem o armazenamento real disponível para a implementação da SAN. Cada um dos controladores de armazenamento pode ter uma ou mais conexões com a rede, e cada um mantém seu próprio cache para dados frequentemente lidos e/ou para lidar com gravações imediatamente, permitindo que as gravações sejam adiadas para os discos físicos, que podem ser mais lentos do que gravar diretamente no cache. Esses caches podem ser espelhados para outros controladores por meio de conexões de alta velocidade, para permitir que falhas ocorram com impacto mínimo ou nulo no ambiente. Dessa forma, vários controladores de armazenamento trabalham juntos como uma espécie de "cluster de failover" para a SAN, proporcionando alta disponibilidade.
-
 Ao utilizar implementações de armazenamento baseadas em SAN, o ponto mais lento na configuração geral será o gargalo para o sistema. Por exemplo, considere uma SAN que utiliza um HBA de 4 Gb/s e se conecta a um switch de 4 Gb/s, que por sua vez se conecta a uma porta do controlador de armazenamento de 2 Gb/s. Mesmo que os discos físicos da matriz sejam capazes de realizar E/S de 8 Gb/s, a porta do controlador de armazenamento de 2 Gb/s será o gargalo na implementação.
-
 Essa é a razão pela qual solucionar problemas em implementações de SAN para o SQL Server pode ser extremamente difícil. Sempre que uma SAN está sendo utilizada com o SQL Server, solucionar problemas de desempenho no ambiente requer suporte adicional do administrador da SAN.
 
 Diagnosticando problemas de E/S de disco
@@ -1004,12 +893,12 @@ Mais de 50 ms = problema significativo de desempenho.
 
 Além dos contadores de desempenho, tempos de espera elevados para PAGEIOLATCH_*, ASYNC_IO_COMPLETION, IO_COMPLETION ou waits WRITELOG podem ser sinais de gargalos de E/S de disco no servidor. A consulta para recuperar as estatísticas de espera para uma instância do SQL Server está incluída na seção "Estatísticas de Espera: A Base para Solução de Problemas" do Capítulo 1.
 
-Common Disk I/O Problems
+Problemas Comuns de E/S de Disco
 
 Assim como em muitos dos problemas abordados ao longo deste livro, o primeiro passo ao tentar resolver problemas de E/S é garantir que a falta de indexação (Capítulo 5) ou consultas mal escritas não estejam causando uma quantidade desnecessariamente excessiva de E/S. Se o design do seu banco de dados e a carga de trabalho das consultas estiverem otimizados o máximo possível e o problema de E/S persistir, provavelmente você está enfrentando um problema de configuração inadequada do disco. Com base nas perguntas que vejo em fóruns técnicos online e na minha experiência como consultor, as seguintes configurações incorretas são a causa de muitos dos problemas de E/S de disco que encontro:
 
 dimensionamento para capacidade em vez de desempenho de E/S
-isolação inadequada da carga de trabalho
+isolamento inadequado da carga de trabalho
 alinhamento incorreto de partições
 largura de banda incorreta ao utilizar configurações de SAN.
 
@@ -1018,95 +907,45 @@ Cada um desses problemas e as etapas necessárias para solucioná-los serão abo
 Dimensionamento para capacidade em vez de desempenho de E/S
 
 Como já abordado anteriormente neste capítulo, o dimensionamento adequado do subsistema de disco para o SQL Server é principalmente uma questão de desempenho e não de capacidade real de armazenamento. Muitas vezes, a menos que um DBA experiente esteja envolvido nas decisões de compra, o fator chave utilizado no provisionamento de hardware é o tamanho do banco de dados e não os requisitos de desempenho de E/S da carga de trabalho.
-
 Um banco de dados de 800 GB pode ser armazenado em um único disco de 1 TB, mas as chances de um único disco de 1 TB ser capaz de fornecer a capacidade de E/S necessária para obter um desempenho satisfatório durante o acesso simultâneo de usuários são mínimas, na melhor das hipóteses. A chave para configurações de disco de alto desempenho é ter muitos discos físicos trabalhando juntos, usando RAID, para fornecer tanto a capacidade de E/S necessária quanto o espaço de armazenamento necessário.
-
 Com implementações de SAN, é mais provável que você obtenha o número de discos necessário para lidar com os requisitos de desempenho de E/S. No entanto, uma vez que a maioria das implementações de SAN não é dedicada apenas ao SQL Server, você também precisa considerar os requisitos de desempenho de E/S compartilhados pelos outros servidores que usam os mesmos discos físicos e o impacto potencial que essa E/S compartilhada terá no desempenho do SQL Server.
+Solucionar problemas de desempenho de E/S requer monitorar os contadores de desempenho do subsistema de E/S de disco, bem como monitorar os dados virtuais de arquivo e estatísticas de espera da instância do banco de dados, para determinar o impacto que o subsistema de E/S pode estar causando no desempenho do SQL Server.
 
-Troubleshooting problems with I/O performance requires monitoring the performance
-counters for the disk I/O subsystem, as well as monitoring the virtual file and wait stats
-for the database instance, to determine the impact the I/O subsystem may be having on
-SQL Server performance.
-Incorrect workload isolation
-Workload isolation is critical for SQL Server storage planning. As discussed earlier, the
-I/O characteristics of the transaction log files and data files are significantly different, and
-segregating the I/O for the two files is critical to overall system performance. For highwrite workloads, in particular, where the transaction log files are constantly written to,
-the need to isolate the transaction log files on separate physical disk arrays is paramount.
-In SAN-based implementations, where there are no dedicated spindles configured specifically for SQL Server, workload isolation also has to take into account the other systems
-that are sharing the physical spindles, and the impact that they will have on the performance of SQL Server.
-As discussed in the SAN section, earlier, it is very common in small and medium business
-infrastructures to have SANs that allocate storage to SQL Server from a disk pool that
-is shared by the whole enterprise, and so is being used by all manner of other applications. My advice is to consider this sort of configuration inappropriate for use with SQL
-Server, unless appropriate testing proves otherwise, or the pool of disks is large enough to
-support the required I/O throughput for the shared demand.
-If a shared pool of disks is being used, it is important to have the right monitoring tools
-in place for the configuration. Having a SQL Server database, Oracle database, and busy
-Exchange mailbox database sharing a small disk pool is likely to be problematic for all
-three in terms of performance, due to the competing high I/O workloads.68
-Chapter 2: Disk I/O Configuration
-Incorrect partition alignment
-At PASS Summit 2008, Jimmy May, a member of the SQLCAT team, presented a
-session on Disk Partition Alignment Best Practices for SQL Server, which was later turned
-into a white paper of the same name (http://msdn.microsoft.com/en-us/library/
-dd758814%28v=sql.100%29.aspx). At that time, few people had ever heard of partition
-alignment, let alone realized that it had long been a silent performance killer for disk
-storage arrays, often reducing performance by as much as 20–30% overall.
-The crux of the problem is that disk hardware reports 63 hidden sectors at the beginning
-of the drive, which are used for the master boot record (MBR) and Windows reserves the
-space required for the MBR when creating a partition on the disk. This offset of 63 sectors
-results in a 31.5 KB offset of the disk, which is misaligned with the standard stripe unit
-sizes used by RAID controllers, which range from 4 KB to 512 KB based on the specific
-controller and configuration being used to control the size of each stripe element written
-to, or read from, each disk in the stripe.
-Most disks commonly used today have a 512-byte sector size, but newer disks and SSDs
-may use a 4 KB sector size. The recommended allocation unit size for SQL Server is 64
-KB, instead of the default 4 KB on NTFS and, based on the recommended allocation unit
-size for a 512-byte sector, a 64 KB block of data will use 128 sectors.
-When this is offset by 63 sectors, the result is a split I/O, where one disk in the array
-incurs an I/O operation to read 65 sectors of information and a second I/O request occurs
-to the next disk in the array to read the remaining 63 sectors of data for the 64 KB block
-of data.
-To prevent this problem from continuing in the future, Microsoft changed Windows
-Server 2008 to offset the starting partition at a 1 MB boundary, which is compatible with
-all existing stripe unit sizes for RAID, and results in appropriate alignment of the disk.
-The problem is that moving a disk to Windows Server 2008 doesn't fix the problem, and
-any disk that was partitioned on Windows Server 2000 or 2003 will be misaligned unless69
-Chapter 2: Disk I/O Configuration
-it was explicitly aligned using diskpar (Windows Server 2000) or diskpart (Windows
-Server 2003) from the command line.
-The only way to find out if you have this problem is to run the WMIC command shown
-in Listing 2.1, from the command line, to retrieve the current partition offset information
-from Windows, and determine if any of the partitions are misaligned.
+Isolamento incorreto da carga de trabalho
+
+O isolamento da carga de trabalho é fundamental para o planejamento de armazenamento do SQL Server. Como discutido anteriormente, as características de E/S dos arquivos de log de transações e arquivos de dados são significativamente diferentes, e a segregação da E/S para os dois arquivos é crucial para o desempenho geral do sistema. Para cargas de trabalho de alto volume de gravação, em particular, em que os arquivos de log de transações são constantemente gravados, a necessidade de isolar os arquivos de log de transações em arrays de discos físicos separados é primordial.
+Em implementações baseadas em SAN, onde não há fusos dedicados configurados especificamente para o SQL Server, o isolamento da carga de trabalho também deve levar em consideração os outros sistemas que estão compartilhando os fusos físicos e o impacto que eles terão no desempenho do SQL Server.
+Conforme discutido na seção sobre SAN, é muito comum em infraestruturas de pequenas e médias empresas ter SANs que alocam armazenamento para o SQL Server a partir de um conjunto de discos compartilhado por toda a empresa e, portanto, é usado por todos os tipos de outras aplicações. Meu conselho é considerar esse tipo de configuração inadequada para uso com o SQL Server, a menos que testes apropriados provem o contrário, ou o conjunto de discos seja grande o suficiente para suportar a taxa de transferência de E/S necessária para a demanda compartilhada.
+Se um conjunto compartilhado de discos estiver sendo usado, é importante ter as ferramentas de monitoramento adequadas para a configuração. Ter um banco de dados do SQL Server, um banco de dados Oracle e um banco de caixas de correio do Exchange ocupado compartilhando um pequeno conjunto de discos provavelmente será problemático para os três em termos de desempenho, devido às cargas de trabalho de alta E/S em competição.
+
+Alinhamento incorreto de partições
+
+Na PASS Summit 2008, Jimmy May, um membro da equipe SQLCAT, apresentou uma sessão sobre as Melhores Práticas de Alinhamento de Partições de Disco para o SQL Server, que posteriormente foi transformada em um white paper com o mesmo nome (http://msdn.microsoft.com/en-us/library/dd758814%28v=sql.100%29.aspx). Naquela época, poucas pessoas haviam ouvido falar do alinhamento de partições, quanto mais perceberam que isso há muito tempo era um vilão silencioso para o desempenho de matrizes de armazenamento de disco, muitas vezes reduzindo o desempenho em até 20-30% no geral.
+A essência do problema é que o hardware do disco relata 63 setores ocultos no início da unidade, que são usados para o registro de inicialização principal (MBR), e o Windows reserva o espaço necessário para o MBR ao criar uma partição no disco. Essa compensação de 63 setores resulta em uma compensação de 31,5 KB no disco, que está desalinhada com os tamanhos padrão de unidade de faixa usados pelos controladores RAID, que variam de 4 KB a 512 KB, dependendo do controlador específico e da configuração usada para controlar o tamanho de cada elemento de faixa gravado ou lido em cada disco da faixa.
+A maioria dos discos comumente usados hoje possui um tamanho de setor de 512 bytes, mas discos e SSDs mais recentes podem usar um tamanho de setor de 4 KB. O tamanho de unidade de alocação recomendado para o SQL Server é de 64 KB, em vez dos 4 KB padrão no NTFS e, com base no tamanho de unidade de alocação recomendado para um setor de 512 bytes, um bloco de dados de 64 KB usará 128 setores.
+Quando isso é compensado por 63 setores, o resultado é uma E/S dividida, em que um disco na matriz incorre em uma operação de E/S para ler 65 setores de informações e ocorre uma segunda solicitação de E/S para o próximo disco na matriz para ler os 63 setores restantes de dados para o bloco de dados de 64 KB.
+Para evitar que esse problema continue no futuro, a Microsoft alterou o Windows Server 2008 para compensar a partição inicial em um limite de 1 MB, que é compatível com todos os tamanhos de unidade de faixa existentes para RAID e resulta em um alinhamento adequado do disco. O problema é que mover um disco para o Windows Server 2008 não resolve o problema, e qualquer disco que tenha sido particionado no Windows Server 2000 ou 2003 estará desalinhado, a menos que tenha sido explicitamente alinhado usando o diskpar (Windows Server 2000) ou diskpart (Windows Server 2003) a partir da linha de comando.
+A única maneira de descobrir se você tem esse problema é executar o comando WMIC mostrado na Listagem 2.1, a partir da linha de comando, para obter as informações atuais do deslocamento da partição do Windows e determinar se alguma das partições está desalinhada.
+
 wmic partition get BlockSize, StartingOffset, Name, Index
-Listing 2.1: Using WMI query to investigate possible disk partition misalignment.
-If the StartingOffset value is not evenly divisible without a remainder, or
-decimal result, by the stripe unit size being used by the RAID controller, then the
-disk is misaligned.
-The good news is that fixing a misaligned partition is very easy to do, but the bad news is
-that, to fix the problem, you have to delete the existing partitions and data from the disks
-and start over. The diskpart tool in Windows Server 2003, 2008, and 2008 R2 can be
-used to create a partition on a disk that is aligned to a specified size in KB. The following
-diskpart command will create a partition that is aligned at 64 KB.
+
+Listagem 2.1: Usando consulta WMI para investigar possíveis desalinhamentos de partição de disco.
+
+Se o valor StartingOffset não for divisível uniformemente, sem resto ou resultado decimal, pelo tamanho da unidade de faixa sendo usado pelo controlador RAID, então o disco está desalinhado.
+
+A boa notícia é que corrigir uma partição desalinhada é muito fácil de fazer, mas a má notícia é que, para corrigir o problema, você precisa excluir as partições existentes e os dados dos discos e começar do zero. A ferramenta diskpart no Windows Server 2003, 2008 e 2008 R2 pode ser usada para criar uma partição em um disco que esteja alinhada a um tamanho especificado em KB. O seguinte comando diskpart criará uma partição alinhada em 64 KB.
+
 create partition primary align=64
-Listing 2.2: Creating a 64 KB aligned partition.
-Once the partition is aligned it can be assigned a letter and formatted, using the recommended 64 KB allocation unit size, then put back into service as a host for database files,
-without the costly performance impact associated with misalignment.70
-Chapter 2: Disk I/O Configuration
-Incorrect bandwidth using SAN configurations
-In SAN environments, where the storage is attached through a network connection, one
-of the biggest limiting factors to storage performance is the bandwidth available for the
-connection. This is true regardless of whether the connection is Fiber Channel, or iSCSI,
-using traditional Ethernet for the connectivity.
-When I first started working with SAN environments for SQL Server the prevailing
-technology in use was Fiber Channel, and the standard port speed was 2 Gb/sec for a
-single path. At the time, newer hardware that supported 4 Gb/sec connections for a single
-path was just being implemented in environments. Soon thereafter, 1 Gb/sec iSCSI began
-to appear in small-to-medium business environments, as a lower-cost implementation of
-shared storage for the enterprise.
-For me, one of the hardest things to understand, when working with SANs, was the
-impact that the paths to the SAN had on storage performance, especially in multi-path
-environments where the expectation was that multiple paths to the SAN would improve
-the overall performance of the storage connections.
+
+Listagem 2.2: Criando uma partição alinhada em 64 KB.
+
+Uma vez que a partição esteja alinhada, ela pode ser atribuída uma letra e formatada, usando o tamanho de unidade de alocação recomendado de 64 KB, e então colocada de volta em serviço como um host para arquivos de banco de dados, sem o impacto de desempenho custoso associado ao desalinhamento.
+
+Banda larga incorreta usando configurações SAN
+
+Em ambientes SAN, onde o armazenamento está conectado por meio de uma conexão de rede, um dos maiores fatores limitantes para o desempenho de armazenamento é a largura de banda disponível para a conexão. Isso é verdade independentemente se a conexão é Fibre Channel ou iSCSI, usando Ethernet tradicional para a conectividade.
+Quando comecei a trabalhar com ambientes SAN para o SQL Server, a tecnologia predominante em uso era o Fibre Channel, e a velocidade padrão da porta era de 2 Gb/s para um único caminho. Na época, hardware mais recente que suportava conexões de 4 Gb/s para um único caminho estava sendo implementado em ambientes. Logo depois, o iSCSI de 1 Gb/s começou a aparecer em ambientes de pequenas e médias empresas como uma implementação de custo mais baixo de armazenamento compartilhado para a empresa.
+Para mim, uma das coisas mais difíceis de entender ao trabalhar com SANs foi o impacto que os caminhos para o SAN tinham no desempenho do armazenamento, especialmente em ambientes de múltiplos caminhos, onde a expectativa era que vários caminhos para o SAN melhorariam o desempenho geral das conexões de armazenamento.
 When using SAN multi-path technologies, the initial benchmarking and validation of
 the storage configuration is incredibly important. You need to verify whether or not the
 multiple paths to the SAN really are being used in conjunction with each other to improve
