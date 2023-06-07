@@ -964,129 +964,71 @@ Além disso, provavelmente será necessário adicionar capacidade de E/S ou desc
 
 
 
-Chapter 3: High CPU Utilization
-A CPU-bound system is relatively easy to spot, but not always as easy to diagnose. If you
-notice that one or more of the CPUs are working at close to maximum capacity, along
-with a dramatic decrease in server performance, then you've likely got a CPU issue. The
-CPU is involved in almost all SQL Server activity, from running queries to moving data
-in and out of memory, and so on, which means that an over-taxed CPU can have dire
-consequences.
-Unfortunately, the source of CPU pressure is not always easy to pinpoint since what
-seems like a CPU problem may actually have its root cause elsewhere, such as insufficient memory, causing SQL Server to constantly move data in and out of memory, or
-poorly written queries, inadequate indexing, or even inappropriate configuration option
-settings. The source of the CPU pressure may also be a non-SQL Server process running
-on the server.
-Regardless of what caused the problem, the goal of the investigation stage of troubleshooting excessive CPU utilization in SQL Server is to isolate the problem to a specific
-source. Generally, this will require the collection of multiple pieces of information, using
-tools such as Performance Monitor (PerfMon), SQLTrace and several of the SQL Server
-Dynamic Management Views.
-Once it has been confirmed that the high CPU usage is due to the SQL Server process,
-and the problem has been isolated to a specific query (or set of queries), we can seek to
-alleviate the CPU pressure via design changes, such as tuning CPU-intensive queries,
-adding appropriate indexes, replacing ad hoc SQL with stored procedures to improve plan
-reuse and so on, or by tweaking SQL Server and Windows configuration settings.74
-Chapter 3: High CPU Utilization
-Investigating CPU Pressure
-In this section, we'll discuss the three main tools used to measure CPU usage, and
-diagnose CPU pressure, in SQL Server:
-•	 Performance Monitor – a Windows monitoring tool for measuring the CPU usage by
-SQL Server and other processes running on the server.
-•	 SQLTrace – a set of system stored procedures for real-time tracing events that are
-executing in SQL Server during periods of high CPU usage.
-•	 Dynamic Management Views – a collection of system objects that provide both
-snapshot and aggregate data regarding resource usage in SQL Server.
+Capítulo 3: Utilização Elevada da CPU
+
+Um sistema dependente da CPU é relativamente fácil de identificar, mas nem sempre é tão fácil de diagnosticar. Se você perceber que uma ou mais CPUs estão trabalhando próximo à capacidade máxima, juntamente com uma diminuição drástica no desempenho do servidor, então provavelmente há um problema com a CPU. A CPU está envolvida em quase todas as atividades do SQL Server, desde a execução de consultas até a movimentação de dados dentro e fora da memória, e assim por diante, o que significa que uma CPU sobrecarregada pode ter consequências graves.
+Infelizmente, a origem da pressão sobre a CPU nem sempre é fácil de identificar, uma vez que o que parece ser um problema da CPU pode ter sua causa raiz em outro lugar, como memória insuficiente, fazendo com que o SQL Server mova constantemente os dados dentro e fora da memória, consultas mal escritas, indexação inadequada ou até mesmo configurações inapropriadas de opções de configuração. A fonte da pressão sobre a CPU também pode ser um processo não relacionado ao SQL Server em execução no servidor.
+Independentemente do que tenha causado o problema, o objetivo da fase de investigação para solucionar a utilização excessiva da CPU no SQL Server é isolar o problema em uma fonte específica. Geralmente, isso exigirá a coleta de várias informações, usando ferramentas como o Monitor de Desempenho (PerfMon), SQLTrace e várias das Visualizações de Gerenciamento Dinâmico do SQL Server.
+Uma vez confirmado que o alto uso da CPU é devido ao processo do SQL Server, e o problema foi isolado para uma consulta específica (ou conjunto de consultas), podemos buscar aliviar a pressão da CPU por meio de mudanças no design, como ajustar consultas que consomem muita CPU, adicionar índices apropriados, substituir consultas SQL improvisadas por stored procedures para melhorar a reutilização de planos e assim por diante, ou ajustar as configurações de configuração do SQL Server e do Windows.
+
+Investigando a Pressão da CPU
+
+Nesta seção, discutiremos as três principais ferramentas usadas para medir o uso da CPU e diagnosticar a pressão da CPU no SQL Server:
+• Performance Monitor - uma ferramenta de monitoramento do Windows para medir o uso da CPU pelo SQL Server e outros processos em execução no servidor.
+• SQLTrace - um conjunto de stored procedures do sistema para rastrear eventos em tempo real que estão sendo executados no SQL Server durante períodos de alto uso da CPU.
+• Dynamic Management Views - uma coleção de objetos do sistema que fornecem dados instantâneos e agregados sobre o uso de recursos no SQL Server.
+
 Performance Monitor
-If your SQL Server system is experiencing excessively high CPU activity, the first tool for
-which you should reach is Performance Monitor (PerfMon). This Windows monitoring
-tool will confirm whether the excessive CPU usage is due to SQL Server activity, or is
-caused by other processes on the server, or the operating system itself. There is little point
-in spending valuable time and energy investigating SQL Server for excessive CPU usage, if
-the root cause is a non-SQL Server process.
-The primary PerfMon counters that are of value for monitoring CPU usage are listed
-below with brief explanations (quoted from MSDN):
-Processor/ %Privileged Time – percentage of time the processor spends on execution of Microsoft
-Windows kernel commands such as core operating system activity and device drivers.
-Processor/ %User Time – percentage of time the processor spends on executing user processes such as
-SQL Server. This includes I/O requests from SQL Server.
-Process (sqlservr.exe)/ %Processor Time – the sum of processor time on each processor for all
-threads of the process.75
-Chapter 3: High CPU Utilization
-Simply open up PerfMon (Control Panel | System and Security | Administrative Tools),
-click the Add button (represented by a green cross) and add the counters, as shown in
-Figure 3.1.
-Figure 3.1: Adding CPU counters in PerfMon.
-These three counters are sufficient to monitor the overall CPU usage, as well as the usage
-by SQL Server. However, there are several SQL Statistics counters (and one Plan
-Cache counter) that don't directly monitor CPU usage but do monitor events such as
-compilation and recompilation events, which can eat up a lot of CPU cycles, or are indications of problems that produce high CPU usage. These counters are simply listed here,
-and discussed in further detail later in the chapter, in direct relation to the issues that
-they can be used to investigate.76
-Chapter 3: High CPU Utilization
+
+Se o seu sistema SQL Server estiver enfrentando uma atividade excessivamente alta da CPU, a primeira ferramenta à qual você deve recorrer é o Performance Monitor (PerfMon). Essa ferramenta de monitoramento do Windows irá confirmar se o uso excessivo da CPU é devido à atividade do SQL Server ou se é causado por outros processos no servidor ou pelo próprio sistema operacional. Não faz sentido gastar tempo e energia valiosos investigando o SQL Server por uso excessivo da CPU se a causa raiz for um processo não relacionado ao SQL Server.
+Os principais contadores do PerfMon que são úteis para monitorar o uso da CPU são listados abaixo com breves explicações (citadas do MSDN):
+
+Processor/ %Privileged Time - porcentagem de tempo que o processador gasta na execução de comandos do kernel do Microsoft Windows, como atividade principal do sistema operacional e drivers de dispositivos.
+Processor/ %User Time - porcentagem de tempo que o processador gasta executando processos do usuário, como o SQL Server. Isso inclui solicitações de E/S do SQL Server.
+Process (sqlservr.exe)/ %Processor Time - a soma do tempo do processador em cada processador para todos os threads do processo.
+
+Basta abrir o PerfMon (Painel de Controle | Sistema e Segurança | Ferramentas Administrativas), clicar no botão Adicionar (representado por uma cruz verde) e adicionar os contadores, conforme mostrado na Figura 3.1.
+
+*********************************************************
+* Figura 3.1: Adicionando contadores de CPU no PerfMon. *
+*********************************************************
+
+Esses três contadores são suficientes para monitorar o uso geral da CPU, bem como o uso pelo SQL Server. No entanto, existem vários contadores de Estatísticas do SQL (e um contador de Cache de Plano) que não monitoram diretamente o uso da CPU, mas monitoram eventos como eventos de compilação e recompilação, que podem consumir muitos ciclos de CPU ou são indicações de problemas que causam alto uso da CPU. Esses contadores são simplesmente listados aqui e discutidos em mais detalhes posteriormente no capítulo, em relação direta com os problemas que eles podem ser usados para investigar.
+
 •	 SQLServer:SQL Statistics/Auto-Param Attempts/sec
 •	 SQLServer:SQL Statistics/Failed Auto-params/sec
 •	 SQLServer:SQL Statistics/Batch Requests/sec
 •	 SQLServer:SQL Statistics/SQL Compilations/sec
 •	 SQLServer:SQL Statistics/SQL Re-Compilations/sec
 •	 SQLServer:Plan Cache/Cache hit Ratio
-None of these counters have hard thresholds that indicate "good" or "bad" values; instead
-they should be evaluated against what is normal for the system in question, and if a
-certain value falls far outside the normal range, the cause should be investigated further.
-Processor usage in virtual machines
-With a virtual machine (VM), the %ProcessorTime is the percentage of the resources allocated to the
-VM that is being used, not the percentage allocated to the actual hardware. Hence, if the VM has been
-allocated very minimal CPU resources, PerfMon may show very high %ProcessorTime even though
-the actual CPUs are barely being used. One of the first steps when investigating high CPU usage in a
-virtual machine is to check the hardware usage of the virtual machine as a whole and ensure that the
-resource allocations are reasonable.
+
+Nenhum desses contadores possui limites rígidos que indicam valores "bons" ou "ruins"; em vez disso, eles devem ser avaliados em relação ao que é considerado normal para o sistema em questão, e se um determinado valor estiver muito fora da faixa normal, a causa deve ser investigada mais a fundo.
+
+Uso do processador em máquinas virtuais
+
+Em uma máquina virtual (VM), o %ProcessorTime é a porcentagem dos recursos alocados para a VM que está sendo utilizada, e não a porcentagem alocada ao hardware real. Portanto, se a VM tiver sido alocada com recursos de CPU muito mínimos, o PerfMon pode mostrar um %ProcessorTime muito alto, mesmo que as CPUs reais estejam sendo pouco utilizadas. Um dos primeiros passos ao investigar alto uso da CPU em uma máquina virtual é verificar o uso de hardware da máquina virtual como um todo e garantir que as alocações de recursos sejam razoáveis.
+
 SQL Trace
-The Profiler utility included with SQL Server can be used to examine the details of what
-commands are running against a SQL Server. It is a useful tool for digging into details of
-specific problems once the general problem has been identified. The Profiler GUI makes
-use of a set of stored procedures, collectively known as SQL Trace. The GUI itself should
-be used with caution on busier servers, as it can have an adverse effect on the overall77
-Chapter 3: High CPU Utilization
-performance and stability of the server. Instead, a server-side trace should be run, with
-output directed to a file on a fast, local drive.
-The main usage for SQL Trace is to identify specific queries that are consuming
-large amounts of CPU. It is less useful for a point-in-time analysis than the Dynamic
-Management Views are, and is more useful for capturing workloads for analysis.
-With the Dynamic Management Views (such as sys.dm_exec_requests) the rising
-resource usage can be watched while the query is still running, while with SQL Trace
-the statement or batch must complete before the event that shows the total resource
-usage is fired.
-To capture a set of queries that are using excessive amounts of CPU, a trace needs to be
-run during times of high CPU usage. The details on how to set up and run a trace are
-given in Chapter 5, and will not be repeated here. The one additional consideration in
-running a trace to investigate queries that are consuming large amounts of CPU is that
-a trace filter should be added on the CPU column to avoid capturing large numbers of
-uninteresting queries.
-Dynamic Management Views
-Various Dynamic Management Views (DMVs) provide a range of information that can
-help diagnose CPU-related issues. This information includes aggregated query performance statistics, aggregated wait statistics, details of what is running, what is waiting for
-processing time, what is waiting for other resources, and other information that is hard or
-impossible to get in any other way. We can investigate high CPU usage by SQL Server by
-examining the CPU-related wait statistics, the scheduler details and the aggregated query
-performance statistics, as follows:
-•	 Verifying the extent of CPU pressure via signal waits, using sys.dm_os_wait_stats.
-•	 Diagnosing a CPU-bound system according the types of wait observed, using sys.
-dm_os_wait_stats and sys.dm_os_schedulers.78
-Chapter 3: High CPU Utilization
-•	 Identifying high-CPU cached plans, and associated queries, using sys.dm_exec_
-query_stats and sys.dm_exec_sql_text.
-•	 Identifying currently waiting tasks, especially ones waiting on CPU-related wait types
-using sys.dm_os_waiting_tasks.
-•	 Observing the resource usage of currently executing queries with sys.
-dm_exec_requests.
-Investigating CPU-related wait statistics
-Whenever a session has to wait before the requested work can continue, SQL Server
-records the reason for the wait (the resource that is being waited on) and the length of
-time waited. The sys.dm_os_wait_stats DMV exposes these wait statistics, aggregated across all sessions since the server last restarted or the wait statistics were cleared
-out with the DBCC SQLPERF('sys.dm_os_wait_stats', CLEAR); command. This
-DMV can be used, among other things, to confirm CPU pressure and establish the most
-common wait types that are being experienced by a CPU-bound system.
-It's worth noting that some third-party monitoring tools rely on the statistics in this DMV
-not being cleared out between server restarts as, if they are cleared out, it may impact the
-accuracy of the information shown by these monitoring tools.
+
+A ferramenta Profiler incluída no SQL Server pode ser usada para examinar os detalhes dos comandos que estão sendo executados em um servidor SQL. É uma ferramenta útil para investigar os detalhes de problemas específicos depois que o problema geral foi identificado. A interface gráfica do Profiler faz uso de um conjunto de stored procedures, conhecidas coletivamente como SQL Trace. A própria interface gráfica deve ser usada com cautela em servidores mais movimentados, pois pode ter um efeito adverso no desempenho geral e na estabilidade do servidor. Em vez disso, deve-se executar um trace no lado do servidor, com a saída direcionada para um arquivo em uma unidade local rápida.
+O principal uso do SQL Trace é identificar consultas específicas que estão consumindo grandes quantidades de CPU. É menos útil para uma análise pontual do que as Dynamic Management Views, sendo mais útil para capturar cargas de trabalho para análise. Com as Dynamic Management Views (como sys.dm_exec_requests), é possível acompanhar o aumento do uso de recursos enquanto a consulta ainda está em execução, enquanto com o SQL Trace, a instrução ou lote deve ser concluído antes que o evento que mostra o uso total de recursos seja acionado.
+Para capturar um conjunto de consultas que estão usando quantidades excessivas de CPU, é necessário executar um trace durante períodos de alto uso da CPU. Os detalhes sobre como configurar e executar um trace são apresentados no Capítulo 5 e não serão repetidos aqui. A consideração adicional ao executar um trace para investigar consultas que consomem grandes quantidades de CPU é adicionar um filtro na coluna de CPU para evitar capturar um grande número de consultas sem interesse.
+
+Dynamic Management Views (DMVs)
+
+Várias Dynamic Management Views (DMVs) fornecem uma variedade de informações que podem ajudar a diagnosticar problemas relacionados à CPU. Essas informações incluem estatísticas de desempenho agregadas das consultas, estatísticas de espera agregadas, detalhes do que está sendo executado, o que está esperando tempo de processamento, o que está esperando por outros recursos e outras informações que são difíceis ou impossíveis de obter de outra forma. Podemos investigar o alto uso da CPU pelo SQL Server examinando as estatísticas de espera relacionadas à CPU, os detalhes do escalonador e as estatísticas de desempenho agregadas das consultas, da seguinte forma:
+
+• Verificar a extensão da pressão da CPU por meio de esperas de sinal, usando sys.dm_os_wait_stats.
+• Diagnosticar um sistema com restrição de CPU de acordo com os tipos de espera observados, usando sys.dm_os_wait_stats e sys.dm_os_schedulers.
+• Identificar planos em cache com alto uso de CPU e consultas associadas, usando sys.dm_exec_query_stats e sys.dm_exec_sql_text.
+• Identificar tarefas atualmente em espera, especialmente aquelas que estão esperando por tipos de espera relacionados à CPU, usando sys.dm_os_waiting_tasks.
+• Observar o uso de recursos das consultas em execução atualmente com sys.dm_exec_requests.
+
+Investigando estatísticas de espera relacionadas à CPU
+
+Sempre que uma sessão precisa esperar antes que o trabalho solicitado possa continuar, o SQL Server registra o motivo da espera (o recurso pelo qual está esperando) e o tempo de espera. A DMV sys.dm_os_wait_stats expõe essas estatísticas de espera, agregadas em todas as sessões desde a última reinicialização do servidor ou desde a última vez em que as estatísticas de espera foram apagadas com o comando DBCC SQLPERF('sys.dm_os_wait_stats', CLEAR). Essa DMV pode ser usada, entre outras coisas, para confirmar a pressão da CPU e estabelecer os tipos de espera mais comuns que um sistema com restrição de CPU está enfrentando.
+Vale ressaltar que algumas ferramentas de monitoramento de terceiros dependem das estatísticas nesta DMV não serem apagadas entre reinicializações do servidor, pois, se forem apagadas, isso pode afetar a precisão das informações exibidas por essas ferramentas de monitoramento.
+
 Signal wait time
 Along with a wait_type column, indicating the type of wait, the sys.dm_os_wait_
 stats DMV returns several useful wait times, including:
