@@ -1,40 +1,36 @@
-000014-YD8KFM-8FFR3C-294X93-BYJN9T-8JHY59-0H77VT-EBPFUJ-FCHD0B-TK0TP6
-
-High Performance SQL Server
-
-Troubleshooting SQL Server
-A Guide for the Accidental DBA
-
-Jonathan Kehayias and Ted Krueger
-
-Foreword by Paul Randal
-Technical review by Gail Shaw
-ISBN: 978-1-906434-77-9
-
-
-
-
-Troubleshooting SQL Server
-A Guide for the Accidental DBA
-By Jonathan Kehayias and Ted Krueger
-
-With a Foreword from Paul S. Randal
-
-First published by Simple Talk Publishing September 2011
-
-Direitos autorais de Jonathan Kehayias e Ted Krueger 2011
-ISBN 978-1-906434-77-9
-O direito de Jonathan Kehayias e Ted Krueger de serem identificados como autores desta obra foi afirmado por eles de acordo com o Copyright, Designs and Patents Act 1988.
-Todos os direitos reservados. Nenhuma parte desta publicação pode ser reproduzida, armazenada ou introduzida em um sistema de recuperação, ou transmitida de qualquer forma ou por qualquer meio (eletrônico, mecânico, fotocópia, gravação ou outro) sem o consentimento prévio por escrito do editor. Qualquer pessoa que realizar qualquer ato não autorizado em relação a esta publicação poderá ser responsabilizada por processo criminal e reivindicações civis por danos. Este livro é vendido sob a condição de que não seja emprestado, revendido, alugado ou circulado de outra forma sem o consentimento prévio do editor, em qualquer forma que não seja a publicada, e sem uma condição semelhante, incluindo esta condição, sendo imposta ao editor subsequente.
-Editado por Tony Davis
-Revisão técnica e material adicional: Gail Shaw
-Imagem da capa por Andy Martin
-Diagramação e design por Matthew Tye & Gower Associates
-
-
-
-
-Table of Contents
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>DBA Acidental</title>
+</head>
+<body>
+	<p>High Performance SQL Server</p>
+	<p>Troubleshooting SQL Server <br>
+		A Guide for the Accidental DBA</p>
+	<p>Jonathan Kehayias and Ted Krueger</p>
+	<p>Foreword by Paul Randal<br>
+		Technical review by Gail Shaw<br>
+		ISBN: 978-1-906434-77-9</p>
+	<p>Troubleshooting SQL Server<br>
+		A Guide for the Accidental DBA<br>
+		By Jonathan Kehayias and Ted Krueger</p>
+	<p>With a Foreword from Paul S. Randal</p>
+	<p>First published by Simple Talk Publishing September 2011</p>
+	<p>
+		Direitos autorais de Jonathan Kehayias e Ted Krueger 2011<br>
+		ISBN 978-1-906434-77-9<br>
+		O direito de Jonathan Kehayias e Ted Krueger de serem identificados como autores desta obra foi afirmado por eles de acordo com o Copyright, Designs and Patents Act 1988.<br>
+		Todos os direitos reservados. Nenhuma parte desta publicação pode ser reproduzida, armazenada ou introduzida em um sistema de recuperação, ou transmitida de qualquer forma ou por qualquer meio (eletrônico, mecânico, fotocópia, gravação ou outro) sem o consentimento prévio por escrito do editor. Qualquer pessoa que realizar qualquer ato não autorizado em relação a esta publicação poderá ser responsabilizada por processo criminal e reivindicações civis por danos. Este livro é vendido sob a condição de que não seja emprestado, revendido, alugado ou circulado de outra forma sem o consentimento prévio do editor, em qualquer forma que não seja a publicada, e sem uma condição semelhante, incluindo esta condição, sendo imposta ao editor subsequente.<br>
+		Editado por Tony Davis<br>
+		Revisão técnica e material adicional: Gail Shaw<br>
+		Imagem da capa por Andy Martin<br>
+		Diagramação e design por Matthew Tye & Gower Associates<br>
+	</p>
+	<h1>Table of Contents</h1>
+	</body>
+</html>
 
 Introduction
 Who is this book for?
@@ -1029,157 +1025,104 @@ Investigando estatísticas de espera relacionadas à CPU
 Sempre que uma sessão precisa esperar antes que o trabalho solicitado possa continuar, o SQL Server registra o motivo da espera (o recurso pelo qual está esperando) e o tempo de espera. A DMV sys.dm_os_wait_stats expõe essas estatísticas de espera, agregadas em todas as sessões desde a última reinicialização do servidor ou desde a última vez em que as estatísticas de espera foram apagadas com o comando DBCC SQLPERF('sys.dm_os_wait_stats', CLEAR). Essa DMV pode ser usada, entre outras coisas, para confirmar a pressão da CPU e estabelecer os tipos de espera mais comuns que um sistema com restrição de CPU está enfrentando.
 Vale ressaltar que algumas ferramentas de monitoramento de terceiros dependem das estatísticas nesta DMV não serem apagadas entre reinicializações do servidor, pois, se forem apagadas, isso pode afetar a precisão das informações exibidas por essas ferramentas de monitoramento.
 
-Signal wait time
-Along with a wait_type column, indicating the type of wait, the sys.dm_os_wait_
-stats DMV returns several useful wait times, including:
-•	 wait_time_ms – total amount of time that tasks have waited on this given wait type;
-this value includes the time in the signal_wait_time_ms column. The value increments from the moment a task stops execution, to wait for a resource, to the point it
-resumes execution.79
-Chapter 3: High CPU Utilization
-•	 signal_wait_time_ms – the total amount of time tasks took to start executing after
-being signaled (i.e. after the resource it was waiting for became available); this is time
-spent on the runnable queue, and is pure CPU wait.
-If the signal wait time is a significant portion of the total wait time, it means that tasks
-are waiting a relatively long time to resume execution after the resources that they were
-waiting for became available. This can indicate either that there are lots of CPU-intensive
-queries, which may need optimizing, or that the server needs more CPU. The query in
-Listing 3.1 will provide a measure of how much of the total wait time is signal wait time.
-SELECT SUM(signal_wait_time_ms) AS TotalSignalWaitTime ,
-( SUM(CAST(signal_wait_time_ms AS NUMERIC(20, 2)))
-/ SUM(CAST(wait_time_ms AS NUMERIC(20, 2))) * 100 )
-AS PercentageSignalWaitsOfTotalTime
-FROM sys.dm_os_wait_stats
-Listing 3.1: Verifying CPU pressure via signal wait time.
-Since this DMV shows aggregated wait times and counts since the statistics were cleared
-or since the server started, a point-in-time view of the wait stats is generally not that
-useful. What is most useful is to compare the wait stats at a particular time with the stats
-at an earlier time and see how they changed. The other option is to clear the wait stats
-DMV, using DBCC SQLPERF("sys.dm_os_wait_stats",CLEAR);, wait a while, then
-query and see what's accumulated in that known and set period of time.
-Tracking session and statement-level waits
-Since the wait times in this DMV are aggregated, it is hard to relate a wait time to a specific query, unless
-you're on a test system with only one session running. However, in SQL Server 2008, it's possible to do
-this if you use Extended Events. See my blog post: http://sqlblog.com/blogs/jonathan_kehayias/
-archive/2010/12/30/an-xevent-a-day-30-of-31-tracking-session-and-statement-level-waits.
-aspx.80
-Chapter 3: High CPU Utilization
-We can also use the sys.dm_os_wait_stats DMV to find out which resource waits are
-the most common in our CPU-bound system, as shown in Listing 3.2, where we identify
-the top wait events, ordered according to the total amount of time processes have waited
-(wait_time_ms) on this event. It is important to ignore the benign waits, typically ones
-caused by system processes that are expected to be waiting most of the time. We're also
-subtracting out the signal_wait_time as that portion of the wait time is not waiting
-for the particular resource, but waiting for time on the scheduler.
+Tempo de espera do sinal
+
+Junto com uma coluna wait_type, que indica o tipo de espera, o DMV sys.dm_os_wait_stats retorna vários tempos de espera úteis, incluindo:
+•	wait_time_ms - quantidade total de tempo que as tarefas esperaram por este determinado tipo de espera; esse valor inclui o tempo na coluna signal_wait_time_ms. O valor aumenta a partir do momento em que uma tarefa interrompe a execução para esperar por um recurso até o momento em que ela retoma a execução.
+•	signal_wait_time_ms - a quantidade total de tempo que as tarefas levam para começar a executar após serem sinalizadas (ou seja, após o recurso pelo qual estavam esperando estar disponível); esse é o tempo gasto na fila de execução e é uma espera puramente da CPU.
+Se o tempo de espera do sinal for uma parte significativa do tempo total de espera, significa que as tarefas estão aguardando um tempo relativamente longo para retomar a execução após os recursos pelos quais estavam esperando ficarem disponíveis. Isso pode indicar que há muitas consultas intensivas de CPU, que podem precisar de otimização, ou que o servidor precisa de mais CPU. A consulta no Exemplo 3.1 fornecerá uma medida de quanto do tempo total de espera é o tempo de espera do sinal.
+
+SELECT  SUM(signal_wait_time_ms) AS TotalSignalWaitTime ,
+        ( SUM(CAST(signal_wait_time_ms AS NUMERIC(20, 2)))
+          / SUM(CAST(wait_time_ms AS NUMERIC(20, 2))) * 100 )
+                         AS PercentageSignalWaitsOfTotalTime
+FROM    sys.dm_os_wait_stats
+
+Exemplo 3.1: Verificando a pressão da CPU por meio do tempo de espera do sinal.
+
+Como esta exibição de gerenciamento de espera (DMV) mostra tempos de espera e contagens agregadas desde que as estatísticas foram zeradas ou desde que o servidor foi iniciado, uma visualização pontual das estatísticas de espera geralmente não é muito útil. O que é mais útil é comparar as estatísticas de espera em um determinado momento com as estatísticas em um momento anterior e ver como elas mudaram. A outra opção é zerar as estatísticas de espera da DMV, usando DBCC SQLPERF("sys.dm_os_wait_stats",CLEAR);, esperar um pouco e, em seguida, fazer consultas para ver o que se acumulou nesse período de tempo conhecido e definido.
+
+Acompanhando esperas em nível de sessão e instrução
+
+Como os tempos de espera nesta DMV são agregados, é difícil relacionar um tempo de espera a uma consulta específica, a menos que você esteja em um sistema de teste com apenas uma sessão em execução. No entanto, no SQL Server 2008, é possível fazer isso se você usar Eventos Estendidos (Extended Events). Veja o meu artigo no blog: http://sqlblog.com/blogs/jonathan_kehayias/archive/2010/12/30/an-xevent-a-day-30-of-31-tracking-session-and-statement-level-waits.aspx.
+
+Também podemos usar a DMV sys.dm_os_wait_stats para descobrir quais são as esperas de recursos mais comuns em nosso sistema com restrição de CPU, como mostrado no Exemplo 3.2, onde identificamos os principais eventos de espera, ordenados de acordo com a quantidade total de tempo que os processos esperaram (wait_time_ms) nesse evento. É importante ignorar as esperas benignas, normalmente causadas por processos do sistema que se espera que estejam esperando a maior parte do tempo. Também estamos subtraindo o signal_wait_time, pois essa parte do tempo de espera não está esperando pelo recurso específico, mas esperando por tempo no agendador.
+
 SELECT TOP ( 10 )
-wait_type ,
-waiting_tasks_count ,
-( wait_time_ms - signal_wait_time_ms ) AS resource_wait_time ,
-max_wait_time_ms ,
-CASE waiting_tasks_count
-WHEN 0 THEN 0
-ELSE wait_time_ms / waiting_tasks_count
-END AS avg_wait_time
-FROM sys.dm_os_wait_stats
-WHERE wait_type NOT LIKE '%SLEEP%' -- remove eg. SLEEP_TASK and
--- LAZYWRITER_SLEEP waits
-AND wait_type NOT LIKE 'XE%'
-AND wait_type NOT IN -- remove system waits
+        wait_type ,
+        waiting_tasks_count ,
+        ( wait_time_ms - signal_wait_time_ms ) AS resource_wait_time ,
+        max_wait_time_ms ,
+        CASE waiting_tasks_count
+          WHEN 0 THEN 0
+          ELSE wait_time_ms / waiting_tasks_count
+        END AS avg_wait_time
+FROM    sys.dm_os_wait_stats
+WHERE   wait_type NOT LIKE '%SLEEP%' -- remove eg. SLEEP_TASK and
+                                     -- LAZYWRITER_SLEEP waits
+        AND wait_type NOT LIKE 'XE%'
+        AND wait_type NOT IN -- remove system waits
 ( 'KSOURCE_WAKEUP', 'BROKER_TASK_STOP', 'FT_IFTS_SCHEDULER_IDLE_WAIT',
-'SQLTRACE_BUFFER_FLUSH', 'CLR_AUTO_EVENT', 'BROKER_EVENTHANDLER',
-'BAD_PAGE_PROCESS', 'BROKER_TRANSMITTER', 'CHECKPOINT_QUEUE',
-'DBMIRROR_EVENTS_QUEUE', 'SQLTRACE_BUFFER_FLUSH', 'CLR_MANUAL_EVENT',
-'ONDEMAND_TASK_QUEUE', 'REQUEST_FOR_DEADLOCK_SEARCH', 'LOGMGR_QUEUE',
-'BROKER_RECEIVE_WAITFOR', 'PREEMPTIVE_OS_GETPROCADDRESS',
-'PREEMPTIVE_OS_AUTHENTICATIONOPS', 'BROKER_TO_FLUSH' )
+  'SQLTRACE_BUFFER_FLUSH', 'CLR_AUTO_EVENT', 'BROKER_EVENTHANDLER',
+  'BAD_PAGE_PROCESS', 'BROKER_TRANSMITTER', 'CHECKPOINT_QUEUE',
+  'DBMIRROR_EVENTS_QUEUE', 'SQLTRACE_BUFFER_FLUSH', 'CLR_MANUAL_EVENT',
+  'ONDEMAND_TASK_QUEUE', 'REQUEST_FOR_DEADLOCK_SEARCH', 'LOGMGR_QUEUE',
+  'BROKER_RECEIVE_WAITFOR', 'PREEMPTIVE_OS_GETPROCADDRESS',
+  'PREEMPTIVE_OS_AUTHENTICATIONOPS', 'BROKER_TO_FLUSH' )
 ORDER BY wait_time_ms DESC
 -- **** Author: Jonathan Kaheyias ****
-Listing 3.2: Finding the top 10 wait events (cumulative).
-Three interesting wait types to look out for, in regard to CPU pressure, are SOS_
-SCHEDULER_YIELD, CXPACKET and CMEMTHREAD.81
-Chapter 3: High CPU Utilization
-SOS_SCHEDULER_YIELD waits
-The SQL scheduler is a cooperative multi-tasking scheduler. This means that it relies on
-the executing queries to voluntarily relinquish the CPU after a specific amount of running
-time. By contrast, the Windows scheduler is a pre-emptive multi-tasking scheduler, which
-means it removes tasks from the CPU after a specific amount of time.
-When a task voluntarily relinquishes the CPU and begins waiting to resume execution,
-the wait type assigned to the task is SOS_SCHEDULER_YIELD. The relinquishing task
-goes back onto the runnable queue and another task gets its allocated time on the CPU.
-If overall wait times are low, this type of wait is benign, simply indicating that the query
-spent longer than allowed on the CPU without having to wait for other resources (disk
-I/O, locks, latches, memory grants and so on).
-If queries show high wait times in sys.dm_exec_requests or sys.dm_os_waiting_
-tasks for the SOS_SCHEDULER_YIELD wait type, it's an indication that the query is
-extremely CPU-intensive. If there are high wait times for this wait type overall on the
-server it can indicate either that there are lots of CPU-intensive queries, which may need
-optimizing, or that the server needs more CPU. Scheduler activity can be investigated
-further using the sys.dm_os_schedulers DMV (discussed shortly).
-CXPACKET waits
-CXPACKET waits occur during synchronization of the query processor exchange iterator
-between workers, for a query running in parallel across multiple processors. If the server
-hosts a data warehouse or reporting type of database that receives a low volume of queries
-but processes large amounts of data, parallelism can substantially reduce the time it
-takes to execute those queries. In contrast, however, if the server hosts an OLTP database
-that has a lot of small queries and transactions, then parallelism can kill throughput and
-negatively impact performance. For further discussion of high CXPACKET waits and how
-to deal with this issue see the section Inappropriate parallelism, later.82
-Chapter 3: High CPU Utilization
+
+Exemplo 3.2: Encontrando os 10 principais eventos de espera (cumulativos).
+
+Três tipos de espera interessantes para se observar, em relação à pressão da CPU, são SOS_SCHEDULER_YIELD, CXPACKET e CMEMTHREAD.
+
+Esperas SOS_SCHEDULER_YIELD
+
+O agendador SQL é um agendador cooperativo de multitarefa. Isso significa que ele depende das consultas em execução para voluntariamente ceder a CPU após um determinado tempo de execução. Em contraste, o agendador do Windows é um agendador de multitarefa preemptivo, o que significa que ele remove as tarefas da CPU após um determinado tempo.
+Quando uma tarefa voluntariamente cede a CPU e começa a esperar para retomar a execução, o tipo de espera atribuído à tarefa é SOS_SCHEDULER_YIELD. A tarefa cedente volta para a fila de execução e outra tarefa recebe seu tempo alocado na CPU.
+Se os tempos de espera globais forem baixos, esse tipo de espera é benigno, indicando simplesmente que a consulta passou mais tempo do que o permitido na CPU sem precisar esperar por outros recursos (E/S de disco, bloqueios, latches, concessões de memória etc.).
+Se as consultas mostrarem tempos de espera elevados em sys.dm_exec_requests ou sys.dm_os_waiting_tasks para o tipo de espera SOS_SCHEDULER_YIELD, isso indica que a consulta é extremamente intensiva em CPU. Se houver tempos de espera elevados para esse tipo de espera em geral no servidor, pode indicar que há muitas consultas intensivas em CPU, que podem precisar de otimização, ou que o servidor precisa de mais CPU. A atividade do agendador pode ser investigada ainda mais usando a DMV sys.dm_os_schedulers (discutida em breve).
+
+Esperas CXPACKET
+
+As esperas CXPACKET ocorrem durante a sincronização do iterador de troca do processador de consulta entre os workers, para uma consulta em execução em paralelo em vários processadores. Se o servidor hospeda um data warehouse ou um banco de dados de relatórios que recebe um baixo volume de consultas, mas processa grandes quantidades de dados, o paralelismo pode reduzir substancialmente o tempo necessário para executar essas consultas. No entanto, em contraste, se o servidor hospeda um banco de dados OLTP que possui muitas consultas e transações pequenas, o paralelismo pode afetar negativamente o throughput e o desempenho. Para mais discussão sobre esperas CXPACKET elevadas e como lidar com esse problema, consulte a seção Paralelismo inadequado, posteriormente.
+
 CMEMTHREAD waits
-CMEMTHREAD waits are waits for synchronized memory objects. Some memory objects
-can be accessed by multiple threads simultaneously, some cannot. When multiple threads
-are trying to access a memory object, typically a cache, which must be accessed by one
-thread at a time, the waiting threads get a CMEMTHREAD wait.
-In general, CMEMTHREAD waits are not common or long-lasting. However, there is a
-known memory issue with SQL Server 2005 where, under certain circumstances, a
-server would show very high CPU usage, very high CMEMTHREAD waits, and very poorly
-performing queries. The details of this will be discussed later, in the TokenAndPermUserStore section.
-Investigating scheduler queues
-The sys.dm_os_schedulers DMV can identify whether or not a SQL instance is
-CPU-bound. This DMV returns one row for each of the SQL Server schedulers and it lists
-the total number of tasks that are assigned to each scheduler, as well as the number that
-are runnable.
-A runnable task is one that is in the runnable queues, waiting for CPU time. Other
-tasks on the scheduler that are in the current_tasks_count but not the runnable_
-tasks_count are ones that are either sleeping or waiting for a resource (lock, latch, I/O,
-memory, and so on).
-SELECT scheduler_id ,
-current_tasks_count ,
-runnable_tasks_count
-FROM sys.dm_os_schedulers
-WHERE scheduler_id < 255
-Listing 3.3: Investigating scheduler queues.83
-Chapter 3: High CPU Utilization
-Again, there is no threshold value that represents the boundary between a "good" and
-"bad" number of runnable tasks, but the lower the better. A high number of runnable
-tasks, like a high signal wait time, indicates that there is not enough CPU for the current
-query load.
-The filter for schedulers below 255 removes, from the result set, the numerous hidden
-schedulers in SQL Server, which are used for backups, the Dedicated Administrator
-Connection (DAC), and so on, and are not of interest when investigating general
-CPU load.
-Identifying CPU-intensive queries
-In order to determine the worst-running queries in the plan cache of SQL Server, the
-DMVs sys.dm_exec_query_stats and sys.dm_exec_sql_text can be used.
-The sys.dm_exec_query_stats DMV provides aggregated statistics and returns
-one row for each query statement in the cached plan. Many of the columns are incremented counters, and provide information about how many times a query has been
-executed and the resources that were used. For example, the *_worker_time columns
-represent the time spent on the CPU, and the *_elapsed_time columns show the total
-execution time.
-The query shown in Listing 3.4 returns the top ten most costly queries in cache by total
-worker time. We join to the sys.dm_exec_sql_text and sys.dm_exec_query_
-plan functions to retrieve the text and execution plans for these queries, within
-the batch.
+
+CMEMTHREAD waits are waits for synchronized memory objects. Some memory objects can be accessed by multiple threads simultaneously, some cannot. When multiple threads are trying to access a memory object, typically a cache, which must be accessed by one thread at a time, the waiting threads get a CMEMTHREAD wait.
+In general, CMEMTHREAD waits are not common or long-lasting. However, there is a known memory issue with SQL Server 2005 where, under certain circumstances, a server would show very high CPU usage, very high CMEMTHREAD waits, and very poorly performing queries. The details of this will be discussed later, in the TokenAndPermUserStore section.
+
+Investigando as filas do agendador
+
+A DMV sys.dm_os_schedulers pode identificar se uma instância do SQL está com restrição de CPU ou não. Esta DMV retorna uma linha para cada um dos agendadores do SQL Server e lista o número total de tarefas atribuídas a cada agendador, bem como o número que está pronto para execução.
+Uma tarefa pronta para execução é aquela que está nas filas de prontidão, esperando pelo tempo da CPU. Outras tarefas no agendador que estão no current_tasks_count, mas não no runnable_tasks_count, estão ou dormindo ou aguardando um recurso (bloqueio, latch, E/S, memória, etc.).
+
+SELECT  scheduler_id ,
+        current_tasks_count ,
+		runnable_tasks_count
+FROM    sys.dm_os_schedulers
+WHERE   scheduler_id < 255
+
+Exemplo 3.3: Investigando as filas do agendador.
+
+Novamente, não há um valor limite que represente a fronteira entre um número "bom" e "ruim" de tarefas prontas para execução, mas quanto menor, melhor. Um alto número de tarefas prontas para execução, assim como um alto tempo de espera do sinal, indica que não há CPU suficiente para a carga de consultas atual.
+O filtro para agendadores abaixo de 255 remove, do conjunto de resultados, os numerosos agendadores ocultos no SQL Server, que são usados para backups, a Conexão Administrativa Dedicada (DAC) e assim por diante, e não são de interesse ao investigar a carga geral da CPU.
+
+Identificando consultas intensivas em CPU
+
+Para determinar as consultas de pior desempenho no cache de plano do SQL Server, podem ser utilizadas as DMVs sys.dm_exec_query_stats e sys.dm_exec_sql_text. A DMV sys.dm_exec_query_stats fornece estatísticas agregadas e retorna uma linha para cada instrução de consulta no plano em cache. Muitas das colunas são contadores incrementais e fornecem informações sobre quantas vezes uma consulta foi executada e os recursos que foram utilizados. Por exemplo, as colunas *_worker_time representam o tempo gasto na CPU e as colunas *_elapsed_time mostram o tempo total de execução.
+A consulta mostrada no Exemplo 3.4 retorna as dez consultas mais custosas em cache pelo tempo total de CPU. Juntamos as funções sys.dm_exec_sql_text e sys.dm_exec_query_plan para recuperar o texto e os planos de execução dessas consultas, dentro do lote.
+
 SELECT TOP ( 10 )
-SUBSTRING(ST.text, ( QS.statement_start_offset / 2 ) + 1,
-( ( CASE statement_end_offset
-WHEN -1 THEN DATALENGTH(st.text)
-ELSE QS.statement_end_offset
-END - QS.statement_start_offset ) / 2 ) + 1)
-AS statement_text ,84
-Chapter 3: High CPU Utilization
-execution_count ,
-total_worker_time / 1000 AS total_worker_time_ms ,
-( total_worker_time / 1000 ) / execution_count
+        SUBSTRING(ST.text, ( QS.statement_start_offset / 2 ) + 1,
+                  ( ( CASE statement_end_offset
+                        WHEN -1 THEN DATALENGTH(st.text)
+						ELSE QS.statement_end_offset
+					END - QS.statement_start_offset ) / 2 ) + 1)
+				AS statement_text ,84
+		execution_count ,
+		total_worker_time / 1000 AS total_worker_time_ms ,
+		 ( total_worker_time / 1000 ) / execution_count
 AS avg_worker_time_ms ,
 total_logical_reads ,
 total_logical_reads / execution_count AS avg_logical_reads ,
@@ -1191,7 +1134,9 @@ FROM sys.dm_exec_query_stats qs
 CROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) st
 CROSS APPLY sys.dm_exec_query_plan(qs.plan_handle) qp
 ORDER BY total_worker_time DESC
+
 Listing 3.4: Finding the top ten CPU-consuming queries.
+
 The execution plan can be viewed by clicking the XML link to open the plan in its
 graphical form. The execution plan returned is for the entire batch, not just the
 high-CPU statement.
