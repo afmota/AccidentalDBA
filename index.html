@@ -23,178 +23,241 @@
 		Diagramação e design por Matthew Tye & Gower Associates<br>
 	</p>
 	<h1>Table of Contents</h1>
-Introduction
-Who is this book for?
-Code Examples
-
-Chapter 1: A Performance Troubleshooting Methodology
-Defining a Troubleshooting Methodology
-Wait Statistics: the Basis for Troubleshooting
-Virtual File Statistics
-Performance Counters
-Plan Cache Usage
-Summary
-
-Chapter 2: Disk I/O Configuration
-Disk Configuration: Basic Considerations
-Disk size vs. disk throughput
-Random versus sequential I/O
-Choosing the Right RAID Level
-A brief overview of RAID configurations
-Disk size and throughput considerations
-Workload considerations
-Direct Attached Storage vs. Storage Area Networks
-Direct Attached Storage
-Storage Area Networks
-Diagnosing Disk I/O Issues
-Common Disk I/O Problems
-Sizing for capacity instead of I/O performance
-Incorrect workload isolation
-Incorrect partition alignment
-Incorrect bandwidth using SAN configurations
-Summary
-
-Chapter 3: High CPU Utilization
-Investigating CPU Pressure
-Performance Monitor
-SQL Trace
-Dynamic Management Views
-Common Causes of High CPU Usage
-Missing indexes
-Outdated statistics
-Non-SARGable predicates
-Implicit conversions
-Parameter sniffing
-Ad hoc non-parameterized queries
-Inappropriate parallelism
-TokenAndPermUserStore
-Windows Server and BIOS power saving options
-Summary
-Additional Resources
-
-Chapter 4: Memory Management
-The Self-Tuning Database Engine
-How SQL Server Allocates Memory
-32-bit Virtual Address Space limitations
-Using 64-bit SQL Server
-Memory configuration options with 64-bit SQL Server
-Diagnosing Memory Pressure
-Memory-related counters
-Memory-related DMVs
-Common Memory-Related Problems
-The SQL Server memory leak myth
-Paging problems
-OS instability due to Lock Pages in Memory
-plus unlimited max server memory
-App Domain is marked for unload due to memory pressure
-Error 701 and FAILED_VIRTUAL_RESERVE
-Over-provisioned virtual machines
-Memory settings for multiple instances
-Summary
-
-Chapter 5: Missing Indexes
-Index Selection and Design
-Index key column order
-Use of included columns
-Index width
-Identifying Missing Indexes
-Workload analysis with the Database Engine Tuning Advisor
-Missing index feature
-Missing indexes on foreign keys
-Identifying Unused Indexes
-Identifying Duplicate Indexes
-Summary
-
-Chapter 6: Blocking
-Locks and Concurrency (a Brief Review)
-Lock modes
-Lock types
-Lock escalation
-Concurrency and the transaction isolation levels
-Latches and latch contention
-Monitoring Blocking
-Using sysprocesses (SQL Server 2000 and later)
-Cumulative wait statistics with DBCC SQLPERF (waitstats)
-Dynamic Management Views
-Performance Monitor
-Automated Detection and Notification of Blocking
-The Sp_blocker_pss80 process
-SQL Trace
-Event notifications
-Extended Events
-Resolving Blocking
-Bad database design
-Inappropriate isolation level
-Poorly written queries
-Missing indexes
-Poor application design
-Outdated hardware
-Hints, Trace Flags and Other Last Resorts
-Locking hints
-Summary
-
-Chapter 7: Handling Deadlocks
-The Lock Monitor
-Capturing Deadlock Graphs
-Trace Flag 1204
-Trace Flag 1222
-SQL Profiler XML Deadlock Graph event
-Service Broker event notifications
-WMI Provider for server events
-Extended Events
-Reading Deadlock Graphs
-Interpreting Trace Flag 1204 deadlock graphs
-Interpreting Trace Flag 1222 deadlock graphs
-Interpreting XML deadlock graphs
-Common types of deadlock and how to eliminate them
-Bookmark lookup deadlock
-Range scans caused by SERIALIZABLE isolation
-Cascading constraint deadlocks
-Intra-query parallelism deadlocks
-Accessing objects in different orders
-Handling Deadlocks to Prevent Errors
-T-SQL TRY…CATCH blocks
-Handling ADO.NET SqlExceptions in .NET code
-Controlling Deadlock Behavior with Deadlock Priority
-Summary
-
-Chapter 8: Large or Full Transaction Log
-How the Transaction Log Works
-How SQL Server writes to the transaction log
-Understanding log truncation
-Sizing and growing the log
-Diagnosing a Runaway Transaction Log
-Excessive logging: index maintenance operations
-Lack of log space reuse
-Other possible causes of log growth
-Handling a "Transaction Log Full" Error
-Mismanagement or What Not To Do
-Detach database, delete log file
-Forcing log file truncation
-Scheduled shrinking of the transaction log
-Proper Log Management
-Summary
-
-Chapter 9: Truncated Tables, Dropped Objects and Other
-Accidents Waiting to Happen
-Example Case: The Missing Sales Order Data
-Recovering Lost Data
-Recovering from backup
-Recovering without a backup
-Finding the Culprit
-Prevention is Better than Cure
-Plan for recovery from all data losses
-Implement a change control process
-Implement an appropriate security model
-Access control measures
-Summary
-
-Appendix: What to Do When All Else Fails
-Microsoft Customer Support Services
-Online Resources
-Articles
-Blogs
-Forums
-Hiring a Consultant
+	<ul type="disk">
+		<li><strong>Introduction</strong></li>
+		<ul>
+			<li>Who is this book for?</li>
+			<li>Code Examples</li>
+		</ul>
+		<li><strong>Chapter 1: A Performance Troubleshooting Methodology</strong></li>
+		<ul>
+			<li>Defining a Troubleshooting Methodology</li>
+			<li>Wait Statistics: the Basis for Troubleshooting</li>
+			<li>Virtual File Statistics</li>
+			<li>Performance Counters</li>
+			<li>Plan Cache Usage</li>
+			<li>Summary</li>
+		</ul>
+		<li><strong>Chapter 2: Disk I/O Configuration</strong></li>
+		<ul>
+			<li>Disk Configuration: Basic Considerations</li>
+			<ul>
+				<li>Disk size vs. disk throughput</li>
+				<li>Random versus sequential I/O</li>
+			</ul>
+			<li>Choosing the Right RAID Level</li>
+			<ul>
+				<li>A brief overview of RAID configurations</li>
+				<li>Disk size and throughput considerations</li>
+				<li>Workload considerations</li>
+			</ul>
+			<li>Direct Attached Storage vs. Storage Area Networks</li>
+			<ul>
+				<li>Direct Attached Storage</li>
+				<li>Storage Area Networks</li>
+			</ul>
+			<li>Diagnosing Disk I/O Issues</li>
+			<li>Common Disk I/O Problems</li>
+			<ul>
+				<li>Sizing for capacity instead of I/O performance</li>
+				<li>Incorrect workload isolation</li>
+				<li>Incorrect partition alignment</li>
+				<li>Incorrect bandwidth using SAN configurations</li>
+			</ul>
+			<li>Summary</li>
+		</ul>
+		<li><strong>Chapter 3: High CPU Utilization</strong></li>
+		<ul>
+			<li>Investigating CPU Pressure</li>
+			<ul>
+				<li>Performance Monitor</li>
+				<li>SQL Trace</li>
+				<li>Dynamic Management Views</li>
+			</ul>
+			<li>Common Causes of High CPU Usage</li>
+			<ul>
+				<li>Missing indexes</li>
+				<li>Outdated statistics</li>
+				<li>Non-SARGable predicates</li>
+				<li>Implicit conversions</li>
+				<li>Parameter sniffing</li>
+				<li>Ad hoc non-parameterized queries</li>
+				<li>Inappropriate parallelism</li>
+				<li>TokenAndPermUserStore</li>
+				<li>Windows Server and BIOS power saving options</li>
+			</ul>
+			<li>Summary</li>
+			<li>Additional Resources</li>
+		</ul>
+		<li><strong>Chapter 4: Memory Management</strong></li>
+		<ul>
+			<li>The Self-Tuning Database Engine</li>
+			<li>How SQL Server Allocates Memory</li>
+			<ul>
+				<li>32-bit Virtual Address Space limitations</li>
+				<li>Using 64-bit SQL Server</li>
+				<li>Memory configuration options with 64-bit SQL Server</li>
+			</ul>
+			<li>Diagnosing Memory Pressure</li>
+			<ul>
+				<li>Memory-related counters</li>
+				<li>Memory-related DMVs</li>
+			</ul>
+			<li>Common Memory-Related Problems</li>
+			<ul>
+				<li>The SQL Server memory leak myth</li>
+				<li>Paging problems</li>
+				<li>OS instability due to Lock Pages in Memory</li>
+				<li>plus unlimited max server memory</li>
+				<li>App Domain is marked for unload due to memory pressure</li>
+				<li>Error 701 and FAILED_VIRTUAL_RESERVE</li>
+				<li>Over-provisioned virtual machines</li>
+				<li>Memory settings for multiple instances</li>
+			</ul>
+			<li>Summary</li>
+		</ul>
+		<li><strong>Chapter 5: Missing Indexes</strong></li>
+		<ul>
+			<li>Index Selection and Design</li>
+			<ul>
+				<li>Index key column order</li>
+				<li>Use of included columns</li>
+				<li>Index width</li>
+			</ul>
+			<li>Identifying Missing Indexes</li>
+			<ul>
+				<li>Workload analysis with the Database Engine Tuning Advisor</li>
+				<li>Missing index feature</li>
+				<li>Missing indexes on foreign keys</li>
+			</ul>
+			<li>Identifying Unused Indexes</li>
+			<li>Identifying Duplicate Indexes</li>
+			<li>Summary</li>
+		</ul>
+		<li><strong>Chapter 6: Blocking</strong></li>
+		<ul>
+			<li>Locks and Concurrency (a Brief Review)</li>
+			<ul>
+				<li>Lock modes</li>
+				<li>Lock types</li>
+				<li>Lock escalation</li>
+				<li>Concurrency and the transaction isolation levels</li>
+				<li>Latches and latch contention</li>
+			</ul>
+			<li>Monitoring Blocking</li>
+			<ul>
+				<li>Using sysprocesses (SQL Server 2000 and later)</li>
+				<li>Cumulative wait statistics with DBCC SQLPERF (waitstats)</li>
+				<li>Dynamic Management Views</li>
+				<li>Performance Monitor</li>
+			</ul>
+			<li>Automated Detection and Notification of Blocking</li>
+			<ul>
+				<li>The Sp_blocker_pss80 process</li>
+				<li>SQL Trace</li>
+				<li>Event notifications</li>
+				<li>Extended Events</li>
+			</ul>
+			<li>Resolving Blocking</li>
+			<ul>
+				<li>Bad database design</li>
+				<li>Inappropriate isolation level</li>
+				<li>Poorly written queries</li>
+				<li>Missing indexes</li>
+				<li>Poor application design</li>
+				<li>Outdated hardware</li>
+			</ul>
+			<li>Hints, Trace Flags and Other Last Resorts</li>
+			<ul>
+				<li>Locking hints</li>
+			</ul>
+			<li>Summary</li>
+		</ul>
+		<li><strong>Chapter 7: Handling Deadlocks</strong></li>
+		<ul>
+			<li>The Lock Monitor</li>
+			<li>Capturing Deadlock Graphs</li>
+			<ul>
+				<li>Trace Flag 1204</li>
+				<li>Trace Flag 1222</li>
+				<li>SQL Profiler XML Deadlock Graph event</li>
+				<li>Service Broker event notifications</li>
+				<li>WMI Provider for server events</li>
+				<li>Extended Events</li>
+			</ul>
+			<li>Reading Deadlock Graphs</li>
+			<ul>
+				<li>Interpreting Trace Flag 1204 deadlock graphs</li>
+				<li>Interpreting Trace Flag 1222 deadlock graphs</li>
+				<li>Interpreting XML deadlock graphs</li>
+			</ul>
+			<li>Common types of deadlock and how to eliminate them</li>
+			<ul>
+				<li>Bookmark lookup deadlock</li>
+				<li>Range scans caused by SERIALIZABLE isolation</li>
+				<li>Cascading constraint deadlocks</li>
+				<li>Intra-query parallelism deadlocks</li>
+				<li>Accessing objects in different orders</li>
+			</ul>
+			<ul>
+				<li>Handling Deadlocks to Prevent Errors</li>
+				<li>T-SQL TRY…CATCH blocks</li>
+				<li>Handling ADO.NET SqlExceptions in .NET code</li>
+			</ul>
+			<li>Controlling Deadlock Behavior with Deadlock Priority</li>
+			<li>Summary</li>
+		</ul>
+		<li><strong>Chapter 8: Large or Full Transaction Log</strong></li>
+		<ul>
+			<li>How the Transaction Log Works</li>
+			<ul>
+				<li>How SQL Server writes to the transaction log</li>
+				<li>Understanding log truncation</li>
+				<li>Sizing and growing the log</li>
+			</ul>
+			<li>Diagnosing a Runaway Transaction Log</li>
+			<ul>
+				<li>Excessive logging: index maintenance operations</li>
+				<li>Lack of log space reuse</li>
+				<li>Other possible causes of log growth</li>
+			</ul>
+			<li>Handling a "Transaction Log Full" Error</li>
+			<li>Mismanagement or What Not To Do</li>
+			<li>Detach database, delete log file</li>
+			<li>Forcing log file truncation</li>
+			<li>Scheduled shrinking of the transaction log</li>
+			<li>Proper Log Management</li>
+			<li>Summary</li>
+		</ul>
+		<li><strong>Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen</strong></li>
+		<ul>
+			<li>Example Case: The Missing Sales Order Data</li>
+			<li>Recovering Lost Data</li>
+			<ul>
+				<li>Recovering from backup</li>
+				<li>Recovering without a backup</li>
+			</ul>
+			<li>Finding the Culprit</li>
+			<li>Prevention is Better than Cure</li>
+			<ul>
+				<li>Plan for recovery from all data losses</li>
+				<li>Implement a change control process</li>
+				<li>Implement an appropriate security model</li>
+				<li>Access control measures</li>
+			</ul>
+			<li>Summary</li>
+		</ul>
+		<li><strong>Appendix: What to Do When All Else Fails</strong></li>
+		<ul>
+			<li>Microsoft Customer Support Services</li>
+			<li>Online Resources</li>
+			<ul>
+				<li>Articles</li>
+				<li>Blogs</li>
+				<li>Forums</li>
+			</ul>
+			<li>Hiring a Consultant</li>
+		</ul>
+	</ul>
 </body>
 </html>
