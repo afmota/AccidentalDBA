@@ -281,94 +281,85 @@ AND sod.ModifiedDate < '2010/01/02'
     <p>Esse é um problema bastante comum em muitos bancos de dados. Com frequência, vejo funções como <code>UPPER</code>, <code>LTRIM</code>, <code>ISNULL</code> sendo usadas em consultas, seja nos joins ou na cláusula <code>WHERE</code>, e em muitos casos simplesmente não há necessidade delas. Se as colunas usarem uma colação que não diferencia maiúsculas de minúsculas, os valores em maiúsculas e minúsculas são considerados iguais, e o uso das funções <code>UPPER</code> ou <code>LOWER</code> não faz nada além de degradar o desempenho. Da mesma forma, nas comparações de strings, o SQL ignora espaços finais, eliminando a necessidade da função <code>RTRIM</code>.</p>
     <img src="imagens/fig33.PNG" alt="Index Seek">
     <p><strong>Figura 3.3</strong>: Uma busca de índice no índice SalesOrderDetail.</p>
-    
-    Dealing with NULLs is always a fun one. The ISNULL function is often used unnecessarily due to a misunderstanding of how NULLs work in predicates. For example, the following two WHERE clause predicates are completely equivalent in function.
+    <p>Lidar com <code>NULLs</code> sempre é interessante. A função <code>ISNULL</code> é frequentemente usada desnecessariamente devido a uma incompreensão de como os <code>NULLs</code> funcionam em predicados. Por exemplo, os dois predicados abaixo na cláusula <code>WHERE</code> são completamente equivalentes em função.</p>
+    <pre>
+        <code>
+WHERE ISNULL(SomeCol,0) > 0
+WHERE SomeCol > 0
+        </code>
+    </pre>
+    <p>No primeiro caso, qualquer linha com um valor <code>NULL</code> será excluída porque o <code>NULL</code> é convertido para zero e o filtro é para valores maiores que zero. No segundo caso, qualquer linha com um valor <code>NULL</code> será excluída porque os <code>NULLs</code> nunca retornam verdadeiro quando comparados a qualquer valor usando os operadores de igualdade (=), diferença (<>), menor que (<), maior que (>), ou qualquer outro operador de comparação. Eles só retornam verdadeiro para verificações de <code>IS NULL</code> ou <code>IS NOT NULL</code>. Portanto, ambos os predicados alcançam o mesmo resultado, mas apenas o segundo permite o uso de pesquisas de índice.</p>
+    <h3>Conversões implícitas</h3>
+    <p>Uma conversão implícita ocorre devido à comparação de tipos de dados diferentes. O SQL não pode comparar valores de tipos diferentes e, portanto, é necessário converter uma das colunas envolvidas para o mesmo tipo de dados que o outro, a fim de realizar a comparação.</p>
+    <p>Quando ocorre uma conversão implícita em uma coluna usada em uma cláusula <code>WHERE</code> ou <code>FROM</code>, o Otimizador do SQL Server determina a conversão de todos os valores da coluna antes que o filtro possa ser aplicado. Isso significa que, durante a execução da consulta, o processador de consulta converterá o tipo de dados de menor precedência para o tipo de dados de maior precedência antes de aplicar o filtro ou a condição de junção. Isso implica que, assim como no caso de funções na coluna, o predicado é considerado não-SARGable, o que significa que não é possível usar pesquisas de índice. O SQL precisa processar mais linhas do que o necessário para obter os resultados, o que resulta em um maior uso da CPU.</p>
+    <p>Uma manifestação comum desse problema é a comparação de parâmetros <code>NVARCHAR</code> com colunas do tipo <code>VARCHAR</code>. Existem algumas bibliotecas de acesso a dados (como o JDBC, por exemplo) que passam constantes de string como Unicode (<code>NVARCHAR</code>) por padrão. O problema é demonstrado no exemplo 3.9, onde a coluna AccountNumber é do tipo <code>VARCHAR</code> e o parâmetro é uma sequência Unicode (<code>NVARCHAR</code>), indicada pelo N antes das aspas de abertura.</p>
+    <pre>
+        <code>
+SELECT  p.FirstName ,
+        p.LastName ,
+        c.AccountNumber
+FROM    Sales.Customer AS c
+        INNER JOIN Person.Person AS p ON c.PersonID = p.BusinessEntityID
+WHERE   AccountNumber = N'AW00029594'
+        </code>
+    </pre>
+    <p><strong>Exemplo 3.9</strong>: Uma conversão implícita de tipo de dados na condição de busca.</p>
+    <p>The relevant section of the execution plan, shown in Figure 3.4, confirms that we get an index scan operation.</p>
+    <img src="imagens/fig34.png" alt="O predicado não-SARGable resulta em uma varredura de índice.">
+    <p><strong>Figura 3.4</strong>: O predicado não-SARGable resulta em uma varredura de índice.</p>
+    <p>A janela de propriedades do filtro, na Figura 3.5, mostra a conversão implícita.</p>
+    <img src="imagens/fig35.PNG" alt="O predicado do filtro dita a necessidade de converter todas as linhas na coluna AccountNumber para NVARCHAR.">
+    <p><strong>Figure 3.5</strong>: O predicado do filtro dita a necessidade de converter todas as linhas na coluna <code>AccountNumber</code> para <code>NVARCHAR</code>.</p>
+    <p>A solução para conversões implícitas é garantir que as colunas usadas em junções sejam sempre do mesmo tipo e que, na cláusula <code>WHERE</code>, quaisquer variáveis, parâmetros ou constantes sejam do mesmo tipo das colunas com as quais estão sendo comparados. Se não forem, faça uso cuidadoso das funções de conversão (<code>CAST</code>, <code>CONVERT</code>) nas variáveis, parâmetros ou constantes para que correspondam ao tipo de dados da coluna.</p>
+    <p>Se estiver usando bibliotecas de acesso a dados como o JDBC, verifique as propriedades para garantir que elas não estejam passando todos os valores de string como <code>NVARCHAR</code>, independentemente do tipo de dados da coluna subjacente.</p>
+    <h3>Parameter sniffing</h3>
+    <p>O "parameter sniffing" é um processo usado pelo SQL Server ao criar um plano de execução para uma stored procedure, função ou consulta parametrizada. Na primeira vez em que o plano é compilado, o SQL Server examina, ou "sniffa", os valores dos parâmetros de entrada fornecidos e os utiliza, em conjunto com as estatísticas das colunas, para estimar o número de linhas que serão afetadas pela consulta. Em seguida, usa essa estimativa para calcular o custo de várias possíveis execuções do plano. Um problema surge apenas se os valores que foram passados como parâmetros de entrada na criação inicial do plano resultarem em um número de linhas atípico em relação ao que será obtido em futuras execuções da procedure. O "parameter sniffing" ocorre apenas no momento em que um plano é compilado ou recompilado, e todas as execuções subsequentes da stored procedure, função ou consulta parametrizada usarão o mesmo plano.</p>
+    <p>Durante a compilação inicial, apenas os valores dos parâmetros de entrada podem ser "sniffados", pois as variáveis locais ainda não têm valor. Se uma instrução dentro do lote for recompilada, tanto os valores dos parâmetros quanto das variáveis podem ser "sniffados", pois as variáveis terão valores naquele momento.</p>
+    <p>Como exemplo, usaremos novamente o banco de dados <code>AdventureWorks</code>, e especificamente a coluna <code>ShipDate</code> na tabela <code>Sales.SalesOrderHeader</code>. Essa coluna tem uma data mínima de 08/07/2004 e uma data máxima de 08/07/2011. O Exemplo 3.10 mostra uma stored procedure para encontrar todos os números de pedidos de venda (também nessa tabela) que estão entre duas datas de envio fornecidas.</p>
+    <pre>
+        <code>
+CREATE PROCEDURE user_GetCustomerShipDates
+    (
+      @ShipDateStart DATETIME ,
+      @ShipDateEnd DATETIME
+    )
+AS
+    SELECT  CustomerID ,
+            SalesOrderNumber
+    FROM    Sales.SalesOrderHeader
+    WHERE   ShipDate BETWEEN @ShipDateStart AND @ShipDateEnd
+GO
+        </code>
+    </pre>
+    <p><strong>Exemplo 3.10</strong>: A stored procedure <code>user_GetCustomerShipDates</code>.</p>
+    Isso seria suportado por um índice não clusterizado em <code>ShipDate</code>, conforme mostrado no Exemplo 3.11.
+    <pre>
+        <code>
+CREATE NONCLUSTERED INDEX IDX_ShipDate_ASC
+     ON Sales.SalesOrderHeader (ShipDate)
+GO
+        </code>
+    </pre>
+    <p><strong>Exemplo 3.11</strong>: Um índice não clusterizado na coluna <code>ShipDate</code>.</p>
+    <p>Agora, vamos executar a stored procedure duas vezes, conforme mostrado no Exemplo 3.12, com a primeira consulta abrangendo um intervalo de datas de vários anos e, portanto, retornando muitas linhas, e a segunda consulta abrangendo apenas um intervalo de dez dias. Certifique-se de obter o plano de execução real juntamente com os resultados.</p>
+    <pre>
+        <code>
+DBCC FREEPROCCACHE
+EXEC user_GetCustomerShipDates '2001/07/08', '2004/01/01'
+EXEC user_GetCustomerShipDates '2001/07/10', '2001/07/20'
+        </code>
+    </pre>
+    Exemplo 3.12: Executando a stored procedure user_GetCustomerShipDates, com a primeira consulta abrangendo um intervalo de datas grande.
 
-    WHERE ISNULL(SomeCol,0) > 0
-    WHERE SomeCol > 0
-
-    In the first one, any row with a NULL value will be excluded because the NULL is converted to zero and the filter is for values greater than zero. In the second one, any row with a NULL value will be excluded because NULLs do not ever return true when compared to any value using the =, <>, <, > or any of the other comparison operators. They can only return true for IS NULL or IS NOT NULL checks. Hence, both predicates achieve the same result, but only the second one allows use of index seeks.
-    
-    Implicit conversions
-
-    An implicit conversion results from a comparison of unequal data types. SQL cannot compare values of differing types and it must convert one of the columns involved to the same data type as the other, in order to do the comparison.
-
-    When an implicit conversion occurs on a column that is used in a WHERE or FROM clause, the SQL Server Optimizer dictates a conversion of all the column values before the filter can be applied. This means that, during the query execution, the query processor will convert the lower precedence data type to the higher precedence data type before applying the filter or join condition. This means that, as with the case of functions on the column, the predicate is considered non-SARGable and so index seeks cannot be used, SQL must process more rows than necessary to get the results, and this leads to higher CPU usage.
-
-    A common manifestation of this problem is the comparison of NVARCHAR parameters to columns that are of type VARCHAR. There are some data access libraries (JDBC springs immediately to mind) that pass string constants as Unicode (NVARCHAR), by default. The problem is demonstrated in Listing 3.9, where the AccountNumber column is a VARCHAR and the parameter is a Unicode string (NVARCHAR), so designated by the N before the opening quote.
-
-    SELECT  p.FirstName ,
-            p.LastName ,
-            c.AccountNumber
-    FROM    Sales.Customer AS c
-            INNER JOIN Person.Person AS p ON c.PersonID = p.BusinessEntityID
-    WHERE   AccountNumber = N'AW00029594'
-
-    Listing 3.9: An implicit data type conversion in the search condition.
-    
-    The relevant section of the execution plan, shown in Figure 3.4, confirms that we get an index scan operation.
-
-    ********************************************************************
-    * Figure 3.4: The non-SARGable predicate results in an index scan. *
-    ********************************************************************
-
-    The Filter properties window, in Figure 3.5, shows the implicit conversion.
-
-    ***********************************************************************************************************************
-    * Figure 3.5: The filter predicate dictates the need to convert all the rows in the AccountNumber column to NVARCHAR. *
-    ***********************************************************************************************************************
-
-    The fix for implicit conversions is to ensure that columns used in joins are always of the same type and that, in the WHERE clause, any variables, parameters or constants are of the same type as the columns to which they are being compared. If they are not, make careful use of conversion functions (CAST, CONVERT) on the variables, parameters or constants so that they match the data type of the column.
-
-    If using data access libraries like JDBC, check the properties to ensure that they are not passing all string values as NVARCHAR regardless of the underlying column data type.
-
-    Parameter sniffing
-
-    Parameter sniffing is a process used by SQL Server when creating an execution plan for a stored procedure, function, or parameterized query. The first time the plan is compiled, SQL Server will examine, or "sniff", the input parameter values supplied, and use them, in conjunction with the column statistics, to estimate the number of rows that will be touched by the query. It then uses that estimate in its costing of various possible execution plans. A problem only arises if the values that were passed as input parameters on initial plan creation, result in a row count that is atypical of that which will result from future executions of the procedure. Parameter sniffing only occurs at the time a plan is compiled or recompiled, and all subsequent executions of the stored procedure, function, or parameterized query will use the same plan.
-
-    During the initial compile, only the values of the input parameters can be sniffed as any local variables will have no value. If a statement within the batch is recompiled, both parameter and variable values can be sniffed, as the variables will, by that time, have values.
-
-    By way of an example, we'll use the AdventureWorks database again, and specifically the ShipDate in the Sales.SalesOrderHeader table. This column has a minimum date of 2011/07/08 and maximum date of 2004/08/07. Listing 3.10 shows a stored procedure to find all sales order numbers (also in this table) that are between two given ship dates.
-
-    CREATE PROCEDURE user_GetCustomerShipDates
-        (
-          @ShipDateStart DATETIME ,
-          @ShipDateEnd DATETIME
-        )
-    AS
-        SELECT  CustomerID ,
-                SalesOrderNumber
-        FROM    Sales.SalesOrderHeader
-        WHERE   ShipDate BETWEEN @ShipDateStart AND @ShipDateEnd
-    GO
-
-    Listing 3.10: The user_GetCustomerShipDates stored procedure.
-
-    This would be supported by a non-clustered index on ShipDate, as shown in Listing 3.11.
-
-    CREATE NONCLUSTERED INDEX IDX_ShipDate_ASC
-         ON Sales.SalesOrderHeader (ShipDate)
-    GO
-
-    Listing 3.11: A non-clustered index on the ShipDate column.
-
-    Now, we'll execute the stored procedure twice, as shown in Listing 3.12, with the first query spanning a date range of several years, and so returning many rows, and the second one only covering a range of ten days. Be sure to retrieve the actual execution plan with the results.
-
-    DBCC FREEPROCCACHE
-    EXEC user_GetCustomerShipDates '2001/07/08', '2004/01/01'
-    EXEC user_GetCustomerShipDates '2001/07/10', '2001/07/20'
-
-    Listing 3.12: Executing the user_GetCustomerShipDates stored procedure, with the large date range query first.
-
-    Note that we ran DBCC FREEPROCCACHE to clear the plan cache and ensure a new plan is created. The plan is identical in each case, as shown in Figure 3.6.
+    Observe que executamos o comando DBCC FREEPROCCACHE para limpar o cache de planos e garantir a criação de um novo plano. O plano é idêntico em ambos os casos, conforme mostrado na Figura 3.6.
 
     ***********************************************************************************
-    * Figure 3.6: Execution plans for the user_GetCustomerShipDates stored procedure. *
+    * Figura 3.6: Planos de execução para a stored procedure user_GetCustomerShipDates. *
     ***********************************************************************************
 
-    In the plan we see that optimizer has chosen not to use the non-clustered index on the ShipDate column, which we created especially for this procedure. The reason is that it is not a covering index (it doesn't include the SalesOrderNumber column) and the number of rows that the optimizer estimated, based on the parameter values for the initial execution, along with the statistics, was too high to make the combination of index seek/key lookup optimal. Hence the optimizer ignores that index and scans a different one.
+    No plano, vemos que o otimizador optou por não utilizar o índice não clusterizado na coluna ShipDate, que criamos especialmente para esta stored procedure. A razão é que não se trata de um índice de cobertura (não inclui a coluna SalesOrderNumber) e o número de linhas estimado pelo otimizador, com base nos valores dos parâmetros para a execução inicial, juntamente com as estatísticas, foi muito alto para tornar a combinação de busca no índice/verificação da chave otimizada. Portanto, o otimizador ignora esse índice e faz uma varredura em outro.
 
-    Now, run Listing 3.12 again, this time not returning the execution plan, but with STATISTICS IO and STATISTICS TIME enabled. The reason we're doing a separate run is that returning the actual execution has an impact on the query's performance, so executions that return the execution plan should not also be used to check the query's performance statistics. The results are as follows (the separating headers were added manually, for clarity).
+    Agora, execute novamente o Exemplo 3.12, desta vez sem retornar o plano de execução, mas com as opções STATISTICS IO e STATISTICS TIME habilitadas. A razão para fazer uma execução separada é que retornar o plano de execução real tem um impacto no desempenho da consulta, portanto, as execuções que retornam o plano de execução não devem ser usadas para verificar as estatísticas de desempenho da consulta. Os resultados são os seguintes (os cabeçalhos separadores foram adicionados manualmente, para maior clareza).
 
     ==FIRST EXECUTION (LARGE DATE RANGE)===
 
@@ -390,23 +381,23 @@ AND sod.ModifiedDate < '2010/01/02'
     SQL Server Execution Times:
       CPU time = 15 ms, elapsed time = 5 ms.
 
-    The logical reads are shown as 686 reads for both, but it's the CPU time that is of far more interest here. It's worth noting that the majority of the elapsed time is actually the transmission and display of the rows, hence this time will be far larger for 17,000 rows (the first set) than for 40 rows (the second).
+    As leituras lógicas são mostradas como 686 leituras para ambos os casos, mas é o tempo de CPU que é de maior interesse aqui. Vale ressaltar que a maioria do tempo decorrido é, na verdade, a transmissão e exibição das linhas, portanto, esse tempo será muito maior para 17.000 linhas (o primeiro conjunto) do que para 40 linhas (o segundo).
 
-    Now, we'll clear the cache again and flip the order of execution, so the shorter date range query is executed first, as shown in Listing 3.13. This means that, this time, the parameter sniffing process will result in a much lower estimated number of rows.
+    Agora, vamos limpar o cache novamente e inverter a ordem de execução, para que a consulta com um intervalo de datas mais curto seja executada primeiro, conforme mostrado no Exemplo 3.13. Isso significa que, desta vez, o processo de parameter sniffing resultará em um número estimado de linhas muito menor.
 
     DBCC FREEPROCCACHE
     EXEC user_GetCustomerShipDates '2001/07/10', '2001/07/20'
     EXEC user_GetCustomerShipDates '2001/07/08', '2004/01/01'
 
-    Listing 3.13: Executing the user_GetCustomerShipDates stored procedure, with the shorter date range query first.
+    Exemplo 3.13: Executando a stored procedure user_GetCustomerShipDates, com a consulta de intervalo de datas mais curto sendo executada primeiro.
 
-    As expected, the execution plan has changed dramatically, as shown in Figure 3.7. The smaller number of estimated rows leads the optimizer to use an index seek on our IDX_ShipDate_ASC index, followed by a key lookup to retrieve the remaining rows.
+    Como esperado, o plano de execução mudou drasticamente, como mostrado na Figura 3.7. O menor número de linhas estimadas leva o otimizador a usar uma busca no índice no nosso índice IDX_ShipDate_ASC, seguido por uma verificação de chave para recuperar as linhas restantes.
 
     ***************************************************************************************
-    * Figure 3.7: New execution plans for the user_GetCustomerShipDates stored procedure. *
+    * Figura 3.7: Novos planos de execução para a stored procedure user_GetCustomerShipDates. *
     ***************************************************************************************
 
-    Run Listing 3.13 again, this time without the execution plan but with the statistics, and you'll see that the plan works just fine for the first execution, but causes problems for the next one.
+    Execute novamente o Exemplo 3.13, desta vez sem o plano de execução, mas com as estatísticas, e você verá que o plano funciona muito bem para a primeira execução, mas causa problemas para a próxima.
 
     ==FIRST EXECUTION (SMALL DATE RANGE)===
 
@@ -422,25 +413,25 @@ AND sod.ModifiedDate < '2010/01/02'
     SQL Server Execution Times:
     CPU time = 47 ms, elapsed time = 182 ms.100
     
-    Now that's not a huge jump in CPU time, but remember that even the second execution is dealing with 17,000 rows in the result set. At larger row counts, this problem can have a very significant impact.
+    Embora não seja um grande salto no tempo de CPU, lembre-se de que mesmo a segunda execução está lidando com 17.000 linhas no conjunto de resultados. Com contagens de linhas maiores, esse problema pode ter um impacto muito significativo.
 
-    This is a classic, though small-scale, example of parameter sniffing working against us. The plan with the key lookups is only optimal for small row counts (typically < 1% of the table). Above that, the additional I/O and additional CPU required for the key lookups becomes very significant.
+    Este é um exemplo clássico, embora em pequena escala, de como o parameter sniffing trabalha contra nós. O plano com as verificações de chave é ótimo apenas para contagens de linhas pequenas (tipicamente < 1% da tabela). Acima disso, a E/S adicional e o CPU adicional necessários para as verificações de chave se tornam muito significativos.
 
-    There are several different ways to tackle parameter sniffing problems, depending on the situation and on the version of SQL Server you're using.
+    Existem várias maneiras diferentes de lidar com problemas de parameter sniffing, dependendo da situação e da versão do SQL Server que você está usando.
 
     Trace Flag 4136
 
-    SQL Server 2008 introduced an option to turn parameter sniffing off altogether for a SQL Server instance, by simply enabling Trace Flag 4136. This option was added in SQL Server 2008 SP1 CU7, and SQL Server 2008 R2 CU2, and also back-ported into SQL Server 2005 in SP3 CU9.
+    O SQL Server 2008 introduziu uma opção para desativar completamente o parameter sniffing para uma instância do SQL Server, simplesmente ativando o Trace Flag 4136. Essa opção foi adicionada no SQL Server 2008 SP1 CU7 e no SQL Server 2008 R2 CU2, e também foi retroportada para o SQL Server 2005 no SP3 CU9.
 
-    When the query optimizer is able to "sniff" the value of a parameter, it uses this value, along with the statistics histogram, to provide an accurate estimate of the number of records that will be returned. As discussed earlier, this is only problematic if the initial parameter value turns out to be completely atypical.
+    Quando o otimizador de consultas é capaz de "sniffar" o valor de um parâmetro, ele usa esse valor, juntamente com o histograma de estatísticas, para fornecer uma estimativa precisa do número de registros que serão retornados. Como discutido anteriormente, isso só é problemático se o valor inicial do parâmetro se mostrar completamente atípico.
 
-    When parameter sniffing is prevented, the optimizer can't find out the parameter value and so can't use the statistics histogram. Instead, it makes what is often a less accurate estimation of the number of rows that will be returned, by assuming a uniform data distribution across all data values. For example, consider a column X, containing 10 rows with values 1, 2, 3, 3, 3, 3, 3, 4, 5, 5. The optimizer would always estimate that a "WHERE X=value" query will return 2 rows (total number of rows divided by number of distinct values), and so the plan would always be optimized for this number of rows.
+    Quando o parameter sniffing é evitado, o otimizador não consegue obter o valor do parâmetro e, portanto, não pode usar o histograma de estatísticas. Em vez disso, ele faz uma estimativa menos precisa do número de linhas que serão retornadas, assumindo uma distribuição uniforme dos dados em todos os valores. Por exemplo, considere uma coluna X contendo 10 linhas com valores 1, 2, 3, 3, 3, 3, 3, 4, 5, 5. O otimizador sempre estimaria que uma consulta "WHERE X = valor" retornará 2 linhas (número total de linhas dividido pelo número de valores distintos), e assim o plano sempre seria otimizado para esse número de linhas.
 
-    In short, although this option is available, parameter sniffing is beneficial to most procedures that are written to use typical values. Turning parameter sniffing off may inadvertently affect these plans in a negative way. As such, this Trace Flag should be considered an absolute last resort if nothing else fixes the problem.
+    Em resumo, embora essa opção esteja disponível, o parameter sniffing é benéfico para a maioria dos procedimentos que são escritos para usar valores típicos. Desativar o parameter sniffing pode afetar inadvertidamente esses planos de maneira negativa. Como tal, esse Trace Flag deve ser considerado como último recurso absoluto se nada mais resolver o problema.
 
-    Using the OPTIMIZE FOR hint
+   Usando o hint OPTIMIZE FOR
 
-    In SQL Server 2005 and later, we can use the OPTIMIZE FOR hint to specify a parameter value for the optimizer to use when compiling a plan, as shown in Listing 3.14.
+   No SQL Server 2005 e posterior, podemos usar a dica OPTIMIZE FOR para especificar um valor de parâmetro para o otimizador usar ao compilar um plano, conforme mostrado no Listing 3.14.
 
     CREATE PROCEDURE user_GetCustomerShipDates
         (
@@ -456,15 +447,15 @@ AND sod.ModifiedDate < '2010/01/02'
                                   @ShipDateEnd = '2004/01/01' ) )
     GO
 
-    Listing 3.14: Using the OPTIMIZE FOR query hint.
+    Listagem 3.14: Usando o hint de consulta OPTIMIZE FOR.
 
-    This allows the optimizer to optimize the plan for a parameter value that is known to be more typically used. This will remove the possibility for parameter sniffing, but at the same time may still lead to a plan that is not as efficient, if atypical values are used.
+    Isso permite que o otimizador otimize o plano para um valor de parâmetro que se sabe ser mais comumente usado. Isso elimina a possibilidade de "parameter sniffing", mas ao mesmo tempo pode levar a um plano menos eficiente se valores atípicos forem usados.
 
-    In SQL Server 2008, this was "extended" to provide the OPTIMIZE FOR UNKNOWN hint, which instructs SQL Server to not use parameter sniffing at all. This allows for a queryby-query control of parameter sniffing, whereas the aforementioned Trace Flag controls the setting for the entire instance. In most cases, the hint is a more desirable solution as, in general, parameter sniffing is a good thing.
+    No SQL Server 2008, isso foi "estendido" para fornecer a dica OPTIMIZE FOR UNKNOWN, que instrui o SQL Server a não usar o "parameter sniffing" de forma alguma. Isso permite um controle de "parameter sniffing" consulta por consulta, enquanto o Trace Flag mencionado anteriormente controla a configuração para toda a instância. Na maioria dos casos, a dica é uma solução mais desejável, pois, em geral, o "parameter sniffing" é algo positivo.
 
-    Recompilation options
+    Opções de recompilação
 
-    We can use the WITH RECOMPILE option, when creating a stored procedure, as another possible solution to parameter sniffing issues. This will mean a plan is never cached for the procedures, since it forces a recompile, and generation of a new plan on every execution. This means that row estimations will always be based on the current parameter value, but at the cost of increasing the execution time of the procedure.
+    Podemos usar a opção WITH RECOMPILE ao criar uma stored procedure como outra possível solução para problemas de "parameter sniffing". Isso significa que um plano nunca será armazenado em cache para a procedure, pois força uma recompilação e geração de um novo plano a cada execução. Isso significa que as estimativas de linhas serão sempre baseadas no valor atual do parâmetro, mas ao custo de aumentar o tempo de execução da procedure.
 
     CREATE PROCEDURE user_GetCustomerShipDates
        (
@@ -479,9 +470,9 @@ AND sod.ModifiedDate < '2010/01/02'
        WHERE   ShipDate BETWEEN @ShipDateStart AND @ShipDateEnd
     GO
 
-    Listing 3.15: Using the WITH RECOMPILE option.
+    Listing 3.15: Usando a opção WITH RECOMPILE.
 
-    The OPTION(RECOMPILE) query hint can be used in much the same way, and may be a better option if there are multiple queries within the procedure and only a portion of them suffer from parameter sniffing problems.
+    O hint de consulta OPTION(RECOMPILE) pode ser usado de maneira semelhante e pode ser uma opção melhor se houver várias consultas dentro da procedure e apenas uma parte delas sofrer com problemas de "parameter sniffing".
 
     CREATE PROCEDURE user_GetCustomerShipDates
        (
@@ -496,14 +487,14 @@ AND sod.ModifiedDate < '2010/01/02'
        OPTION  ( RECOMPILE )
     GO
 
-    Listing 3.16: Using the OPTION(RECOMPILE) query hint.
+    Listing 3.16: Usando o hint de consulta OPTION(RECOMPILE).
 
-    Essas técnicas são úteis quando o custo adicional das compilações é pequeno em comparação com a degradação de desempenho causada pelo reuso de planos inadequados. A dica OPTION(RECOMPILE) deve ser usada sempre que possível, em preferência ao WITH RECOMPILE para um procedimento armazenado, a fim de manter o impacto do processo de compilação repetida o mais baixo possível.
+Essas técnicas são úteis quando o custo adicional das compilações é pequeno em comparação com a degradação de desempenho causada pelo reuso de planos inadequados. A dica OPTION(RECOMPILE) deve ser usada sempre que possível, em preferência ao WITH RECOMPILE para um procedimento armazenado, a fim de manter o impacto do processo de compilação repetida o mais baixo possível.
 
-    Ad hoc non-parameterized queries
+Consultas não parametrizadas ad hoc
 
-    Ad hoc queries are statements sent to the optimizer that are not predefined by using stored procedures, sp_executesql or other ways to force reuse of execution plans. The SQL Server will always check on the plan cache to see if a suitable plan can be reused for a given query, before going through the full process of generating a new execution plan and storing it in cache.
-    Ad hoc queries will cause execution plans to be generated for each and every statement. This causes excessive use of resources, especially CPU. Consider the three queries shown in Listing 3.17.
+As consultas ad hoc são declarações enviadas ao otimizador que não são predefinidas usando stored procedures, sp_executesql ou outras maneiras de forçar o reuso de planos de execução. O SQL Server sempre verificará o cache de planos para ver se um plano adequado pode ser reutilizado para uma determinada consulta, antes de passar pelo processo completo de geração de um novo plano de execução e armazená-lo em cache.
+Consultas ad hoc farão com que planos de execução sejam gerados para cada declaração. Isso causa um uso excessivo de recursos, especialmente da CPU. Considere as três consultas mostradas em Listing 3.17.
 
     <pre>
         <code>
@@ -528,31 +519,31 @@ WHERE  soh.SalesOrderNumber = 'SO70907'
         </code>
     </pre>
     
-    Listing 3.17: Three simple but non-parameterized queries.
+    Listing 3.17: Três consultas simples, mas não parametrizadas.
 
-    These three statements should produce the same execution plan, but they don't. The different values hard-coded into value assignment in the WHERE clause mean that they are considered by the optimizer to be three different queries, and hence get separate execution plans.
+    Essas três declarações deveriam produzir o mesmo plano de execução, mas não o fazem. Os diferentes valores atribuídos hardcoded na cláusula WHERE significam que eles são considerados pelo otimizador como três consultas diferentes e, portanto, recebem planos de execução separados.
 
-    For very simple queries, SQL Server can use a technique called simple parameterization to replace the fixed values with parameters, and so allow for plan reuse. However, even the queries in Listing 3.17 are too complex to qualify for simple parameterization.
+    Para consultas muito simples, o SQL Server pode usar uma técnica chamada parametrização simples para substituir os valores fixos por parâmetros e, assim, permitir o reuso de planos. No entanto, até mesmo as consultas na Listagem 3.17 são muito complexas para se qualificarem para a parametrização simples.
 
-    The problem with non-parameterized queries is two-fold:
+    O problema com consultas não parametrizadas é duplo:
 
-    1. The plan cache fills up with lots of single-use plans from ad hoc queries. This means that the memory is used less efficiently. It also means that plans that might have been reusable can get discarded from cache due to memory pressure, requiring them to be compiled again when the queries are rerun.
+    1. O cache de planos é preenchido com muitos planos de uso único de consultas ad hoc. Isso significa que a memória é usada de forma menos eficiente. Também significa que os planos que poderiam ser reutilizáveis podem ser descartados do cache devido à pressão de memória, exigindo que sejam compilados novamente quando as consultas forem executadas novamente.
 
-    2. The compilation of these single-use plans wastes CPU. Compilation is expensive, using relatively large amounts of CPU, and the repeated compilation of plans for ad hoc queries, which are unlikely to be reused, is just a waste of resources.
+    2. A compilação desses planos de uso único desperdiça CPU. A compilação é cara, usando quantidades relativamente grandes de CPU, e a compilação repetida de planos para consultas ad hoc, que provavelmente não serão reutilizados, é apenas um desperdício de recursos.
 
-    Cases where a lack of parameterization is causing excessive plan compilation, or where simple (or forced) parameterization is attempted but fails, can be identified using the following counters from the SQL Statistics objects in Performance Monitor:
+    Casos em que a falta de parametrização está causando uma compilação excessiva de planos, ou onde a parametrização simples (ou forçada) é tentada, mas falha, podem ser identificados usando os seguintes contadores dos objetos de Estatísticas SQL no Monitor de Desempenho:
 
     •	 SQLServer: SQL Statistics: SQL Compilations/Sec
     •	 SQLServer: SQL Statistics: Auto-Param Attempts/Sec
     •	 SQLServer: SQL Statistics: Failed Auto-Param/Sec
 
-    Reference: http://msdn.microsoft.com/en-us/library/ms190911(SQL.100).aspx.
+    Referência: http://msdn.microsoft.com/en-us/library/ms190911(SQL.100).aspx.
 
-    If the non-parameterized ad hoc queries are causing a problem, there are a couple of options for fixing it. The first and best option is to fix the problem at source, in the calling application. If that is not an option, there are settings in SQL Server that can be changed to alleviate the problem.
+    Se as consultas ad hoc não parametrizadas estiverem causando um problema, há algumas opções para resolvê-lo. A primeira e melhor opção é corrigir o problema na origem, no aplicativo que realiza as chamadas. Se isso não for possível, existem configurações no SQL Server que podem ser alteradas para amenizar o problema.
 
-    Fixing the application
+    Corrigindo o aplicativo
 
-    If it is possible to change the application that is sending these non-parameterized queries to SQL Server, then that option should be the one chosen. This can involve moving data access from ad hoc queries embedded in the front-end code into stored procedures, or it may just involve changing the ad hoc queries that are embedded in the front-end code to their parameterized versions. Listing 3.18 shows an unparameterized query being sent to SQL Server.
+    Se for possível alterar o aplicativo que está enviando essas consultas ad hoc não parametrizadas para o SQL Server, essa opção deve ser escolhida. Isso pode envolver a migração do acesso aos dados de consultas ad hoc incorporadas no código da interface para procedimentos armazenados, ou pode envolver apenas a alteração das consultas ad hoc incorporadas no código da interface para suas versões parametrizadas. A Listagem 3.18 mostra uma consulta não parametrizada sendo enviada ao SQL Server.
 
     cmd.CommandType = CommandType.Text;
     cmd.CommandText = @"SELECT soh.SalesOrderNumber,
@@ -564,9 +555,9 @@ WHERE  soh.SalesOrderNumber = 'SO70907'
 
     dtrSalesOrders = cmd.ExecuteReader();
 
-    Listing 3.18: An unparameterized query being sent to SQL Server.
+    Listagem 3.18: Uma consulta não parametrizada sendo enviada ao SQL Server.
 
-    Listing 3.19 shows the same query, but now in a parameterized form that will allow plan reuse.
+    Listagem 3.19: A mesma consulta, mas agora em uma forma parametrizada que permitirá o reuso do plano.
     
     dtrSalesOrders.Close();
     cmd.CommandType = CommandType.Text;
@@ -582,62 +573,62 @@ WHERE  soh.SalesOrderNumber = 'SO70907'
 
     dtrSalesOrders = cmd.ExecuteReader();
 
-    Listing 3.19: A parameterized query being sent to SQL Server.
-    
-    If changing the application is not possible, as is often the case with vendor applications, or where the source code for the application is unavailable, then there are two options in SQL Server that can help alleviate the problem: forced parameterization and optimize for ad hoc workloads.
-    
-    Forced parameterization in SQL Server
-    
-    SQL Server 2005 and above offers the ability to set the database-level PARAMETERIZATION option to FORCED, using the ALTER DATABASE statement, as shown in Listing 3.20. This will force all ad hoc queries against that database to be parameterized before the compile process starts.
+    Listagem 3.19: Uma consulta parametrizada sendo enviada ao SQL Server.
+
+    Se não for possível alterar o aplicativo, como muitas vezes ocorre com aplicativos de fornecedores, ou quando o código-fonte do aplicativo não está disponível, existem duas opções no SQL Server que podem ajudar a aliviar o problema: parametrização forçada e otimização para cargas de trabalho ad hoc.
+
+    Parametrização forçada no SQL Server
+
+    O SQL Server 2005 e versões posteriores oferecem a capacidade de definir a opção PARAMETERIZATION em nível de banco de dados como FORCED, usando a instrução ALTER DATABASE, conforme mostrado na Listagem 3.20. Isso forçará todas as consultas ad hoc nesse banco de dados a serem parametrizadas antes do processo de compilação iniciar.
 
     ALTER DATABASE AdventureWorks SET PARAMETERIZATION FORCED
 
-    Listing 3.20: Setting the PARAMETERIZATION option to FORCED.
+    Listagem 3.20: Definindo a opção PARAMETERIZATION como FORCED.
 
-    If you run this command and then rerun the three queries from Listing 3.17, the query that the SQL Query Optimizer gets to optimize will be the parameterized version, and you'll find that there's only one plan created in cache, not three.
+    Se você executar esse comando e depois executar novamente as três consultas da Listagem 3.17, a consulta que o Otimizador de Consulta do SQL recebe para otimizar será a versão parametrizada, e você verá que apenas um plano será criado em cache, e não três.
 
-    There are potential downsides to using forced parameterization, in that this setting forces SQL to use one plan for all matching queries, no matter what the literal values, so there is a possibility for the same parameter sniffing problems to which stored procedures are susceptible. If such a problem does occur, it can be investigated and resolved in much the same way as with stored procedures, discussed earlier in this chapter.
+    Existem possíveis desvantagens no uso da parametrização forçada, pois essa configuração obriga o SQL a usar um plano para todas as consultas correspondentes, independentemente dos valores literais, o que significa que há uma possibilidade dos mesmos problemas de parameter sniffing aos quais as stored procedures estão suscetíveis. Se ocorrer um problema desse tipo, ele poderá ser investigado e resolvido de maneira semelhante ao discutido anteriormente neste capítulo para as stored procedures.
 
-    Optimize for ad hoc workloads
+    Otimização para cargas de trabalho ad hoc
 
-    In SQL Server 2008 and later, we can use optimize for ad hoc workloads, which is a server-level setting, i.e. it will affect every single database on the server (as opposed to forced parameterization, which is database-specific).
+    No SQL Server 2008 e versões posteriores, podemos usar a opção "optimize for ad hoc workloads", que é uma configuração em nível de servidor, ou seja, afetará todos os bancos de dados no servidor (ao contrário da parametrização forçada, que é específica do banco de dados).
 
-    With this setting enabled, SQL Server does not cache the plan of an ad hoc query the first time it is encountered. Instead, a plan-stub is cached that just indicates that the query has been seen before. Only if the query is seen a second time is the plan cached. This won't reduce the number of compiles for ad hoc queries, but it will make it less likely that the plan cache will grow as much, since the initial stub takes up very little memory. As such, it reduces the chances that other plans which could be reusable will be discarded due to memory pressure.
+    Com essa configuração habilitada, o SQL Server não armazena em cache o plano de uma consulta ad hoc na primeira vez em que ela é encontrada. Em vez disso, é armazenado um plano "stub" que indica apenas que a consulta foi vista anteriormente. Somente se a consulta for vista novamente é que o plano será armazenado em cache. Isso não reduz o número de compilações para consultas ad hoc, mas torna menos provável que o cache de planos cresça tanto, pois o stub inicial ocupa muito pouca memória. Assim, reduz as chances de que outros planos que poderiam ser reutilizáveis sejam descartados devido à pressão de memória.
 
-    To enable the optimize for ad hoc workloads setting, use sp_configure, as shown in Listing 3.21.
+    Para habilitar a configuração "optimize for ad hoc workloads", use o procedimento armazenado sp_configure, conforme mostrado na Listagem 3.21.
     
     EXEC sp_configure 'show advanced options',1
     RECONFIGURE
     EXEC sp_configure 'optimize for ad hoc workloads',1
     RECONFIGURE
     
-    Listing 3.21: Enabling the optimize for ad hoc workloads setting.
-    
-    Inappropriate parallelism
+    Listagem 3.21: Habilitando a configuração "optimize for ad hoc workloads".
 
-    SQL Server is designed to be able to make use of multiple processors when processing user requests. Query parallelism is the mechanism used by the SQL query execution engine to split the work of a query into multiple threads, each of which will execute on a separate scheduler. Queries are parallelized at the operator level; in other words, if the query runs in parallel, some of the query operators may run in their parallel form, while others may not.
+    Paralelismo inadequado
+
+    O SQL Server é projetado para ser capaz de aproveitar vários processadores ao processar solicitações de usuários. O paralelismo de consulta é o mecanismo usado pelo mecanismo de execução de consulta do SQL para dividir o trabalho de uma consulta em várias threads, cada uma das quais será executada em um agendador separado. As consultas são paralelizadas no nível do operador; em outras palavras, se a consulta for executada em paralelo, alguns dos operadores da consulta podem ser executados em sua forma paralela, enquanto outros não.
     
     ******************************************************************************
-    * Figure 3.8: Execution plan showing that operators are running in parallel. *
+    * Figura 3.8: Plano de execução mostrando que os operadores estão sendo executados em paralelo. *
     ******************************************************************************
 
-    When a query is submitted to SQL Server for processing, the query optimizer compiles an execution plan that has been optimized to allow the query to execute in the fastest manner possible. If the estimated cost of executing the plan serially exceeds the 'cost threshold for parallelism' sp_configure option, the number of logical CPUs available to SQL Server is greater than one, and the 'max degree of parallelism' sp_configure option is set to the default of zero or greater than one, the plan produced will include parallelism. The Degree of Parallelism (DOP) is not included as a part of the plan; this is, instead, determined at the time of execution based on the number of logical processors, the 'max degree of parallelism' sp_configure or, if the MAXDOP query hint is being used, the value specified by the hint, and the number of available worker threads.
+    Quando uma consulta é enviada ao SQL Server para processamento, o otimizador de consultas compila um plano de execução otimizado para permitir que a consulta seja executada da maneira mais rápida possível. Se o custo estimado de executar o plano sequencialmente exceder a opção de configuração 'custo limite para paralelismo', o número de CPUs lógicas disponíveis para o SQL Server for maior que um e a opção de configuração 'máximo grau de paralelismo' for definida como o padrão de zero ou maior que um, o plano produzido incluirá paralelismo. O Grau de Paralelismo (DOP) não é incluído como parte do plano; isso é determinado no momento da execução com base no número de processadores lógicos, na opção de configuração 'máximo grau de paralelismo' ou, se estiver sendo usado o hint de consulta MAXDOP, o valor especificado pelo hint, e no número de threads de trabalho disponíveis.
 
-    Parallel query processing can reduce the time required to process a query by horizontally partitioning the input data, distributing the partitions across multiple logical CPUs, and simultaneously executing the same operation across multiple processor cores. This can be very beneficial to data warehouse and reporting operations, which have a few large queries that deal with volumes of data and only a few requests occur concurrently. By splitting the request across multiple OS threads on multiple processor cores, the optimizer increases the utilization of the hardware resources by spreading the load across all of the processors on the server, resulting in a reduction of total execution time.
+    O processamento de consultas paralelas pode reduzir o tempo necessário para processar uma consulta, particionando horizontalmente os dados de entrada, distribuindo as partições em várias CPUs lógicas e executando simultaneamente a mesma operação em vários núcleos do processador. Isso pode ser muito benéfico para operações de data warehouse e relatórios, que possuem algumas consultas grandes que lidam com volumes de dados e ocorrem apenas algumas solicitações simultaneamente. Ao dividir a solicitação em várias threads do sistema operacional em vários núcleos do processador, o otimizador aumenta a utilização dos recursos de hardware, distribuindo a carga entre todos os processadores no servidor, resultando em uma redução do tempo total de execução.
 
-    The specific impact of a parallel workload depends on a number of factors, not the least of which is the ability of the remaining hardware components in the system to cope with the heavy demands for memory allocation and disk I/O that a parallel workload can generate. When parallelism is used appropriately, on high-cost queries, it can have a very beneficial effect on overall server performance. However, it can be very detrimental to OLTP environments where the workload consists of lots of smaller queries executing concurrently, since the parallel operation can utilize up to all of the processor cores on the server, causing other requests to wait to execute. If the primary use of the server is for an OLTP database that has a lot of smaller concurrent requests, parallelism of a single common query can sink throughput.
+    O impacto específico de uma carga de trabalho paralela depende de vários fatores, incluindo a capacidade dos demais componentes de hardware do sistema para lidar com as demandas intensas de alocação de memória e E/S de disco que uma carga de trabalho paralela pode gerar. Quando o paralelismo é usado de forma apropriada, em consultas de alto custo, pode ter um efeito muito benéfico no desempenho geral do servidor. No entanto, pode ser muito prejudicial para ambientes OLTP, nos quais a carga de trabalho consiste em várias consultas menores executando simultaneamente, pois a operação paralela pode utilizar todos os núcleos do processador no servidor, fazendo com que outras solicitações aguardem para executar. Se o uso principal do servidor for um banco de dados OLTP com muitas solicitações menores e concorrentes, o paralelismo de uma única consulta comum pode reduzir a taxa de transferência.
 
-    As noted above, SQL Server has two configuration options that control the parallel execution of queries by the engine. They are the cost threshold for parallelism and the max degree of parallelism options of sp_configure. The max degree of parallelism option exists to prevent a single query from utilizing all of the processor cores on a SQL Server. The cost threshold for parallelism option exists to control the threshold for a query that causes the optimizer to use parallelism to execute a query.
+    Conforme mencionado acima, o SQL Server possui duas opções de configuração que controlam a execução paralela de consultas pelo mecanismo. Elas são as opções de configuração 'custo limite para paralelismo' e 'máximo grau de paralelismo' do sp_configure. A opção 'máximo grau de paralelismo' existe para evitar que uma única consulta utilize todos os núcleos do processador em um SQL Server. A opção 'custo limite para paralelismo' existe para controlar o limite para uma consulta que faz com que o otimizador use o paralelismo para executar a consulta.
 
-    Too often, when CPU issues related to "inappropriate parallelism" arise, the suggested solution seems to focus solely on changing the value for max degree of parallelism. For example, a quick online search of the problem, especially the CXPACKET wait type (a classic indicator of parallelism-related issues, as discussed a little later) will result in numerous posts that recommend reducing the max degree of parallelism to one half or one fourth the number of logical processors or processor cores on the server, or even to completely disable parallelism by setting it to 1. While this may solve the problem, it may not be the ideal solution. The best solution is to consider, in tandem, the appropriate value for each of these options.
+    Com muita frequência, quando surgem problemas de CPU relacionados a "paralelismo inadequado", a solução sugerida parece se concentrar apenas em alterar o valor para 'máximo grau de paralelismo'. Por exemplo, uma rápida pesquisa online do problema, especialmente do tipo de espera CXPACKET (um indicador clássico de problemas relacionados a paralelismo, como discutido um pouco mais adiante), resultará em numerosas postagens que recomendam reduzir o 'máximo grau de paralelismo' para metade ou um quarto do número de processadores lógicos ou núcleos do processador no servidor, ou até mesmo desabilitar completamente o paralelismo definindo-o como 1. Embora isso possa resolver o problema, pode não ser a solução ideal. A melhor solução é considerar, em conjunto, o valor apropriado para cada uma dessas opções.
 
-    Cost threshold for parallelism
+    Custo limite para paralelismo
 
-    As discussed, the cost threshold for parallelism option determines a threshold "cost" which, when exceeded, will cause a parallel execution plan to be generated, in order to execute the user request. Since parallel execution is only possible on multi-processor systems, the cost threshold for parallelism option is only used by the engine when multiple processors exist, the server is not affinitized to a single processor and max degree of parallelism is set to a value other than I.
+    Como discutido, a opção de configuração "custo limite para paralelismo" determina um limiar de "custo" que, quando excedido, faz com que um plano de execução paralela seja gerado para executar a solicitação do usuário. A execução paralela é possível apenas em sistemas de vários processadores, portanto, a opção de custo limite para paralelismo só é utilizada pelo mecanismo de banco de dados quando existem vários processadores, o servidor não está afetado a um único processador e o máximo grau de paralelismo é definido como um valor diferente de 1.
 
-    The "cost" is the estimated amount of time in seconds that it would take to execute the query serially with a given execution plan. The default value is five, meaning that a parallel plan will only be generated and used by queries that are estimated to take longer than five seconds to execute serially on the given system. On larger databases, this threshold may be low enough to cause multiple concurrent executions of common queries, and so to cause contention in the system.
+    O "custo" é a quantidade estimada de tempo em segundos que levaria para executar a consulta de forma sequencial, com base em um plano de execução específico. O valor padrão é cinco, o que significa que um plano paralelo só será gerado e utilizado por consultas que tenham uma estimativa de tempo de execução sequencial superior a cinco segundos no sistema em questão. Em bancos de dados maiores, esse limite pode ser baixo o suficiente para causar múltiplas execuções concorrentes de consultas comuns, resultando em contenção no sistema.
 
-    To determine what might be an appropriate setting for the cost threshold for parallelism option, it is possible to query the existing plans in the plan cache to determine the costs associated with the plans that have been executing with parallelism, as shown in Listing 3.22.
+    Para determinar qual pode ser uma configuração adequada para a opção de limiar de custo para paralelismo, é possível consultar os planos existentes no cache de planos para determinar os custos associados aos planos que foram executados com paralelismo, conforme mostrado no Exemplo 3.22.
 
     SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED ;
 
@@ -659,145 +650,145 @@ WHERE  soh.SalesOrderNumber = 'SO70907'
            AS qn ( n )
     WHERE n.query('.').exist('//RelOp[@PhysicalOp="Parallelism"]') = 1
 
-    Listing 3.22: Determining the estimated cost of parallel execution plans.
+    Exemplo 3.22: Determinando o custo estimado dos planos de execução paralela.
 
-    Analysis of the most commonly executed statements that result in parallel queries can guide the appropriate setting of the cost threshold for parallelism option to minimize the impact of multiple concurrently executing parallel requests which drive CPU and I/O contention in the system.
+    A análise das declarações mais frequentemente executadas que resultam em consultas paralelas pode orientar a configuração apropriada da opção de custo limite para paralelismo, a fim de minimizar o impacto de várias solicitações paralelas executadas simultaneamente, que geram contenção de CPU e E/S no sistema.
 
-    Max degree of parallelism
+    Grau máximo de paralelismo
 
-    Whenever the estimated cost of executing a query serially exceeds our carefully-evaluated value for cost threshold for parallelism, the database engine can spread the execution load for that query across multiple available processors, according to the degree of parallelism dictated by the max degree of parallelism option. The number of processors used will be determined by the lowest of the following three values:
+    Sempre que o custo estimado de executar uma consulta serialmente exceder nosso valor cuidadosamente avaliado para o limite de custo para paralelismo, o mecanismo do banco de dados pode distribuir a carga de execução dessa consulta entre vários processadores disponíveis, de acordo com o grau de paralelismo ditado pela opção max degree of parallelism. O número de processadores utilizados será determinado pelo valor mais baixo dos três seguintes:
 
-    •	 number of available processors
-    •	 max degree of parallelism option
-    •	 MAXDOP query hint provided for the query being executed (which overrides the value specified by max degree of parallelism).
+    • número de processadores disponíveis
+    • opção max degree of parallelism
+    • dica de consulta MAXDOP fornecida para a consulta em execução (que substitui o valor especificado por max degree of parallelism).
 
-    Generally speaking, as we have discussed, the appropriate value for the max degree of parallelism option depends largely on the type of workload being executed, and the ability of the other hardware subsystems to cope with the additional workload associated with parallel execution in the system. If your system is experiencing parallelism-related issues (see the Diagnosing inappropriate parallelism section), then it may be necessary to limit the degree of parallelism, in conjunction with tuning the cost threshold for parallelism to resolve the problem.
+    Geralmente, como discutimos, o valor apropriado para a opção max degree of parallelism depende em grande parte do tipo de carga de trabalho sendo executada e da capacidade dos outros subsistemas de hardware para lidar com a carga adicional associada à execução paralela no sistema. Se o sistema estiver apresentando problemas relacionados à paralelização (consulte a seção Diagnosing inappropriate parallelism), pode ser necessário limitar o grau de paralelismo, em conjunto com a sintonização do cost threshold for parallelism para resolver o problema.
 
-    One of the more common online recommendations is to disable parallelism entirely by setting the max degree of parallelism to 1. There are cases where this configuration might make sense, for example, true OLTP workloads where all of the transactions are small and there are a lot of transactions executing concurrently. These types of database rarely exist today and disabling parallelism entirely is more likely to reduce performance in the long term.
+    Uma das recomendações mais comuns online é desabilitar completamente a paralelização definindo max degree of parallelism como 1. Existem casos em que essa configuração pode fazer sentido, por exemplo, em cargas de trabalho verdadeiramente OLTP, onde todas as transações são pequenas e muitas transações estão sendo executadas em simultâneo. Esses tipos de bancos de dados raramente existem hoje em dia, e desabilitar completamente a paralelização é mais provável de reduzir o desempenho a longo prazo.
 
-    Over the years I've made a number of different recommendations about how to configure max degree of parallelism. For example, in a SMP system, setting it to half the number of available physical processor cores, or to the number of physical cores on a single processor die, or even setting it to 1 to disable parallelism entirely. Today, I only make a recommendation based on analysis of the query workload, and a review of the wait types of associated workers and subtasks which are executing using parallelism.
+    Ao longo dos anos, fiz várias recomendações diferentes sobre como configurar o max degree of parallelism. Por exemplo, em um sistema SMP, defini-lo como metade do número de núcleos físicos do processador disponíveis, ou como o número de núcleos físicos em um único chip de processador, ou até mesmo definindo-o como 1 para desabilitar completamente a paralelização. Hoje em dia, faço uma recomendação com base na análise da carga de trabalho da consulta e na revisão dos tipos de espera dos trabalhadores associados e subtarefas que estão sendo executados usando a paralelização.
 
-    In particular, I'll analyze occurrences of the CXPACKET session wait type. In most systems, CXPACKET is the symptom and not the problem; there is often a different underlying wait type that can be seen in sys.dm_os_waiting_tasks for the session. By focusing on this wait type, a better decision regarding the appropriate max degree of parallelism option can be made. For example, if the underlying wait type, is PAGEIOLATCH_SH then the parallel operation is waiting on a read from the disk I/O subsystem, and reducing the max degree of parallelism won't resolve the root problem; it will just reduce the number of workers being used in the system, and reduce the accumulated wait time for the CXPACKET wait type. However, this may reduce the additional load the parallelism operations place on the disk I/O subsystem, and buy you time to scale up the I/O performance of the server.
+    Em particular, analisarei as ocorrências do tipo de espera de sessão CXPACKET. Na maioria dos sistemas, o CXPACKET é o sintoma e não o problema; geralmente, há um tipo de espera subjacente diferente que pode ser observado em sys.dm_os_waiting_tasks para a sessão. Ao focar nesse tipo de espera, uma decisão melhor sobre a opção apropriada max degree of parallelism pode ser tomada. Por exemplo, se o tipo de espera subjacente for PAGEIOLATCH_SH, então a operação paralela está esperando uma leitura do subsistema de E/S de disco, e reduzir o max degree of parallelism não resolverá o problema raiz; apenas reduzirá o número de trabalhadores sendo usados no sistema e reduzirá o tempo acumulado de espera para o tipo de espera CXPACKET. No entanto, isso pode reduzir a carga adicional que as operações de paralelismo exercem no subsistema de E/S de disco e dar tempo para aumentar o desempenho de E/S do servidor.
 
-    There are, however, some specific considerations, relating to the memory architecture of the processors. On NUMA-based (Non-Uniform Memory Access) systems, the max degree of parallelism option should be set to the minimum number of processors available on a single NUMA node. This is done to prevent cross-node parallel processing of a request from occurring, which incurs significant expense since sharing memory across nodes is an expensive operation.
+    Existem, no entanto, algumas considerações específicas relacionadas à arquitetura de memória dos processadores. Em sistemas baseados em NUMA (Acesso Não Uniforme à Memória), a opção max degree of parallelism deve ser definida como o número mínimo de processadores disponíveis em um único nó NUMA. Isso é feito para evitar o processamento paralelo entre nós, o que gera um custo significativo, pois o compartilhamento de memória entre nós é uma operação dispendiosa.
 
-    On Symmetric Multiprocessing (SMP) systems, one of the trade-offs with multiple processor cores on a single die is the usage of shared L2 caches across multiple cores, which can result in cache misses for memory-consuming applications such as SQL Server, and which affects the performance of highly concurrent workloads, under higher levels of parallelism. Here, the appropriate value for this option depends largely on the type of workload being executed and the ability of the other hardware subsystems to cope with the added workload associated with parallel execution in the system.
+    Em sistemas de Multiprocessamento Simétrico (SMP), um dos compromissos com vários núcleos de processador em um único chip é o uso de caches L2 compartilhados entre vários núcleos, o que pode resultar em falhas de cache para aplicativos que consomem muita memória, como o SQL Server, e afetar o desempenho de cargas de trabalho altamente concorrentes em níveis mais elevados de paralelismo. Aqui, o valor apropriado para essa opção depende em grande parte do tipo de carga de trabalho sendo executada e da capacidade dos outros subsistemas de hardware para lidar com a carga adicional associada à execução paralela no sistema.
 
-    Finally, note that on SQL Server 2008 and above, the resource governor can be used to enforce a max degree of parallelism for groups of queries, based on various connection properties. Hence it would be possible to limit queries from one application, a specific set of logins or specific hostnames, to a certain max degree of parallelism and let other queries be unlimited.
+    Finalmente, observe que no SQL Server 2008 e posterior, o resource governor pode ser usado para impor um max degree of parallelism para grupos de consultas, com base em várias propriedades de conexão. Portanto, seria possível limitar consultas de um aplicativo, um conjunto específico de logins ou nomes de host específicos a um determinado max degree of parallelism e permitir que outras consultas sejam ilimitadas.
 
-    Hyper-threading and parallelism
+    Hyper-threading e paralelismo
 
-    Hyper-threading is an Intel technology designed to improve parallel execution by presenting to the operating system two logical cores for each physical core. This means that instead of one scheduler per processor core you get two, and so two threads can be executed "simultaneously."
+    O Hyper-threading é uma tecnologia da Intel projetada para melhorar a execução paralela, apresentando ao sistema operacional dois núcleos lógicos para cada núcleo físico. Isso significa que, em vez de um agendador por núcleo do processador, você tem dois, e assim dois threads podem ser executados "simultaneamente".
 
-    AMD processors and two strong threads
+    Processadores AMD e dois threads fortes
 
-    Modern AMD processor architectures, such as Bulldozer, use a different approach to threading, called two strong threads, with a design that offers dedicated hardware to each of two threads. We won't discuss this topic further here, but further information can be found on the AMD website: http://www.anandtech.com/show/3863/amd-discloses-bobcat-bulldozer-architectures-at-hot-chips-2010.
+    Arquiteturas modernas de processadores AMD, como a Bulldozer, utilizam uma abordagem diferente para o encadeamento, chamada de dois threads fortes, com um design que oferece hardware dedicado para cada um dos dois threads. Não discutiremos mais esse tópico aqui, mas mais informações podem ser encontradas no site da AMD: http://www.anandtech.com/show/3863/amd-discloses-bobcat-bulldozer-architectures-at-hot-chips-2010.
 
-    A question that is commonly asked in the online forums is whether or not hyperthreading should be enabled for SQL Server, and how such decisions are affected by workload type.
+    Uma pergunta comumente feita nos fóruns online é se o hyper-threading deve ser ativado para o SQL Server e como essas decisões são afetadas pelo tipo de carga de trabalho.
 
-    As discussed earlier, for an OLAP or DSS workload, query execution performance will benefit from allowing the query optimizer to parallelize individual queries. This is certainly true when there exist a large number of true, physical CPU cores but, on early hyper-threading implementations, it was the experience of most DBAs that the often complex queries that comprised a typical OLP/DSS workload performed poorly when parallelized across multiple hyper-threaded cores. A typical, short OLTP query was less affected by running on a logical core, as opposed to a physical one, so enabling hyperthreading for an OLTP workload could see a benefit from parallelization in the sense that more cores were available to process more queries in a given time.
+    Como discutido anteriormente, para uma carga de trabalho OLAP ou DSS, o desempenho da execução da consulta se beneficiará ao permitir que o otimizador de consultas paralelize consultas individuais. Isso certamente é verdade quando existem um grande número de núcleos de CPU físicos, mas, nas implementações iniciais do hyper-threading, a experiência da maioria dos DBAs foi que as consultas complexas que compunham uma carga de trabalho típica de OLAP/DSS apresentavam um desempenho ruim ao serem paralelizadas em vários núcleos hiper-threaded. Uma consulta típica e curta de OLTP era menos afetada ao ser executada em um núcleo lógico, em oposição a um físico, portanto, ativar o hyper-threading para uma carga de trabalho OLTP poderia trazer benefícios da paralelização no sentido de que mais núcleos estariam disponíveis para processar mais consultas em um determinado período de tempo.
 
-    Nevertheless, several architectural problems with early hyper-threading implementations, which became more and more problematical as the CPU load on a server increased, meant that most DBAs simply disabled hyper-threading in the BIOS, regardless of workload type.
+    No entanto, vários problemas arquiteturais com implementações antigas de hyper-threading, que se tornaram cada vez mais problemáticos à medida que a carga da CPU em um servidor aumentava, fizeram com que a maioria dos DBAs simplesmente desabilitasse o hyper-threading no BIOS, independentemente do tipo de carga de trabalho.
 
-    As recently as a few years ago, when SQL Server 2008 RTM first released, advice to disable hyper-threading for SQL Server, especially for DW/OLAP/DSS workloads, was generally correct. The biggest problem with older processors and hyper-threading related to the size of the onboard caches, which are shared when hyper-threading is enabled. The smaller cache size meant that cache misses were common place for memory-dependent applications like SQL Server. Another issue early on was that Windows Server 2000 wasn't hyper-threading aware so, when you had a dual processor server with hyperthreading enabled, Windows thought it had four physical processors, and would schedule concurrent execution on both threads of a processor when under load.
+    Ainda há alguns anos, quando o SQL Server 2008 RTM foi lançado pela primeira vez, o conselho de desativar o hyper-threading para o SQL Server, especialmente para cargas de trabalho de DW/OLAP/DSS, era geralmente correto. O maior problema com processadores mais antigos e o hyper-threading estava relacionado ao tamanho dos caches internos, que são compartilhados quando o hyper-threading está habilitado. O tamanho menor do cache significava que ocorriam muitas falhas de cache para aplicativos dependentes de memória, como o SQL Server. Outra questão no início era que o Windows Server 2000 não tinha suporte para hyper-threading, então, quando você tinha um servidor com dois processadores com hyper-threading ativado, o Windows pensava que tinha quatro processadores físicos e agendava a execução simultânea em ambos os threads de um processador quando sob carga.
 
-    However, recent advances and improvements in hardware and in Windows, as well as in hyper-threading implementation mean that it is simply incorrect to disable hyperthreading as a matter of course. Many of the early problems no longer exist. For example, Windows Server 2003 and later are hyper-threading aware and so will see two physical and two logical processors, and will handle scheduling differently to accommodate the fact that two of the logical processors are from hyper-threading. Also, newer processors have much larger caches (MB instead of KB); they are less prone to the cache-miss issues and are much better suited for using hyper-threading with memory dependent implementations like SQL Server, especially on Windows Server 2008.
+    No entanto, avanços e melhorias recentes em hardware, no Windows e na implementação do hyper-threading significam que é simplesmente incorreto desativar o hyper-threading como regra geral. Muitos dos problemas iniciais não existem mais. Por exemplo, o Windows Server 2003 e versões posteriores têm suporte para hyper-threading e, portanto, reconhecem dois processadores físicos e dois processadores lógicos, e tratam o agendamento de forma diferente para acomodar o fato de dois dos processadores lógicos serem provenientes do hyper-threading. Além disso, os processadores mais recentes possuem caches muito maiores (MB em vez de KB); eles são menos propensos a problemas de falhas de cache e são mais adequados para usar o hyper-threading com implementações dependentes de memória, como o SQL Server, especialmente no Windows Server 2008.
 
-    In fact, with recent processor architectures, especially Intel Nehalem and later, my advice is to enable hyper-threading unless you find a good reason to turn it off. It's certainly a mistake to disable hyper-threading without first thoroughly testing your application workload with hyper-threading enabled, then disabled, in order to truly know whether or not there is a benefit to having hyper-threading turned on or off.
+    Na verdade, com arquiteturas recentes de processadores, especialmente Intel Nehalem e posteriores, meu conselho é habilitar o hyper-threading, a menos que você encontre um bom motivo para desativá-lo. Certamente é um erro desabilitar o hyper-threading sem primeiro testar completamente sua carga de trabalho do aplicativo com o hyper-threading habilitado e, em seguida, desabilitado, para realmente saber se há benefícios em ter o hyper-threading ativado ou desativado.
 
-    Of course, as processors with eight or even twelve physical cores emerge onto the market, it becomes easier to achieve high levels of parallelism without the need for hyperthreading. However, the technology remains fundamental to Intel's modern processors (for example, the Xeon E7-4870 processor, for 4-socket servers, boasts ten physical core plus hyper-threading), and with most recent processor architectures, there is a good chance that you'll see a performance and/or throughput benefit for both DW/OLAP and OLTP workloads.
+    É claro que, à medida que processadores com oito ou até doze núcleos físicos surgem no mercado, torna-se mais fácil alcançar altos níveis de paralelismo sem a necessidade do hyper-threading. No entanto, a tecnologia continua sendo fundamental para os processadores modernos da Intel (por exemplo, o processador Xeon E7-4870, para servidores de 4 soquetes, possui dez núcleos físicos mais hyper-threading), e com a maioria das arquiteturas de processadores recentes, há uma boa chance de você ver benefícios de desempenho e/ou throughput tanto para cargas de trabalho de DW/OLAP quanto de OLTP.
 
-    Diagnosing inappropriate parallelism
+    Diagnóstico de paralelismo inadequado
 
-    The best way to determine if parallel processing is causing a resource bottleneck in a specific system is to look at the wait statistics and latch statistics for an instance of SQL Server. When a bottleneck exists during the parallel execution of a query, the CXPACKET wait type shows up as one of the top waits for SQL Server. This wait type is set whenever a parallel process has to wait in the exchange iterator for another worker to continue processing. As previously discussed, when this happens, there is generally an underlying, non-CXPACKET wait type, which is associated with the stalled worker. However, since multiple workers are forced to wait when this occurs, the volume of CXPACKET waits will generally exceed the underlying root wait type being exhibited.
+    A melhor maneira de determinar se o processamento paralelo está causando um gargalo de recursos em um sistema específico é analisar as estatísticas de espera (wait statistics) e estatísticas de latch (latch statistics) de uma instância do SQL Server. Quando ocorre um gargalo durante a execução paralela de uma consulta, o tipo de espera CXPACKET é exibido como uma das principais esperas do SQL Server. Esse tipo de espera é definido sempre que um processo paralelo precisa aguardar no iterador de troca (exchange iterator) para que outro worker continue o processamento. Como discutido anteriormente, quando isso acontece, geralmente existe um tipo de espera subjacente, não relacionado ao CXPACKET, que está associado ao worker paralisado. No entanto, como vários workers são forçados a esperar quando isso ocorre, a quantidade de esperas CXPACKET geralmente excede o tipo de espera subjacente.
 
-    Whenever possible, it is best to isolate and troubleshoot the underlying wait type, since this will lead to overall system throughput improvements. The CXPACKET waits are simply a symptom of a problem in most cases, not the actual problem. There are scenarios where it may not be possible to eliminate the underlying wait type; for example, when the disk I/O subsystem can't keep up with the demand required by the parallel execution of a query, the root wait type may be an IO_COMPLETION, ASYNC_IO_COMPLETION, or PAGEIOLATCH_* wait type, and scaling out the I/O subsystem is not possible. When this occurs, reducing the level of parallelism to a degree that still allows parallel processing to occur without bottlenecking in the disk I/O subsystem can improve overall system performance. It is possible that CXPACKET waits in conjunction with other wait types, for example LATCH_* and SOS_SCHEDULER_YIELD, do show that parallelism is the actual problem, and further investigation of the latch stats on the system will validate if this is actually the case. The sys.dm_os_latch_stats DMV contains information about the specific latch waits that have occurred in the instance, and if one of the top latch waits is ACCESS_METHODS_DATASET_PARENT, in conjunction with CXPACKET, LATCH_*, and SOS_SCHEDULER_YIELD wait types as the top waits, the level of parallelism on the system is the cause of bottlenecking during query execution, and reducing the 'max degree of parallelism' sp_configure option may be required to resolve the problems.
+    Sempre que possível, é melhor isolar e solucionar o tipo de espera subjacente, pois isso levará a melhorias gerais no throughput do sistema. As esperas CXPACKET são apenas um sintoma do problema na maioria dos casos, e não o problema real. Existem cenários em que pode não ser possível eliminar o tipo de espera subjacente; por exemplo, quando o subsistema de E/S em disco não consegue acompanhar a demanda exigida pela execução paralela de uma consulta, o tipo de espera raiz pode ser IO_COMPLETION, ASYNC_IO_COMPLETION ou PAGEIOLATCH_*, e dimensionar o subsistema de E/S não é possível. Quando isso ocorre, reduzir o nível de paralelismo a um grau que ainda permita o processamento paralelo ocorrer sem gargalos no subsistema de E/S em disco pode melhorar o desempenho geral do sistema. É possível que as esperas CXPACKET em conjunto com outros tipos de espera, como LATCH_* e SOS_SCHEDULER_YIELD, indiquem que o paralelismo é o problema real, e uma investigação adicional das estatísticas de latch no sistema validará se esse é realmente o caso. A visão de gerenciamento dinâmico sys.dm_os_latch_stats contém informações sobre as esperas de latch específicas que ocorreram na instância, e se uma das principais esperas de latch for ACCESS_METHODS_DATASET_PARENT, em conjunto com CXPACKET, LATCH_* e SOS_SCHEDULER_YIELD como as principais esperas, o nível de paralelismo no sistema é a causa do gargalo durante a execução da consulta, e pode ser necessário reduzir a opção 'max degree of parallelism' no sp_configure para resolver os problemas.
 
-    Resolving parallelism issues
+    Resolvendo problemas de paralelismo
 
-    As discussed earlier, larger, long running queries will generally benefit from parallel execution, since the cost of executing the query serially outweighs the cost associated with initialization, synchronization and termination of the parallel workers, for parallel execution of the query. Inappropriate parallelism most commonly arises in cases where the nature of the workload is "mixed," i.e. we have what is essentially an OLTP workload, characterized by a large number of short transactions, but where some of those transactions are actually complex enough that the cost threshold for parallelism is exceeded and SQL Server parallelizes their execution across all available cores, so tying up CPU resources.
+    Conforme discutido anteriormente, consultas maiores e de longa duração geralmente se beneficiarão da execução paralela, uma vez que o custo de executar a consulta de forma serial é maior do que o custo associado à inicialização, sincronização e término dos trabalhadores paralelos na execução paralela da consulta. O paralelismo inadequado ocorre mais comumente em casos em que a natureza da carga de trabalho é "mista", ou seja, temos uma carga de trabalho essencialmente de OLTP, caracterizada por um grande número de transações curtas, mas onde algumas dessas transações são complexas o suficiente para exceder o limite de custo para paralelismo, e o SQL Server paraleliza sua execução em todos os núcleos disponíveis, consumindo recursos de CPU.
 
-    When parallelism-related issues are diagnosed, the first possible remedy that should be investigated is optimizing the queries that are parallelizing inappropriately, if they are not already tuned. Inappropriate parallelism can easily be a result of missing/inadequate indexes, outdated statistics or badly written queries. In other words, by tuning these queries, they'll cease to exceed the cost threshold for parallelism, and so will naturally execute on a single CPU core.
+    Quando são diagnosticados problemas relacionados ao paralelismo, o primeiro remédio a ser investigado é otimizar as consultas que estão sendo paralelizadas de forma inadequada, caso ainda não estejam ajustadas. O paralelismo inadequado pode facilmente ser resultado de índices ausentes ou inadequados, estatísticas desatualizadas ou consultas mal escritas. Em outras palavras, ao ajustar essas consultas, elas deixarão de exceder o limite de custo para paralelismo e, assim, serão executadas naturalmente em um único núcleo de CPU.
 
-    If the workload is as tuned as it can be, and parallelism issues persist, then the cost threshold for parallelism option should be used in conjunction with the max degree of parallelism option to manage parallel execution in the system overall.
+    Se a carga de trabalho estiver ajustada da melhor forma possível e os problemas de paralelismo persistirem, então a opção "cost threshold for parallelism" deve ser usada em conjunto com a opção "max degree of parallelism" para gerenciar a execução paralela no sistema como um todo.
 
     TokenAndPermUserStore
 
-    The TokenAndPermUserStore cache was introduced in SQL 2005 as an optimization that would allow caching of the results of permissions checks by users against database objects. This cache, however, could be the cause of performance problems, especially in earlier builds of SQL Server 2005, because the limits on the size of the cache were too high. The performance problems typically manifested as excessively high CPU usage and threads with high CMEMTHREAD waits. This section will cover how to identify problems associated with the TokenAndPermUserStore cache, short-term work-arounds, hot fixes from Microsoft for the problem, as well as how to solve the problem in the long term.
+    O cache TokenAndPermUserStore foi introduzido no SQL Server 2005 como uma otimização que permitiria o armazenamento em cache dos resultados das verificações de permissões pelos usuários em relação aos objetos do banco de dados. No entanto, esse cache poderia ser a causa de problemas de desempenho, especialmente nas versões anteriores do SQL Server 2005, devido aos limites de tamanho do cache serem muito altos. Os problemas de desempenho geralmente se manifestavam como uso excessivamente alto da CPU e threads com altos tempos de espera CMEMTHREAD. Esta seção abordará como identificar problemas associados ao cache TokenAndPermUserStore, soluções temporárias, hotfixes da Microsoft para o problema, bem como a solução a longo prazo.
 
-    The problem is discussed in the Knowledge Base article 927396 (http://support.microsoft.com/kb/927396) and tends to materialize under the following circumstances:
+    O problema é discutido no artigo da Base de Conhecimento 927396 (http://support.microsoft.com/kb/927396) e tende a se manifestar nas seguintes circunstâncias:
 
-    •	 large amounts of non-AWE memory allocated to SQL Server (this means the problem is specific to 64-bit SQL)
-    •	 lots of dynamic or ad hoc SQL queries
-    •	 many different database users.
+    • grandes quantidades de memória não-AWE alocadas para o SQL Server (isso significa que o problema é específico para o SQL de 64 bits)
+    • muitas consultas SQL dinâmicas ou ad hoc
+    • muitos usuários de banco de dados diferentes.
 
-    To investigate possible problems related to the TokenAndPermUserStore cache, track the size of the cache over a period of time, using the query shown in Listing 3.23.
+    Para investigar possíveis problemas relacionados ao cache TokenAndPermUserStore, acompanhe o tamanho do cache ao longo de um período de tempo, usando a consulta mostrada na Listagem 3.23.
 
     SELECT SUM(single_pages_kb + multi_pages_kb) / 1024.0 AS CacheSizeMB
     FROM sys.dm_os_memory_clerks
     WHERE [name] = 'TokenAndPermUserStore'
 
-    Listing 3.23: Finding the size of the TokenAndPermUserStore cache.
+    Listagem 3.23: Encontrando o tamanho do cache TokenAndPermUserStore.
 
-    If the cache constantly grows in size, and that growth is accompanied by queries waiting with a CMEMTHREAD wait type, then the size of the cache may be the cause of the high CPU usage.
+    Se o cache crescer constantemente em tamanho e esse crescimento for acompanhado por consultas em espera com o tipo de espera CMEMTHREAD, então o tamanho do cache pode ser a causa do alto uso da CPU.
 
-    If you're using a SQL Server 2005 and the patch level is below SP2, the first thing to do is apply SP2 at the very least, and preferably SP4, since improvements in the management of this cache were made in SP2.
+    Se você estiver usando o SQL Server 2005 e o nível de patch estiver abaixo do SP2, a primeira coisa a fazer é aplicar pelo menos o SP2 e, de preferência, o SP4, pois foram feitas melhorias no gerenciamento desse cache no SP2.
 
-    A best long-term fix, however, is an architectural change to reduce the usage of ad hoc or dynamic SQL, and move as much logic as possible into stored procedures. Depending on the application architecture this may be anything from trivial to impossible, but it should be considered, as doing so almost completely removes the chance of running into this problem.
+    No entanto, a melhor solução a longo prazo é uma mudança arquitetural para reduzir o uso de consultas ad hoc ou SQL dinâmicas e mover o máximo possível de lógica para stored procedures. Dependendo da arquitetura da aplicação, isso pode variar de trivial a impossível, mas deve ser considerado, pois isso quase elimina a chance de encontrar esse problema.
 
-    Short-term fixes in SQL Server 2005
+    Soluções temporárias no SQL Server 2005
 
-    If these measures aren't immediately possible, there are a couple of short-term work-arounds to this problem in SQL Server 2005.
-    
-    Use the sysadmin server role
+    Se essas medidas não forem imediatamente possíveis, existem algumas soluções temporárias para esse problema no SQL Server 2005.
 
-    By making the application service account a member of the sysadmin server role, any permissions checking is bypassed and the problem is resolved. The assumption is that the account can perform any operation inside of SQL Server and therefore does not require additional permissions checks.
+    Use a função de servidor sysadmin
 
-    This solution is very far from ideal, since it provides elevated permissions to the service account. In a pinch, it will provide short-term relief to the problems associated with high CPU utilization. However, if it works, proving that the TokenAndPermUserStore cache is the root cause, then you should immediately determine if another solution can be utilized instead, to solve the problem.
+    Tornando a conta de serviço da aplicação um membro da função de servidor sysadmin, qualquer verificação de permissões é contornada e o problema é resolvido. A suposição é que a conta pode executar qualquer operação dentro do SQL Server e, portanto, não requer verificações de permissões adicionais.
 
-    Regularly clear the cache
+    Essa solução está longe de ser ideal, pois fornece permissões elevadas à conta de serviço. Em uma situação urgente, ela proporcionará alívio temporário para os problemas associados ao alto uso da CPU. No entanto, se funcionar e provar que o cache TokenAndPermUserStore é a causa raiz, você deve imediatamente determinar se outra solução pode ser utilizada em vez disso para resolver o problema.
 
-    Using a SQL agent job and the command shown in Listing 3.24, you can regularly free up space in the TokenAndPermUserStore cache.
+    Limpe regularmente o cache.
+
+    Usando um trabalho do SQL Agent e o comando mostrado na Listagem 3.24, você pode regularmente liberar espaço no cache TokenAndPermUserStore.
     
     DBCC FREESYSTEMCACHE ('TokenAndPermUserStore')
     
-    Listing 3.24: Freeing space in the TokenAndPermUserStore cache.
-    
-    Again, this should only is done in extreme cases and as a temporary solution. However, it will control the cache size until a long-term resolution can be applied.
+    Listagem 3.24: Liberando espaço no cache TokenAndPermUserStore.
+
+    Novamente, isso deve ser feito apenas em casos extremos e como uma solução temporária. No entanto, isso irá controlar o tamanho do cache até que uma solução de longo prazo possa ser aplicada.
 
     Trace Flags
 
-    On SQL 2005 SP2 or above, Trace Flag 4618 and/or Trace Flag 4610 can be enabled. Trace Flag 4618 restricts the number of entries that the cache will hold to 1024 and, if both flags are enabled, the number of cache entries is limited to 8192. Restricting the number of entries the cache will hold should be used temporarily, while other fixes are taken into consideration.
+    No SQL 2005 SP2 ou posterior, a Flag de Trace 4618 e/ou a Flag de Trace 4610 podem ser habilitadas. A Flag de Trace 4618 restringe o número de entradas que o cache irá armazenar para 1024 e, se ambas as flags estiverem habilitadas, o número de entradas no cache é limitado a 8192. Restringir o número de entradas que o cache irá armazenar deve ser usado temporariamente, enquanto outras soluções são consideradas.
 
-    One last configuration change option on SQL 2005, if on SP3 or above, is that Trace Flag 4621 can be enabled. This allows a custom quota to be set. For the details of configuring this, see Knowledge Base article 959823 (http://support.microsoft.com/kb/959823).
+    Uma última opção de alteração de configuração no SQL 2005, se estiver no SP3 ou posterior, é habilitar a Flag de Trace 4621. Isso permite definir uma cota personalizada. Para obter detalhes sobre como configurar isso, consulte o artigo da Base de Conhecimento 959823 (http://support.microsoft.com/kb/959823).
 
-    Configuration options in SQL Server 2008
+    Opções de configuração no SQL Server 2008
 
-    With SQL Server 2008, the configuration options access check cache bucket count and access check cache quota were introduced. These options control the number of entries and number of hash buckets used for the TokenAndPermUserStore cache. The cache should not cause the same problems on SQL 2008 as it did on SQL 2005, but if the problems do manifest, the quota can be set to a lower number and/or the number of hash buckets can be increased. Changing these settings can reduce the time necessary to locate cache entries. This configuration change is, however, not a recommended change unless directed under the guidance of Microsoft Customer Support, but IT should be noted as an area for your troubleshooting.
+    Com o SQL Server 2008, foram introduzidas as opções de configuração "access check cache bucket count" e "access check cache quota". Essas opções controlam o número de entradas e o número de buckets de hash usados pelo cache TokenAndPermUserStore. O cache não deve causar os mesmos problemas no SQL 2008 como ocorria no SQL 2005, mas se os problemas surgirem, a cota pode ser definida para um número menor e/ou o número de buckets de hash pode ser aumentado. Alterar essas configurações pode reduzir o tempo necessário para localizar as entradas do cache. No entanto, essa alteração de configuração não é recomendada, a menos que seja orientada pelo Suporte ao Cliente da Microsoft, mas deve ser observada como uma área para solução de problemas.
 
-    Windows Server and BIOS power saving options
+    Opções de economia de energia do Windows Server e BIOS
 
-    As a part of the green computing initiatives, many hardware manufacturers ship new desktops, laptops, and even servers intended for datacenter use, with the advanced power control configuration set such that the operating system, or the hardware itself, can automatically reduce power consumption and cooling requirements of the system by turning off devices that are not being used, and under-clocking the processors installed in the server. Unfortunately, this can have quite a negative impact on your processor performance.
+    Como parte das iniciativas de computação sustentável, muitos fabricantes de hardware enviam novos desktops, laptops e até mesmo servidores destinados ao uso em datacenters com a configuração avançada de controle de energia definida de modo que o sistema operacional, ou o próprio hardware, possa reduzir automaticamente o consumo de energia e os requisitos de resfriamento do sistema, desligando dispositivos que não estão sendo usados e reduzindo a velocidade dos processadores instalados no servidor. Infelizmente, isso pode ter um impacto bastante negativo no desempenho do processador.
 
-    These hardware-based power-saving settings can be configured in the main system BIOS to allow the hardware to control power consumption (Hardware), the Windows operating system to control power management (OS Control), or to disable power management features completely (None). In general, the default option for the BIOS is to allow the operating system to control the power management features of the system, based on its configured options.
+    Essas configurações de economia de energia baseadas em hardware podem ser configuradas no BIOS do sistema principal para permitir que o hardware controle o consumo de energia (Hardware), permitir que o sistema operacional Windows controle o gerenciamento de energia (Controle do SO) ou desativar completamente os recursos de gerenciamento de energia (Nenhum). Em geral, a opção padrão no BIOS é permitir que o sistema operacional controle os recursos de gerenciamento de energia do sistema com base em suas opções configuradas.
 
-    Windows Server 2008 and 2008 R2 default the power management configuration setting (the Windows Power Plan feature) to Balanced, which allows the system to switch to a low performance state to reduce power consumption. One of the surprises that many people have had, on upgrading their systems on newer server hardware that has Windows Server 2008 or 2008 R2 installed on it, is that overall performance decreases after a period of time and ends up being significantly lower than when the server first started up. This is a direct result of power management features causing under-clocking of the processors on the server.
+    O Windows Server 2008 e o 2008 R2 têm como configuração padrão a opção de gerenciamento de energia "Equilibrado" (Windows Power Plan), que permite que o sistema mude para um estado de baixo desempenho para reduzir o consumo de energia. Uma das surpresas que muitas pessoas tiveram ao atualizar seus sistemas em hardware de servidor mais recente com o Windows Server 2008 ou 2008 R2 instalado é que o desempenho geral diminui após um certo período de tempo e acaba sendo significativamente menor do que quando o servidor foi inicializado pela primeira vez. Isso é resultado direto das características de gerenciamento de energia que causam a redução da velocidade dos processadores no servidor.
 
-    To identify if this is a problem on your system, a free tool named CPU-Z, available from http://www.cpuid.com/softwares/cpu-z/versions-history.html, can be used to collect information about the current state of the processors installed in a server. We won't discuss this tool in detail here, but the important values to look out for, in regard power management problems, are the CPU Specification, which will show the type of processor and its rated clock speed, and the Core Speed, which shows the current clock speed of the processors in the system. If the Core Speed is lower that the rated specification, then power management is reducing the performance of the system.
+    Para identificar se esse é um problema em seu sistema, você pode usar uma ferramenta gratuita chamada CPU-Z, disponível em http://www.cpuid.com/softwares/cpu-z/versions-history.html, para coletar informações sobre o estado atual dos processadores instalados em um servidor. Não discutiremos em detalhes essa ferramenta aqui, mas os valores importantes a serem observados em relação aos problemas de gerenciamento de energia são a Especificação da CPU, que mostra o tipo de processador e sua velocidade de clock nominal, e a Velocidade do Núcleo, que mostra a velocidade de clock atual dos processadores no sistema. Se a Velocidade do Núcleo for menor que a especificação nominal, significa que o gerenciamento de energia está reduzindo o desempenho do sistema.
 
-    The first thing to do is to check the current Windows power management scheme. If it is set to Balanced, change it to High Performance, which prevents the system from switching to a low performance state and ensures the performance characteristics of the system are consistent (see http://support.microsoft.com/kb/2207548). If High Performance is being used by Windows, the BIOS setting should be checked. If it's set to Hardware, change it to OS Control.
+    O primeiro passo é verificar o esquema atual de gerenciamento de energia do Windows. Se estiver definido como Equilibrado, altere-o para Alto Desempenho, o que impede que o sistema mude para um estado de baixo desempenho e garante que as características de desempenho do sistema sejam consistentes (consulte http://support.microsoft.com/kb/2207548). Se o Alto Desempenho estiver sendo usado pelo Windows, a configuração do BIOS também deve ser verificada. Se estiver definido como Hardware, altere para Controle do SO.
 
-    What is insidious here is the impact that power saving has on the % Processor Usage performance counter. The value for this counter is calculated based on the currently used CPU frequency, divided by the available CPU frequency. As such, an under-clocked CPU causes Windows to report higher CPU usage values, leading people to believe that the server is under heavier load than it is in reality.
+    O que é insidioso aqui é o impacto que a economia de energia tem no contador de desempenho % de Uso do Processador. O valor desse contador é calculado com base na frequência atual da CPU dividida pela frequência disponível da CPU. Assim, uma CPU com velocidade reduzida faz com que o Windows relate valores de uso da CPU mais altos, levando as pessoas a acreditar que o servidor está sob uma carga mais pesada do que realmente está.
 
-    Summary
+    Resumo
 
-    Poor management of CPU utilization can and will often have a dramatic impact on SQL Server performance. In general the sustained CPU usage of a SQL Server machine should not exceed 60–70%. Occasional spikes to higher values should not be a problem, but sustained heavier usage is an indication that the server is under severe CPU load.
+    Uma má gestão da utilização da CPU pode ter um impacto dramático no desempenho do SQL Server. Em geral, o uso sustentado da CPU em uma máquina do SQL Server não deve exceder 60-70%. Picos ocasionais para valores mais altos não devem ser um problema, mas um uso mais intenso e sustentado indica que o servidor está sob uma carga severa de CPU.
 
-    When CPU issues arise, and having confirmed that the high CPU usage is due to the SQL Server process, the first job is to isolate the source of the problem, using information from tools such as Performance Monitor (PerfMon), SQLTrace and the SQL Server Dynamic Management Views, many of which have been greatly enhanced with the releases of SQL Server 2005 and 2008.
+    Quando surgem problemas de CPU e após confirmar que o alto uso da CPU se deve ao processo do SQL Server, o primeiro passo é isolar a origem do problema, utilizando informações de ferramentas como o Monitor de Desempenho (PerfMon), SQLTrace e as Visualizações de Gerenciamento Dinâmico do SQL Server, muitas das quais foram significativamente aprimoradas nas versões do SQL Server 2005 e 2008.
 
-    With the problem located, the appropriate measures can be taken to relieve the CPU pressure, ranging from adding useful indexes and tuning CPU-hungry queries, to changing configuration settings. If all of this fails, it may simply be that you need more or faster CPUs along with a better balancing of the load across CPUs, and better scheduling of CPU-intensive queries.
+    Com o problema localizado, podem ser tomadas as medidas apropriadas para aliviar a pressão da CPU, que vão desde adicionar índices úteis e ajustar consultas que consomem muita CPU até alterar as configurações de configuração. Se todas essas medidas falharem, pode ser simplesmente necessário ter mais ou CPUs mais rápidas, juntamente com um melhor balanceamento da carga entre as CPUs e um agendamento mais eficiente das consultas intensivas em CPU.
 
-    Additional Resources
+    Recursos adicionais
 
     •	 Implicit data conversations
     •	 http://sqlblog.com/blogs/jonathan_kehayias/archive/2010/01/08/findingimplicit-column-conversions-in-the-plan-cache.aspx
