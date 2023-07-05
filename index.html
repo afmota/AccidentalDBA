@@ -66,15 +66,15 @@
 			</ul>
 			<li>Summary</li>
 		</ul>
-		<li><strong>Chapter 3: High CPU Utilization</strong></li>
+		<li><strong>Capítulo 3: Utilização Elevada da CPU</strong></li>
 		<ul>
-			<li>Investigating CPU Pressure</li>
+			<li>Investigando a Pressão da CPU</li>
 			<ul>
 				<li>Performance Monitor</li>
 				<li>SQL Trace</li>
-				<li>Dynamic Management Views</li>
+				<li>Dynamic Management Views (DMVs)</li>
 			</ul>
-			<li>Investigating CPU-related wait statistics</li>
+			<li>Investigando estatísticas de espera relacionadas à CPU</li>
 			<ul>
 				<li>Tempo de espera do sinal</li>
 				<li>Esperas <code>SOS_SCHEDULER_YIELD</li>
@@ -83,17 +83,43 @@
 			</ul>
 			<li>Investigando as filas do agendador</li>
 			<li>Identificando consultas intensivas em CPU</li>
-			<li>Common Causes of High CPU Usage</li>
+			<li>Causas comuns de alto uso de CPU</li>
 			<ul>
-				<li>Missing indexes</li>
-				<li>Outdated statistics</li>
-				<li>Non-SARGable predicates</li>
-				<li>Implicit conversions</li>
+				<li>Índices ausentes</li>
+				<li>Estatísticas desatualizadas</li>
+				<li>Predicados não-SARGáveis</li>
+				<li>Conversões implícitas</li>
 				<li>Parameter sniffing</li>
-				<li>Ad hoc non-parameterized queries</li>
-				<li>Inappropriate parallelism</li>
+			</ul>
+			<li>Trace Flag 4136</li>
+			<li>Usando o hint <code>OPTIMIZE FOR</code></li>
+			<li>Opções de recompilação</li>
+			<ul>
+				<li>Consultas não parametrizadas ad hoc</li>
+			</ul>
+			<li>Corrigindo o aplicativo</li>
+			<li>Parametrização forçada no SQL Server</li>
+			<li>Otimização para cargas de trabalho ad hoc</li>
+			<ul>
+				<li>Paralelismo inadequado</li>
+			</ul>
+			<li>Custo limite para paralelismo</li>
+			<li>Grau máximo de paralelismo</li>
+			<li>Hyper-threading e paralelismo</li>
+			<li>Diagnosticando paralelismo inadequado</li>
+			<li>Resolvendo problemas de paralelismo</li>
+			<ul>
 				<li>TokenAndPermUserStore</li>
-				<li>Windows Server and BIOS power saving options</li>
+			</ul>
+			<li>Soluções temporárias no SQL Server 2005</li>
+			<ul>
+				<li>Use a função de servidor sysadmin</li>
+				<li>Limpe regularmente o cache</li>
+				<li>Trace Flags</li>
+			</ul>
+			<li>Opções de configuração no SQL Server 2008</li>
+			<ul>
+				<li>Opções de economia de energia do Windows Server e BIOS</li>
 			</ul>
 			<li>Summary</li>
 			<li>Additional Resources</li>
