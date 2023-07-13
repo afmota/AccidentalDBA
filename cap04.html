@@ -3,132 +3,88 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DBA Acidental</title>
+    <title>DBA Acidental: Gerenciamento de memória</title>
 </head>
 <body>
-    Capítulo 4: Gerenciamento de Memória
+    <h1>Capítulo 4: Gerenciamento de Memória</h1>
+    <p>A alocação e o consumo de memória no SQL Server são uma fonte constante de perguntas nos fóruns online. É muito comum o SQL Server utilizar grandes quantidades de memória e, uma vez alocada essa memória, ela não é liberada. Esse comportamento difere do exibido pela maioria das outras aplicações e leva alguns usuários a acreditar que o SQL Server possui um vazamento de memória, quando esse não é o caso.</p>
+    <p>Este capítulo examinará como o SQL Server realmente aloca memória, como isso afeta as operações contínuas do servidor e, especificamente, as diferenças entre alocações de memória em servidores de 32 bits e 64 bits.</p>
+    <p>Em seguida, discutiremos como diagnosticar a pressão de memória no SQL Server, quando o SQL Server é forçado a operar com uma quantidade insuficiente de memória, usando contadores de desempenho relacionados à memória e Exibições de Gerenciamento Dinâmico.</p>
+    <p>Por fim, discutiremos alguns problemas comuns associados às alocações de memória do SQL Server nas diversas plataformas e como resolver esses problemas, por exemplo, ajustando opções de configuração relacionadas à memória no SQL Server. Conforme você avança nos capítulos, é importante prestar atenção aos casos específicos em que se recomenda alterar as opções de configuração de memória. Uma configuração incorreta das opções de memória pode causar mais problemas do que as opções padrão, dependendo da alteração realizada.</p>
 
-    A alocação e o consumo de memória no SQL Server são uma fonte constante de perguntas nos fóruns online. É muito comum o SQL Server utilizar grandes quantidades de memória e, uma vez alocada essa memória, ela não é liberada. Esse comportamento difere do exibido pela maioria das outras aplicações e leva alguns usuários a acreditar que o SQL Server possui um vazamento de memória, quando esse não é o caso.
-
-    Este capítulo examinará como o SQL Server realmente aloca memória, como isso afeta as operações contínuas do servidor e, especificamente, as diferenças entre alocações de memória em servidores de 32 bits e 64 bits.
-
-    Em seguida, discutiremos como diagnosticar a pressão de memória no SQL Server, quando o SQL Server é forçado a operar com uma quantidade insuficiente de memória, usando contadores de desempenho relacionados à memória e Exibições de Gerenciamento Dinâmico.
-
-    Por fim, discutiremos alguns problemas comuns associados às alocações de memória do SQL Server nas diversas plataformas e como resolver esses problemas, por exemplo, ajustando opções de configuração relacionadas à memória no SQL Server. Conforme você avança nos capítulos, é importante prestar atenção aos casos específicos em que se recomenda alterar as opções de configuração de memória. Uma configuração incorreta das opções de memória pode causar mais problemas do que as opções padrão, dependendo da alteração realizada.
-
-    A alocação e o uso de memória no SQL Server são tópicos complexos, e vamos nos aprofundar apenas o suficiente para permitir um entendimento básico das questões de memória do SQL Server que podem surgir. Se você quiser saber mais após ler este capítulo, recomendo o trabalho de Mark Russinovich (por exemplo, http://blogs.technet.com/b/markrussinovich/archive/2008/07/21/3092070.aspx) e Christian Bolton, especialmente sua apresentação "A Walk Down Memory Lane" no SQLBits III (http://sqlbits.com/Sessions/Event3/A_walk_down_memory_lane).
-
-    O Motor de Banco de Dados Autoajustável
-
+    <p>A alocação e o uso de memória no SQL Server são tópicos complexos, e vamos nos aprofundar apenas o suficiente para permitir um entendimento básico das questões de memória do SQL Server que podem surgir. Se você quiser saber mais após ler este capítulo, recomendo o trabalho de Mark Russinovich (por exemplo, <a href="http://blogs.technet.com/b/markrussinovich/archive/2008/07/21/3092070.aspx" target="_blank" rel="external">http://blogs.technet.com/b/markrussinovich/archive/2008/07/21/3092070.aspx</a>) e Christian Bolton, especialmente sua apresentação "A Walk Down Memory Lane" no SQLBits III (<a href="http://sqlbits.com/Sessions/Event3/A_walk_down_memory_lane" target="_blank" rel="external">http://sqlbits.com/Sessions/Event3/A_walk_down_memory_lane</a>).</p>
+    <h2>O Motor de Banco de Dados Autoajustável</h2>
     Por muito tempo, a Microsoft tem se comprometido com a visão de um motor de banco de dados SQL Server autoajustável, como uma forma de reduzir o custo total de propriedade do produto. A partir do SQL Server 2005, o SQL Server gerencia dinamicamente o uso da memória e pode alterar seu uso de memória sem exigir a reinicialização do motor de banco de dados. O SQL Server simplesmente não oferece opções de configuração para ajustar com precisão as alocações de memória que são comuns em outras plataformas de SGBD. Em vez disso, a quantidade de memória alocada para componentes individuais, como o cache de plano, é controlada automaticamente e totalmente pelo motor de banco de dados, dependendo da carga de trabalho atual do SQL Server e de outras atividades no servidor. A memória não pode ser alocada manualmente.
+    <p>Embora o SQL Server não tenha os recursos para controlar alocações de memória específicas, ainda existem algumas opções de configuração que afetam como o motor de banco de dados utiliza a memória. Se essas opções de configuração requerem ou não alterações em relação aos valores padrão especificados durante a instalação do sistema depende de vários fatores, incluindo as versões e edições do sistema operacional Windows e do SQL Server utilizados, a quantidade de memória física instalada no servidor e a arquitetura do processador (x86, x64, IA64).</p>
+    <h2>Como o SQL Server Aloca Memória</h2>
+    <p>Na primeira vez que alguém olha a guia "Processos" no Gerenciador de Tarefas do Windows em uma máquina típica do SQL Server, conforme mostrado na Figura 4.1, geralmente se surpreende com a quantidade de memória que está sendo utilizada no servidor, principalmente pelo processo <code>sqlservr.exe</code>. O primeiro instinto de alguém que não entende como o SQL Server funciona é pensar que há um vazamento de memória no SQL Server, o que não é o caso.</p>
+    <img src="imagens/fig41.png" alt="Task Manager">
+    <p><strong>Figura 4.1</strong>: Uso de memória do processo SQL Server (configurações padrão).</p>
+    <p>Existe uma grande diferença entre o uso intenso de memória e um vazamento de memória, e o SQL Server é projetado para usar memória em grandes quantidades, a fim de armazenar em cache informações, como páginas de dados recentemente usadas. Isso melhora o desempenho ao reduzir a necessidade de ler constantemente dados do disco, uma operação muito mais lenta e cara do que acessá-los na memória.</p>
+    <p>Como regra geral, o SQL Server usará toda a memória que você puder fornecer e não liberará a memória que foi alocada durante as operações normais, a menos que o sistema operacional tenha definido a sinalização de notificação de recursos de <strong>memória baixa</strong>, que faz o SQL Server reduzir suas alocações de memória. Uma das funcionalidades de autoajuste adicionadas ao SQLOS no SQL Server 2005 foi uma thread dedicada que monitora as notificações de memória emitidas pelo sistema operacional Windows para informar outras aplicações sobre o status do uso de memória no sistema operacional. O Windows OS define duas notificações de memória:</p>
+    <ul>
+        <li><strong>memória alta</strong> informa ao SQL Server que ele pode aumentar seu conjunto de trabalho e usar memória adicional.</li>
+        <li><strong>memória baixa</strong> informa ao SQL Server que o sistema operacional está sob pressão de memória e que o SQL Server deve tentar reduzir seu conjunto de trabalho para devolver memória ao sistema operacional.</li>
+    </ul>
+    <p>Se nenhuma das sinalizações for definida pelo Windows, o uso de memória é estável e o SQL Server continuará operando dentro de seu espaço de processo existente. Essa funcionalidade não existia antes do Windows Server 2003 e do SQL Server 2005. Slava Oks, um desenvolvedor da equipe SQLOS do SQL Server 2005, tem um post em seu blog sobre pressão de memória (<a href="http://blogs.msdn.com/b/slavao/archive/2005/02/01/364523.aspx" target="_blank" rel="external">http://blogs.msdn.com/b/slavao/archive/2005/02/01/364523.aspx</a>), que explica os tipos básicos de pressão de memória e suas possíveis consequências (veja a Figura 4.2). A notificação de "memória baixa", por exemplo, é resultado do que Slava chama de pressão dinâmica <strong>externa</strong> (SO) de memória. O post também discute a necessidade de receber notificações desse tipo de pressão e como o SQL Server foi projetado para gerenciar dinamicamente o uso de memória com base nas notificações de memória do Windows.</p>
+    <img src="imagens/fig42.PNG" alt="Pressão de memória">
+    <p><strong>Figura 4.2</strong>: Resumo dos tipos básicos de pressão de memória no SQL Server.</p>
+    <p>A quantidade de memória que o SQL Server pode usar depende de vários fatores:</p>
+    <ul>
+        <li>quantidade de memória física instalada no servidor;</li>
+        <li>limites de memória do sistema operacional Windows instalado (consulte <a href="http://msdn.microsoft.com/en-us/library/aa366778.aspx" target="_blank" rel="external">http://msdn.microsoft.com/en-us/library/aa366778.aspx</a>);</li>
+        <li>arquitetura do SQL Server (32 bits versus 64 bits);</li>
+        <li>opções de configuração do SQL Server que controlam o uso de memória;</li>
+        <li>versão e edição do SQL Server.</li>
+    </ul>
+    <p>Esses foram listados na ordem de limitação; por exemplo, se o servidor tiver apenas 4 GB de memória física (RAM) instalada, esse será o limite máximo para o SQL Server.</p>
+    <p>Se um servidor tiver 64 GB de RAM e o sistema operacional Windows for o Windows Server 2008 64 bits Standard Edition, então o limite do SO é de 32 GB, que é o máximo que pode ser usado pelo SQL Server.</p>
+    <p>Se uma edição de 32 bits do SQL Server for instalada em um sistema Windows Server 2008 x64 Enterprise Edition com 128 GB de RAM, a quantidade máxima de memória que o SQL Server pode acessar, nas configurações padrão do WOW64, seria de 4 GB, já que um ponteiro de 32 bits só pode "ver" no máximo 4 GB (232/10243). No entanto, configurando as opções de configuração apropriadas do SQL Server (ou seja, habilitando AWE - Address Windowing Extensions, como discutido posteriormente), o SQL Server pode acessar memória adicional por meio das Physical Address Extensions (PAE). Isso altera o ponteiro para 36 bits e, com o uso do AWE para alocar a memória, aumenta a quantidade máxima de memória para 64 GB (236/10243).</p>
+    <p>A versão e edição do SQL Server ocasionalmente podem afetar o limite de memória para o SQL Server. Por exemplo, no SQL Server 2000, a capacidade de habilitar o uso de memória AWE era um recurso exclusivo da edição Enterprise, portanto, se você estivesse usando a edição Standard, o SQL Server não teria acesso a essa memória adicional. No SQL Server 2005, o uso de AWE se tornou um recurso da edição Standard, e essa limitação de edição foi removida. Outro exemplo é que, no SQL Server 2005 e 2008, as edições de 64 bits em execução na Enterprise Edition podem usar Large Pages (discutidas posteriormente neste capítulo).</p>
+    <h3>Limitações do Espaço de Endereço Virtual de 32 bits</h3>
+    <p>O sistema operacional Windows executa cada processo, incluindo o processo do SQL Server, em sua própria área dedicada de memória virtual, conhecida como Espaço de Endereço Virtual (VAS). Um dos maiores desafios com o gerenciamento de memória para o SQL Server de 32 bits é a quantidade limitada de VAS à qual um processo de 32 bits tem acesso. Um processo de 32 bits só pode acessar no máximo 4 GB de memória, portanto, um processo de SQL Server de 32 bits tem acesso apenas a 4 GB de VAS. O VAS é dividido em duas regiões: espaço de <strong>modo kernel</strong> (ou sistema) e espaço de <strong>modo usuário</strong> (ou aplicação).</p>
+    <p>O VAS do modo kernel é usado pelo sistema operacional para mapear várias estruturas de dados do sistema, como o cache de arquivos, pools paginados e não paginados (discutidos brevemente posteriormente). O VAS do modo usuário é usado para mapear a memória para o processo de aplicação em execução atualmente (no nosso caso, o SQL Server).</p>
+    <p>Por padrão, o Windows divide o VAS igualmente em 2 GB de VAS de modo kernel e 2 GB de VAS de modo usuário. Em outras palavras, o VAS total é de 4 GB, mas um único processo de SQL Server de 32 bits pode acessar apenas 2 GB no VAS de modo usuário para seu conjunto de trabalho. Usando a configuração padrão, o SQL Server aloca memória nesses 2 GB de VAS de modo usuário para o buffer pool (cache de dados e plano), com uma quantidade menor de memória necessária para alocações fora do buffer pool (multipáginas).</p>
+    <p>Nas próximas seções, discutiremos os seguintes tópicos:</p>
+    <ul>
+        <li>Como o SQL Server aloca memória no VAS de modo usuário.</li>
+        <li>Reserva de memória para alocações fora do buffer pool.</li>
+        <li>Como estender o VAS de modo usuário para um máximo de 3 GB, usando ajustes no VAS.</li>
+        <li>Como disponibilizar para o processo do SQL Server uma área de memória separada e maior (>4 GB), chamada de memória AWE, para alocações de cache de dados.</li>
+    </ul>
+    <p>Observe que muitos dos conceitos e limitações discutidos nesta seção se aplicam <strong>apenas</strong> a instalações de SQL Server de 32 bits. Consulte a seção "Uso do SQL Server de 64 bits" para obter detalhes sobre instalações de 64 bits.</p>
+    <h2>Alocação do VAS de modo usuário e VirtualAlloc</h2>
+    <p>O SQL Server reserva 2 GB de VAS de modo usuário, mas não aloca essa memória até que ocorra uma alocação de memória física. O SQL Server aloca memória no VAS de modo usuário fazendo chamadas para a função <code>VirtualAlloc</code> na API do Windows. Se você estiver executando uma versão de 32 bits do Windows OS ou do SQL Server, uma chamada para o <code>VirtualAlloc</code> retornará um ponteiro de 32 bits e, como discutido anteriormente, isso limita a quantidade de VAS de modo usuário que o SQL Server pode usar a 2 GB.</p>
+    <p>A memória alocada pelo <code>VirtualAlloc</code> não precisa estar fisicamente presente, portanto, 2 GB de VAS de modo usuário ainda seriam reservados pelo Windows para uso do SQL Server, independentemente da quantidade de memória física (RAM) instalada. No entanto, quando essa memória é usada (cometida), ela precisa estar respaldada por RAM (ou pelo arquivo de paginação), e o Windows garante que a quantidade de memória cometida pelo SQL Server e por quaisquer outros processos seja menor ou igual à memória física instalada, mais a capacidade do arquivo de paginação.</p>
+    <p>No entanto, se você tiver menos de 2 GB de RAM instalada (raro nos dias de hoje), o limite de RAM se torna o limite máximo rígido de memória que o SQL Server irá cometer. Durante o aumento inicial de memória, o SQL Server garantirá que o cache de buffers seja menor do que a RAM física disponível; o SQL Server não vai cometer memória que está garantida para ser paginada para fora do cache de buffers, pois o objetivo principal de ter o cache de buffers na memória é reduzir a atividade física do disco. Na verdade, o seu buffer pool será um pouco menor do que a RAM instalada, devido a requisitos adicionais de memória do SQL Server, que são discutidos em mais detalhes na próxima seção, <em>Alocações fora do buffer pool</em> (MemToLeave).</p>
+    <p>Por fim, observe que qualquer memória alocada pelo <code>VirtualAlloc</code> é paginável; isso significa que o sistema operacional Windows pode forçar essa memória a ser paginada para o disco, em resposta à pressão de memória.</p>
+    <h2>Alocações fora do buffer pool (MemToLeave)</h2>
 
-    Embora o SQL Server não tenha os recursos para controlar alocações de memória específicas, ainda existem algumas opções de configuração que afetam como o motor de banco de dados utiliza a memória. Se essas opções de configuração requerem ou não alterações em relação aos valores padrão especificados durante a instalação do sistema depende de vários fatores, incluindo as versões e edições do sistema operacional Windows e do SQL Server utilizados, a quantidade de memória física instalada no servidor e a arquitetura do processador (x86, x64, IA64).
-
-    Como o SQL Server Aloca Memória
-
-    Na primeira vez que alguém olha a guia "Processos" no Gerenciador de Tarefas do Windows em uma máquina típica do SQL Server, conforme mostrado na Figura 4.1, geralmente se surpreende com a quantidade de memória que está sendo utilizada no servidor, principalmente pelo processo sqlservr.exe. O primeiro instinto de alguém que não entende como o SQL Server funciona é pensar que há um vazamento de memória no SQL Server, o que não é o caso.
-
-    Figura 4.1: Uso de memória do processo SQL Server (configurações padrão).
-
-    Existe uma grande diferença entre o uso intenso de memória e um vazamento de memória, e o SQL Server é projetado para usar memória em grandes quantidades, a fim de armazenar em cache informações, como páginas de dados recentemente usadas. Isso melhora o desempenho ao reduzir a necessidade de ler constantemente dados do disco, uma operação muito mais lenta e cara do que acessá-los na memória.
-
-    Como regra geral, o SQL Server usará toda a memória que você puder fornecer e não liberará a memória que foi alocada durante as operações normais, a menos que o sistema operacional tenha definido a sinalização de notificação de recursos de memória baixa, que faz o SQL Server reduzir suas alocações de memória. Uma das funcionalidades de autoajuste adicionadas ao SQLOS no SQL Server 2005 foi uma thread dedicada que monitora as notificações de memória emitidas pelo sistema operacional Windows para informar outras aplicações sobre o status do uso de memória no sistema operacional. O Windows OS define duas notificações de memória:
-
-    "memória alta" informa ao SQL Server que ele pode aumentar seu conjunto de trabalho e usar memória adicional.
-    "memória baixa" informa ao SQL Server que o sistema operacional está sob pressão de memória e que o SQL Server deve tentar reduzir seu conjunto de trabalho para devolver memória ao sistema operacional.
-
-    Se nenhuma das sinalizações for definida pelo Windows, o uso de memória é estável e o SQL Server continuará operando dentro de seu espaço de processo existente. Essa funcionalidade não existia antes do Windows Server 2003 e do SQL Server 2005. Slava Oks, um desenvolvedor da equipe SQLOS do SQL Server 2005, tem um post em seu blog sobre pressão de memória (http://blogs.msdn.com/b/slavao/archive/2005/02/01/364523.aspx), que explica os tipos básicos de pressão de memória e suas possíveis consequências (veja a Figura 4.2). A notificação de "memória baixa", por exemplo, é resultado do que Slava chama de pressão dinâmica externa (SO) de memória. O post também discute a necessidade de receber notificações desse tipo de pressão e como o SQL Server foi projetado para gerenciar dinamicamente o uso de memória com base nas notificações de memória do Windows.
-
-    Figura 4.2: Resumo dos tipos básicos de pressão de memória no SQL Server.
-
-    A quantidade de memória que o SQL Server pode usar depende de vários fatores:
-
-    quantidade de memória física instalada no servidor;
-    limites de memória do sistema operacional Windows instalado (consulte http://msdn.microsoft.com/en-us/library/aa366778.aspx);
-    arquitetura do SQL Server (32 bits versus 64 bits);
-    opções de configuração do SQL Server que controlam o uso de memória;
-    versão e edição do SQL Server.
-
-    Esses foram listados na ordem de limitação; por exemplo, se o servidor tiver apenas 4 GB de memória física (RAM) instalada, esse será o limite máximo para o SQL Server.
-
-    Se um servidor tiver 64 GB de RAM e o sistema operacional Windows for o Windows Server 2008 64 bits Standard Edition, então o limite do SO é de 32 GB, que é o máximo que pode ser usado pelo SQL Server.
-
-    Se uma edição de 32 bits do SQL Server for instalada em um sistema Windows Server 2008 x64 Enterprise Edition com 128 GB de RAM, a quantidade máxima de memória que o SQL Server pode acessar, nas configurações padrão do WOW64, seria de 4 GB, já que um ponteiro de 32 bits só pode "ver" no máximo 4 GB (232/10243). No entanto, configurando as opções de configuração apropriadas do SQL Server (ou seja, habilitando AWE - Address Windowing Extensions, como discutido posteriormente), o SQL Server pode acessar memória adicional por meio das Physical Address Extensions (PAE). Isso altera o ponteiro para 36 bits e, com o uso do AWE para alocar a memória, aumenta a quantidade máxima de memória para 64 GB (236/10243).
-
-    A versão e edição do SQL Server ocasionalmente podem afetar o limite de memória para o SQL Server. Por exemplo, no SQL Server 2000, a capacidade de habilitar o uso de memória AWE era um recurso exclusivo da edição Enterprise, portanto, se você estivesse usando a edição Standard, o SQL Server não teria acesso a essa memória adicional. No SQL Server 2005, o uso de AWE se tornou um recurso da edição Standard, e essa limitação de edição foi removida. Outro exemplo é que, no SQL Server 2005 e 2008, as edições de 64 bits em execução na Enterprise Edition podem usar Large Pages (discutidas posteriormente neste capítulo).
-
-    Limitações do Espaço de Endereço Virtual de 32 bits
-
-    O sistema operacional Windows executa cada processo, incluindo o processo do SQL Server, em sua própria área dedicada de memória virtual, conhecida como Espaço de Endereço Virtual (VAS). Um dos maiores desafios com o gerenciamento de memória para o SQL Server de 32 bits é a quantidade limitada de VAS à qual um processo de 32 bits tem acesso. Um processo de 32 bits só pode acessar no máximo 4 GB de memória, portanto, um processo de SQL Server de 32 bits tem acesso apenas a 4 GB de VAS. O VAS é dividido em duas regiões: espaço de modo kernel (ou sistema) e espaço de modo usuário (ou aplicação).
-
-    O VAS do modo kernel é usado pelo sistema operacional para mapear várias estruturas de dados do sistema, como o cache de arquivos, pools paginados e não paginados (discutidos brevemente posteriormente). O VAS do modo usuário é usado para mapear a memória para o processo de aplicação em execução atualmente (no nosso caso, o SQL Server).
-
-    Por padrão, o Windows divide o VAS igualmente em 2 GB de VAS de modo kernel e 2 GB de VAS de modo usuário. Em outras palavras, o VAS total é de 4 GB, mas um único processo de SQL Server de 32 bits pode acessar apenas 2 GB no VAS de modo usuário para seu conjunto de trabalho. Usando a configuração padrão, o SQL Server aloca memória nesses 2 GB de VAS de modo usuário para o buffer pool (cache de dados e plano), com uma quantidade menor de memória necessária para alocações fora do buffer pool (multipáginas).
-
-    Nas próximas seções, discutiremos os seguintes tópicos:
-
-    Como o SQL Server aloca memória no VAS de modo usuário.
-    Reserva de memória para alocações fora do buffer pool.
-    Como estender o VAS de modo usuário para um máximo de 3 GB, usando ajustes no VAS.
-    Como disponibilizar para o processo do SQL Server uma área de memória separada e maior (>4 GB), chamada de memória AWE, para alocações de cache de dados.
-
-    Observe que muitos dos conceitos e limitações discutidos nesta seção se aplicam apenas a instalações de SQL Server de 32 bits. Consulte a seção "Uso do SQL Server de 64 bits" para obter detalhes sobre instalações de 64 bits.
-
-    Alocação do VAS de modo usuário e VirtualAlloc
-
-    O SQL Server reserva 2 GB de VAS de modo usuário, mas não aloca essa memória até que ocorra uma alocação de memória física. O SQL Server aloca memória no VAS de modo usuário fazendo chamadas para a função VirtualAlloc na API do Windows. Se você estiver executando uma versão de 32 bits do Windows OS ou do SQL Server, uma chamada para o VirtualAlloc retornará um ponteiro de 32 bits e, como discutido anteriormente, isso limita a quantidade de VAS de modo usuário que o SQL Server pode usar a 2 GB.
-
-    A memória alocada pelo VirtualAlloc não precisa estar fisicamente presente, portanto, 2 GB de VAS de modo usuário ainda seriam reservados pelo Windows para uso do SQL Server, independentemente da quantidade de memória física (RAM) instalada. No entanto, quando essa memória é usada (cometida), ela precisa estar respaldada por RAM (ou pelo arquivo de paginação), e o Windows garante que a quantidade de memória cometida pelo SQL Server e por quaisquer outros processos seja menor ou igual à memória física instalada, mais a capacidade do arquivo de paginação.
-
-    No entanto, se você tiver menos de 2 GB de RAM instalada (raro nos dias de hoje), o limite de RAM se torna o limite máximo rígido de memória que o SQL Server irá cometer. Durante o aumento inicial de memória, o SQL Server garantirá que o cache de buffers seja menor do que a RAM física disponível; o SQL Server não vai cometer memória que está garantida para ser paginada para fora do cache de buffers, pois o objetivo principal de ter o cache de buffers na memória é reduzir a atividade física do disco. Na verdade, o seu buffer pool será um pouco menor do que a RAM instalada, devido a requisitos adicionais de memória do SQL Server, que são discutidos em mais detalhes na próxima seção, Alocações fora do buffer pool (MemToLeave).
-
-    Por fim, observe que qualquer memória alocada pelo VirtualAlloc é paginável; isso significa que o sistema operacional Windows pode forçar essa memória a ser paginada para o disco, em resposta à pressão de memória.
-
-    Alocações fora do buffer pool (MemToLeave)
-
-    Conforme discutido, as maiores alocações de memória feitas pelo SQL Server geralmente são para o buffer pool, para páginas de dados e armazenamento em cache de planos de execução. No entanto, qualquer alocação de memória do VAS de modo usuário que requer mais de 8 KB de memória contígua seria uma alocação fora do buffer pool, feita pelo alocador de várias páginas. Exemplos dessas alocações de várias páginas incluem alocações de pilha de threads, alocações de heap, procedimentos armazenados estendidos, SQLCLR, servidores vinculados e buffers de backup. Dentre esses, os buffers de backup, ou seja, a série de buffers alocados no início de um backup de banco de dados, são um dos consumidores mais comuns de memória fora do buffer pool, sendo que o espaço total necessário pelos buffers de backup é o número de buffers multiplicado pelo tamanho máximo de transferência de dados (MaxTransferSize * BackupBufferCount). Não é incomum uma operação de backup reservar 16 buffers de backup; com cada buffer de backup tendo tamanho de 4 MB, isso por si só consumirá 64 MB de memória fora do buffer pool.
-
-    Para garantir que haja memória VAS suficiente para os requisitos de alocação fora do buffer pool, as edições de 32 bits do SQL Server reservam, ao inicializar, uma porção contígua do VAS comumente chamada de MemToLeave.
-
-    Cálculo do MemToLeave (ou Reserva de VAS)
-
-    Isso se aplica apenas a instâncias de 32 bits do SQL Server e não é realizado em instâncias de 64 bits do SQL Server.
-
-    Uma vez que essa reserva é feita, o tamanho do buffer pool é determinado com base na quantidade de memória física instalada no servidor e no restante do VAS.
-
-    Para o SQL Server 2005 e 2008, o cálculo do MemToLeave é calculado a partir do tamanho necessário da pilha de threads em MB, que é:
-    MaxWorkerThreads * 0.5 MB + tamanho de reserva padrão (256 MB),
-    onde MaxWorkerThreads = (ProcessorCount-4) + 256.
-
-    Para o SQL Server 2000, o cálculo é MaxWorkerThreads = 256.
-
-    Em geral, para instalações do SQL Server de 32 bits usando as opções de configuração padrão do Windows e do SQL Server, a quantidade de reserva do MemToLeave é de pelo menos 384 MB ((256*0.5) + 256) e geralmente inferior a 432 MB, dependendo do número de processadores instalados no servidor. O parâmetro de inicialização -g para o serviço do SQL Server, abordado em breve, pode ser usado para aumentar a quantidade de VAS reservada pelo cálculo do MemToLeave.
-
-    Quando isso é subtraído dos 2 GB do VAS de modo usuário, a porção restante está disponível para o buffer pool, até a memória física disponível instalada no servidor. Portanto, para servidores com 2 GB de RAM ou mais, isso significa que cerca de 1,6 GB de RAM estarão disponíveis para o buffer pool.
-
-    Para permitir que o SQL Server de 32 bits utilize qualquer memória adicional para alocações do buffer pool, existem duas opções, e a opção apropriada depende da quantidade de memória instalada no servidor.
-
-    Para servidores com 4 GB de RAM, podemos aplicar o conceito conhecido como Ajuste de 4 Gigabytes (4GT) ou, de forma mais geral, ajuste do VAS para obter um VAS adicional de modo usuário (em detrimento do VAS de modo kernel). Para servidores com mais de 4 GB de RAM, podemos disponibilizar uma área separada de memória que pode ser usada exclusivamente para alocações na porção de cache de dados do buffer pool, habilitando o AWE (Address Windowing Extensions).
-
-    Ajuste do VAS (Virtual Address Space)
-
-    Para servidores com 4 GB de memória, é possível alterar a forma como o VAS é alocado entre processos de modo usuário e modo kernel. Em vez de uma divisão de 50:50, é possível alocar até 1 GB de espaço adicional para o VAS de modo usuário do buffer pool. No Windows Server 2008, esse processo é geralmente chamado de ajuste do VAS, embora em versões anteriores do Windows fosse chamado de Ajuste de 4 Gigabytes (4GT).
-
-    É claro que o compromisso com o ajuste do VAS é que você acaba tendo até 1 GB a menos de espaço para o VAS de modo kernel, e isso pode ter consequências significativas. Quando o VAS de modo kernel é reduzido, o número de Entradas de Tabela de Páginas (PTEs) do sistema é reduzido, o que, por sua vez, reduz a quantidade total de memória que o SQL Server pode acessar.
-
-    Conceitos críticos: Entradas de Tabela de Páginas
-
-    As PTEs permitem o mapeamento de endereços de memória virtual para endereços de memória física. Se houver um número insuficiente de PTEs no espaço de endereço do kernel do Windows, a quantidade de memória física que pode ser acessada de forma estável pelo sistema é limitada. As PTEs usadas para mapear a memória AWE, por exemplo, devem permanecer residentes na memória para garantir a estabilidade do sistema.
-
-    Em resumo, se um espaço de endereço insuficiente for alocado para o VAS de modo kernel, isso pode levar a instabilidade do sistema, portanto, é necessário ter cuidado ao usar o ajuste do VAS.
-
-    No Windows Server 2008, o ajuste do VAS para servidores de 32 bits é realizado por meio do comando BCDEdit /set no prompt de comando, definindo o valor para a opção increaseuserva entre 2048 e 3072 MB.
-
-    No Windows Server 2000 e posterior, dois parâmetros podem ser adicionados ao arquivo boot.ini para controlar como o VAS é dividido. O parâmetro /3GB no boot.ini altera a alocação para que 3 GB sejam alocados para o VAS de modo usuário e 1 GB seja alocado para o modo kernel. Nos casos em que a divisão 3 GB:1 GB se mostrar problemática, o parâmetro /USERVA pode ser usado em conjunto com o parâmetro /3GB para ajustar a divisão e alocar VAS adicional para o espaço de endereço do modo kernel, aumentando levemente o número de PTEs e o tamanho do Pool Não Paginado (Non-Paged Pool).
-
-    Para obter mais informações sobre o ajuste do VAS de 4GT...
-
-    ...consulte o Books Online, "Tópico: Ajuste de 4 Gigabytes" (http://msdn.microsoft.com/en-us/library/bb613473(v=vs.85).aspx).
+    <p>Conforme discutido, as maiores alocações de memória feitas pelo SQL Server geralmente são para o buffer pool, para páginas de dados e armazenamento em cache de planos de execução. No entanto, qualquer alocação de memória do VAS de modo usuário que requer mais de 8 KB de memória contígua seria uma alocação fora do buffer pool, feita pelo alocador de várias páginas. Exemplos dessas alocações de várias páginas incluem alocações de pilha de threads, alocações de heap, procedimentos armazenados estendidos, SQLCLR, servidores vinculados e buffers de backup. Dentre esses, os buffers de backup, ou seja, a série de buffers alocados no início de um backup de banco de dados, são um dos consumidores mais comuns de memória fora do buffer pool, sendo que o espaço total necessário pelos buffers de backup é o número de buffers multiplicado pelo tamanho máximo de transferência de dados (<code>MaxTransferSize</code> * <code>BackupBufferCount</code>). Não é incomum uma operação de backup reservar 16 buffers de backup; com cada buffer de backup tendo tamanho de 4 MB, isso por si só consumirá 64 MB de memória fora do buffer pool.</p>
+    <p>Para garantir que haja memória VAS suficiente para os requisitos de alocação fora do buffer pool, as edições de 32 bits do SQL Server reservam, ao inicializar, uma porção contígua do VAS comumente chamada de <code>MemToLeave</code>.</p>
+    <p><strong><em>Cálculo do </em></strong><code>MemToLeave</code><strong><em> (ou Reserva de VAS)</em></strong></p>
+    <p><em>Isso se aplica apenas a instâncias de 32 bits do SQL Server e não é realizado em instâncias de 64 bits do SQL Server.</em></p>
+    <p>Uma vez que essa reserva é feita, o tamanho do buffer pool é determinado com base na quantidade de memória física instalada no servidor e no restante do VAS.</p>
+    <p>
+        Para o SQL Server 2005 e 2008, o cálculo do MemToLeave é calculado a partir do tamanho necessário da pilha de threads em MB, que é:<br>
+        <code>MaxWorkerThreads</code> * 0.5 MB + tamanho de reserva padrão (256 MB),<br>
+        onde <code>MaxWorkerThreads</code> = (<code>ProcessorCount</code>-4) + 256.
+    </p>
+    <p>Para o SQL Server 2000, o cálculo é <code>MaxWorkerThreads</code> = 256.</p>
+    <p>Em geral, para instalações do SQL Server de 32 bits usando as opções de configuração padrão do Windows e do SQL Server, a quantidade de reserva do MemToLeave é de pelo menos 384 MB ((256*0.5) + 256) e geralmente inferior a 432 MB, dependendo do número de processadores instalados no servidor. O parâmetro de inicialização -g para o serviço do SQL Server, abordado em breve, pode ser usado para aumentar a quantidade de VAS reservada pelo cálculo do <code>MemToLeave</code>.</p>
+    <p>Quando isso é subtraído dos 2 GB do VAS de modo usuário, a porção restante está disponível para o buffer pool, até a memória física disponível instalada no servidor. Portanto, para servidores com 2 GB de RAM ou mais, isso significa que cerca de 1,6 GB de RAM estarão disponíveis para o buffer pool.</p>
+    <p>Para permitir que o SQL Server de 32 bits utilize qualquer memória adicional para alocações do buffer pool, existem duas opções, e a opção apropriada depende da quantidade de memória instalada no servidor.</p>
+    <p>Para servidores com 4 GB de RAM, podemos aplicar o conceito conhecido como <strong>Ajuste de 4 Gigabytes</strong> (<strong>4GT</strong>) ou, de forma mais geral, <strong>ajuste do VAS</strong> para obter um VAS adicional de modo usuário (em detrimento do VAS de modo kernel). Para servidores com mais de 4 GB de RAM, podemos disponibilizar uma área separada de memória que pode ser usada exclusivamente para alocações na porção de cache de dados do buffer pool, habilitando o AWE (Address Windowing Extensions).</p>
+    <h2>Ajuste do VAS (Virtual Address Space)</h2>
+    <p>Para servidores com 4 GB de memória, é possível alterar a forma como o VAS é alocado entre processos de modo usuário e modo kernel. Em vez de uma divisão de 50:50, é possível alocar até 1 GB de espaço adicional para o VAS de modo usuário do buffer pool. No Windows Server 2008, esse processo é geralmente chamado de ajuste do VAS, embora em versões anteriores do Windows fosse chamado de Ajuste de 4 Gigabytes (4GT).</p>
+    <p>É claro que o compromisso com o ajuste do VAS é que você acaba tendo até 1 GB a menos de espaço para o VAS de modo kernel, e isso pode ter consequências significativas. Quando o VAS de modo kernel é reduzido, o número de <strong>Entradas de Tabela de Páginas</strong> (PTEs) do sistema é reduzido, o que, por sua vez, reduz a quantidade total de memória que o SQL Server pode acessar.</p>
+    <p><strong><em>Conceitos críticos: Entradas de Tabela de Páginas</em></strong></p>
+    <em>As PTEs permitem o mapeamento de endereços de memória virtual para endereços de memória física. Se houver um número insuficiente de PTEs no espaço de endereço do kernel do Windows, a quantidade de memória física que pode ser acessada de forma estável pelo sistema é limitada. As PTEs usadas para mapear a memória AWE, por exemplo, devem permanecer residentes na memória para garantir a estabilidade do sistema.</em>
+    <p>Em resumo, se um espaço de endereço insuficiente for alocado para o VAS de modo kernel, isso pode levar a instabilidade do sistema, portanto, é necessário ter cuidado ao usar o ajuste do VAS.</p>
+    <p>No Windows Server 2008, o ajuste do VAS para servidores de 32 bits é realizado por meio do comando <code>BCDEdit</code> /<code>set</code> no prompt de comando, definindo o valor para a opção <code>increaseuserva</code> entre 2048 e 3072 MB.</p>
+    <p>No Windows Server 2000 e posterior, dois parâmetros podem ser adicionados ao arquivo <code>boot.ini</code> para controlar como o VAS é dividido. O parâmetro <code>/3GB</code> no <code>boot.ini</code> altera a alocação para que <code>3 GB</code> sejam alocados para o VAS de modo usuário e 1 GB seja alocado para o modo kernel. Nos casos em que a divisão 3 GB:1 GB se mostrar problemática, o parâmetro <code>/USERVA</code> pode ser usado em conjunto com o parâmetro <code>/3GB</code> para ajustar a divisão e alocar VAS adicional para o espaço de endereço do modo kernel, aumentando levemente o número de PTEs e o tamanho do Pool Não Paginado (Non-Paged Pool).</p>
+    <p><strong><em>Para obter mais informações sobre o ajuste do VAS de 4GT...</em></strong></p>
+    <p><em>...consulte o Books Online, "Tópico: Ajuste de 4 Gigabytes" </em>(<a href="http://msdn.microsoft.com/en-us/library/bb613473(v=vs.85).aspx" target="_blank" rel="external">http://msdn.microsoft.com/en-us/library/bb613473(v=vs.85).aspx</a>).</p>
 
     O argumento em favor do AWE
 
