@@ -64,4 +64,42 @@ em {
 
 code {
     font-family: 'Courier New', Courier, monospace;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+div#dica {
+    border-style: dotted;
+    width: 900px;
+    padding: 0px 40px;
+    margin: auto;
+}
+
+a {
+    text-decoration: none;
+}
+
+em {
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    font-size: 16px;
+}
+
+a:hover {
+    background-color: #8EA8BF;
+}
+
+.interno:visited {
+    color: black;
+}
+
+.interno:active {
+    color: black;
+}
+
+.codigo {
+    border-style: dotted;
+    width: 800px;
+    padding: 0px 20px;
+    margin: auto;
+    background-color: #8ea8bf33;
 }
