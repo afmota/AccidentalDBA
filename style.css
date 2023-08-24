@@ -13,7 +13,8 @@
 */
 
 * {
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    /*font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;*/
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
 body {
@@ -23,77 +24,70 @@ body {
 main {
     background-color: white;
     border-radius: 10px;
-    padding: 20px;
-    width: 55%;
+    padding: 50px;
+    width: 50%;
     margin: auto;
     box-shadow: 5px 5px 15px #4A678C;
 }
 
 h1 {
     color: black;
-    text-shadow: 1px 1px 2px #1D1E26;
-    font-family: 'Cairo', 'Anek Malayalam', sans-serif;
-    font-size: 3em;
+    /*text-shadow: 1px 1px 2px #1D1E26;
+    font-family: 'Cairo', 'Anek Malayalam', sans-serif;*/
+    font-size: 2.5em;
 }
 
 h2 {
     color: #1D1E26;
-    text-shadow: 1px 1px 2px #4A678C;
-    font-family: 'Anek Malayalam', sans-serif;
-    font-size: 2.5em;
+    /*text-shadow: 1px 1px 2px #4A678C;
+    font-family: 'Anek Malayalam', sans-serif;*/
+    font-size: 2em;
 }
 
 h3 {
     color: #4A678C;
-    text-shadow: 1px 1px 2px #8EA8BF;
-    font-family: 'Cairo', 'Anek Malayalam', sans-serif;
-    font-size: 2em;
+    /*text-shadow: 1px 1px 2px #8EA8BF;
+    font-family: 'Cairo', 'Anek Malayalam', sans-serif;*/
+    font-size: 1.5em;
 }
 
 p {
-    font-family: 'Anek Malayalam', 'Cairo', sans-serif;
-    font-size: 1.2em;
-    text-align: justify;
-}
-
-em {
-    font-family: 'Anek Malayalam', 'Cairo', sans-serif;
+    /*font-family: 'Anek Malayalam', 'Cairo', sans-serif;*/
     font-size: 1em;
     text-align: justify;
 }
 
-code {
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 16px;
-    font-weight: bold;
-}
-
-div#dica {
-    border-style: dotted;
-    width: 900px;
-    padding: 0px 40px;
-    margin: auto;
-}
-
 a {
+    color: black;
+    font-weight: 500;
+    font-style: normal;
     text-decoration: none;
 }
 
-em {
-    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-    font-size: 16px;
+li {
+    font-size: 1em;
 }
 
 a:hover {
     background-color: #8EA8BF;
 }
 
-.interno:visited {
-    color: black;
+.dica {
+    border-bottom: dotted;
+    border-top: dotted;
+    width: 75%;
+    padding: 0px 40px;
+    margin: auto;
 }
 
-.interno:active {
-    color: black;
+code {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1em;
+}
+
+pre {
+    margin: 1px;
+    padding: 1px;
 }
 
 .codigo {
@@ -102,4 +96,8 @@ a:hover {
     padding: 0px 20px;
     margin: auto;
     background-color: #8ea8bf33;
+}
+
+.legenda {
+    font-size: 0.85em;
 }

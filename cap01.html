@@ -18,11 +18,11 @@
       <p>Quando estou examinando um servidor pela primeira vez, preciso estabelecer uma imagem de sua saúde geral e há vários itens nos quais me concentrarei para obter essa imagem. Para cada informação que coletar, a examinarei em relação aos pontos de dados anteriores, para validar ou refutar quaisquer indicadores anteriores quanto à natureza do problema.</p>
       <p>Bastante cedo em qualquer análise, darei uma olhada nas estatísticas de espera, na Visualização de Gerenciamento Dinâmico (DMV) <code>sys.dm_os_wait_stats</code>, para identificar quaisquer esperas de recursos principais no sistema, no nível do sistema operacional. Digamos que identifique esperas de <code>PAGEIOLATCH_SH</code> muito altas, o que indica que as sessões estão experimentando atrasos na obtenção de uma trava para uma página de buffer. Isso acontece quando muitas sessões, ou talvez uma sessão em particular, estão solicitando muitas páginas de dados que não estão disponíveis no pool de buffers (e, portanto, é necessário I/O físico para recuperá-las). O SQL Server deve alocar uma página de buffer para cada uma e colocar uma trava nessa página enquanto ela é recuperada do disco. O gargalo aqui é o I/O de disco; o subsistema de disco simplesmente não pode retornar páginas com rapidez suficiente para satisfazer todas as solicitações de página e, portanto, as sessões estão esperando por travas, e o desempenho está sofrendo. No entanto, isso não significa necessariamente que um subsistema de disco lento seja a causa do gargalo; pode ser simplesmente vítima de um I/O excessivo causado por um problema em outro lugar no sistema.</p>
       <p>Neste ponto, quero validar essas informações examinando as estatísticas virtuais de arquivos em <code>sys.dm_io_virtual_file_stats</code>. Especificamente, procurarei evidências de alta latência associada às operações de leitura e gravação sendo executadas pelo SQL Server. Ao mesmo tempo, estarei me aprofundando mais no problema, uma vez que as estatísticas virtuais de arquivos me dirão quantas atividades de I/O estão sendo realizadas pelo SQL Server e como a carga de I/O é distribuída entre arquivos e bancos de dados na instância do SQL Server. Para corroborar ainda mais esses dados, também posso verificar os valores dos contadores de desempenho <code>Physical Disk\Avg. Disk Reads/sec</code> e <code>Physical Disk\Avg. Disk Writes/sec</code>. Então, neste estágio, digamos que eu tenha confirmado a alta latência associada às operações de leitura e gravação e descobri que um banco de dados específico está experimentando um nível muito alto de I/O principalmente baseado em leitura.</p>
-      <p>Meu próximo passo será investigar as estatísticas de execução das consultas contra esse banco de dados, que são mantidas em <code>sys.dm_exec_query_stats</code> para os planos de execução que estão em cache. Eu identificarei as consultas que têm as leituras físicas acumuladas mais altas e, em seguida, revisarei seus planos de execução associados, procurando oportunidades de ajuste de desempenho, seja adicionando índices ausentes (<em>consulte o <a href="cap05.html" class="interno">Capítulo 5</a></em>) ao banco de dados ou fazendo alterações no código SQL, a fim de otimizar a maneira como o mecanismo do banco de dados acessa os dados.</p>
-      <p>Pode ser que o código esteja otimizado até onde pode ser, mas uma consulta de relatório comumente executada simplesmente precisa ler 6 GB de dados do banco de dados para agregação, como parte de sua execução. Se a maioria desses dados não estiver no cache de buffer, isso causará alto E/S físico e será responsável pelas altas esperas <code>PAGEIOLATCH_SH</code>. Nesse ponto, podemos precisar olhar para nossa configuração de hardware e ver se a raiz real do nosso problema é a falta de memória instalada no servidor. Para verificar isso, examinarei os contadores de memória do PerfMon (<em>consulte o <a href="cap04.html" class="interno">Capítulo 4</a></em>). Se eu ver que a <code>Page Life Expectancy</code> está constantemente oscilando e o sistema está experimentando valores não nulos para <code>Free List Stalls/sec</code> e altos <code>Lazy Writes/sec</code>, então posso ter certeza de que o pool de buffer para a instância está dimensionado inadequadamente para a quantidade de dados que está sendo usada pela carga de trabalho. Isso não significa necessariamente que o servidor precisa de mais memória; pode ser que as consultas sejam ineficientes e estejam lendo muito mais dados do que o necessário. Para identificar a solução apropriada, serão necessárias análises mais aprofundadas. Este é apenas um dos muitos exemplos possíveis, mas é um exemplo do mundo real que encontrei muitas vezes ao solucionar problemas de desempenho com o SQL Server.</p>
+      <p>Meu próximo passo será investigar as estatísticas de execução das consultas contra esse banco de dados, que são mantidas em <code>sys.dm_exec_query_stats</code> para os planos de execução que estão em cache. Eu identificarei as consultas que têm as leituras físicas acumuladas mais altas e, em seguida, revisarei seus planos de execução associados, procurando oportunidades de ajuste de desempenho, seja adicionando índices ausentes (<em>consulte o <a href="cap05.html">Capítulo 5</a></em>) ao banco de dados ou fazendo alterações no código SQL, a fim de otimizar a maneira como o mecanismo do banco de dados acessa os dados.</p>
+      <p>Pode ser que o código esteja otimizado até onde pode ser, mas uma consulta de relatório comumente executada simplesmente precisa ler 6 GB de dados do banco de dados para agregação, como parte de sua execução. Se a maioria desses dados não estiver no cache de buffer, isso causará alto E/S físico e será responsável pelas altas esperas <code>PAGEIOLATCH_SH</code>. Nesse ponto, podemos precisar olhar para nossa configuração de hardware e ver se a raiz real do nosso problema é a falta de memória instalada no servidor. Para verificar isso, examinarei os contadores de memória do PerfMon (<em>consulte o <a href="cap04.html">Capítulo 4</a></em>). Se eu ver que a <code>Page Life Expectancy</code> está constantemente oscilando e o sistema está experimentando valores não nulos para <code>Free List Stalls/sec</code> e altos <code>Lazy Writes/sec</code>, então posso ter certeza de que o pool de buffer para a instância está dimensionado inadequadamente para a quantidade de dados que está sendo usada pela carga de trabalho. Isso não significa necessariamente que o servidor precisa de mais memória; pode ser que as consultas sejam ineficientes e estejam lendo muito mais dados do que o necessário. Para identificar a solução apropriada, serão necessárias análises mais aprofundadas. Este é apenas um dos muitos exemplos possíveis, mas é um exemplo do mundo real que encontrei muitas vezes ao solucionar problemas de desempenho com o SQL Server.</p>
       <p>Existem vários pontos nesse processo de solução de problemas em que seria muito fácil chegar à conclusão errada sobre a natureza do problema. Por exemplo, após revisar as estatísticas de arquivos virtuais e os contadores de desempenho para os discos físicos no servidor, seria fácil concluir que o subsistema de E/S de disco para o servidor estava dimensionado inadequadamente para a quantidade de trabalho sendo realizado e que discos adicionais precisavam ser comprados para lidar com as demandas de E/S de disco do servidor. Infelizmente, aumentar o tamanho de um subsistema de E/S de disco pode ser uma solução extremamente cara se o problema estiver relacionado a um índice ausente em uma consulta comumente executada ou à pressão de memória no pool de buffer. É possível que comprar uma configuração de disco grande o suficiente possa mascarar temporariamente o problema, mas, como a causa raiz subjacente não foi resolvida, pode-se ter certeza de que o mesmo problema ocorrerá mais tarde, à medida que o sistema continua a crescer.</p>
       <p>Depois de fornecer uma visão geral da minha abordagem básica, as seções a seguir aprofundarão um pouco mais nas áreas específicas de foco, como estatísticas de espera, estatísticas virtuais de arquivos, contadores de desempenho e uso do cache de plano. Vou explicar as informações que eles oferecem individualmente e como todas essas informações se inter-relacionam para ajudá-lo a obter uma compreensão completa do que está acontecendo dentro de um servidor.</p>
-      <div id="dica">
+      <div class="dica">
         <p><strong><em>Não se esqueça do óbvio</em></strong></p>
         <p><em>Apenas um lembrete suave: antes de se empolgar coletando dados diagnósticos, certifique-se de ter verificado os problemas óbvios. Se um usuário relatar que sua aplicação "não está funcionando corretamente", a primeira coisa que você provavelmente deve fazer é garantir que os serviços do SQL Server estejam realmente em execução em seu servidor. Se você abrir o <strong>SQL Server Configuration Manager (SSCM)</strong> e descobrir que o status do serviço de <strong>mecanismo de banco de dados</strong>, que tem um <strong>tipo de serviço</strong> SQL Server, está <strong>parado</strong>, então esta é muito provavelmente a causa do problema, a menos que a instância esteja sendo executada em um cluster de failover, momento em que você precisa olhar para o <strong>Failover Cluster Manager</strong> para identificar se o serviço e seus recursos dependentes estão online e começar a solucionar por que o serviço falha em iniciar com base no que você encontrar!</em></p>
       </div>
@@ -33,107 +33,107 @@
       <p>Uma das razões pelas quais as estatísticas de espera são um bom ponto de partida para solucionar problemas de desempenho do SQL Server é que, muitas vezes, os usuários não definem bem os detalhes do problema ao relatá-lo. Na maioria das vezes, a descrição do problema se limita a "o processo x, y ou z está mais lento do que o normal, você pode consertá-lo?". Uma das maneiras mais fáceis de solucionar um problema desconhecido de desempenho é verificar onde e por que o SQL Server teve que esperar para continuar a execução de suas várias tarefas. Geralmente, patches do Windows Server e do SQL Server serão regularmente aplicados ao servidor, então você saberá há quanto tempo o servidor foi reiniciado e, portanto, por que período as estatísticas se acumularam (a menos que alguém as tenha apagado manualmente - veja mais adiante). Idealmente, você desejará que esse período seja superior a cerca de duas semanas (para garantir que as estatísticas cubram toda a carga de trabalho), mas não tão longo que os dados se tornem difíceis de analisar. Nesse último caso, você também pode considerar capturar os valores, esperar um período, capturar novamente e comparar os dois.</p>
       <p>Diagnosticar estatísticas de espera para uma única instância do SQL Server não é uma tarefa simples. Muitas vezes, as informações fornecidas pelas estatísticas de espera são apenas um sintoma do problema real. Para usar essa informação de espera de forma eficaz, é necessário entender a diferença entre esperas de recursos (ou seja, rastreáveis a um recurso de hardware) e esperas não relacionadas a recursos no sistema, bem como os outros resultados fornecidos pelo SQL Server, em relação às informações de espera que estão sendo rastreadas pela instância do SQL Server em geral.</p>
       <p>Como parte das operações normais do SQL Server, existem várias condições de espera que não apresentam problemas e geralmente são esperadas no servidor. Essas condições de espera podem ser consultadas no geral nas sessões do sistema da DMV <code>sys.dm_os_waiting_tasks</code>, conforme mostrado no exemplo 1.1.</p>
-      <div class="codigo">
-        <pre>
-          <code>
-        SELECT  DISTINCT
-                wt.wait_type
-        FROM    sys.dm_os_waiting_tasks AS wt
-                JOIN sys.dm_exec_sessions AS s ON wt.session_id = s.session_id
-        WHERE   s.is_user_process = 0
-          </code>
-        </pre>
-      </div>
-      <p><strong>Exemplo 1.1</strong>: Descobrindo esperas de sessões do sistema.</p>
-      <p>Ao analisar as estatísticas de espera sendo rastreadas pelo SQL Server, é importante eliminar esses tipos de espera da análise, permitindo que as esperas mais problemáticas do sistema sejam identificadas. Uma das coisas que faço como parte do rastreamento de informações de espera é manter um script que filtra os tipos de espera não problemáticos, conforme mostrado no exemplo 1.2.</p>
-      <pre>
+      <pre class="codigo">
         <code>
-      SELECT TOP 10
-         wait_type ,
-         max_wait_time_ms wait_time_ms ,
-         signal_wait_time_ms ,
-         wait_time_ms - signal_wait_time_ms AS resource_wait_time_ms ,
-         100.0 * wait_time_ms / SUM(wait_time_ms) OVER ( )
-         AS percent_total_waits ,
-         100.0 * signal_wait_time_ms / SUM(signal_wait_time_ms) OVER ( )
-         AS percent_total_signal_waits ,
-         100.0 * ( wait_time_ms - signal_wait_time_ms )
-         / SUM(wait_time_ms) OVER ( ) AS percent_total_resource_waits
-      FROM   sys.dm_os_wait_stats
-      WHERE  wait_time_ms > 0 -- remove zero wait_time
-         AND wait_type NOT IN -- filter out additional irrelevant waits
-      ( 'SLEEP_TASK', 'BROKER_TASK_STOP', 'BROKER_TO_FLUSH',
-        'SQLTRACE_BUFFER_FLUSH','CLR_AUTO_EVENT', 'CLR_MANUAL_EVENT',
-        'LAZYWRITER_SLEEP', 'SLEEP_SYSTEMTASK', 'SLEEP_BPOOL_FLUSH',
-        'BROKER_EVENTHANDLER', 'XE_DISPATCHER_WAIT', 'FT_IFTSHC_MUTEX',
-        'CHECKPOINT_QUEUE', 'FT_IFTS_SCHEDULER_IDLE_WAIT',
-        'BROKER_TRANSMITTER', 'FT_IFTSHC_MUTEX', 'KSOURCE_WAKEUP',
-        'LOGMGR_QUEUE', 'ONDEMAND_TASK_QUEUE',
-        'REQUEST_FOR_DEADLOCK_SEARCH', 'XE_TIMER_EVENT', 'BAD_PAGE_PROCESS',
-        'DBMIRROR_EVENTS_QUEUE', 'BROKER_RECEIVE_WAITFOR',
-        'PREEMPTIVE_OS_GETPROCADDRESS', 'PREEMPTIVE_OS_AUTHENTICATIONOPS',
-        'WAITFOR', 'DISPATCHER_QUEUE_SEMAPHORE', 'XE_DISPATCHER_JOIN',
-        'RESOURCE_QUEUE' )
-      ORDER BY wait_time_ms DESC
-        </code>
+SELECT  DISTINCT
+        wt.wait_type
+FROM    sys.dm_os_waiting_tasks AS wt
+        JOIN sys.dm_exec_sessions AS s ON wt.session_id = s.session_id
+WHERE   s.is_user_process = 0</code>
       </pre>
-      <p><strong>Exemplo 1.2</strong>: Encontrando os dez principais eventos de espera acumulativos.</p>
+      <p class="legenda"><strong>Exemplo 1.1</strong>: Descobrindo esperas de sessões do sistema.</p>
+      <p>Ao analisar as estatísticas de espera sendo rastreadas pelo SQL Server, é importante eliminar esses tipos de espera da análise, permitindo que as esperas mais problemáticas do sistema sejam identificadas. Uma das coisas que faço como parte do rastreamento de informações de espera é manter um script que filtra os tipos de espera não problemáticos, conforme mostrado no exemplo 1.2.</p>
+      <pre class="codigo">
+        <code>
+SELECT  TOP 10
+        wait_type ,
+        max_wait_time_ms wait_time_ms ,
+        signal_wait_time_ms ,
+        wait_time_ms - signal_wait_time_ms AS resource_wait_time_ms ,
+        100.0 * wait_time_ms / SUM(wait_time_ms) OVER ( )
+                                    AS percent_total_waits ,
+        100.0 * signal_wait_time_ms / SUM(signal_wait_time_ms) OVER ( )
+                                    AS percent_total_signal_waits ,
+        100.0 * ( wait_time_ms - signal_wait_time_ms )
+        / SUM(wait_time_ms) OVER ( ) AS percent_total_resource_waits
+FROM    sys.dm_os_wait_stats
+WHERE   wait_time_ms > 0 -- remove zero wait_time
+        AND wait_type NOT IN -- filter out additional irrelevant waits
+( 'SLEEP_TASK', 'BROKER_TASK_STOP', 'BROKER_TO_FLUSH',
+  'SQLTRACE_BUFFER_FLUSH','CLR_AUTO_EVENT', 'CLR_MANUAL_EVENT',
+  'LAZYWRITER_SLEEP', 'SLEEP_SYSTEMTASK', 'SLEEP_BPOOL_FLUSH',
+  'BROKER_EVENTHANDLER', 'XE_DISPATCHER_WAIT', 'FT_IFTSHC_MUTEX',
+  'CHECKPOINT_QUEUE', 'FT_IFTS_SCHEDULER_IDLE_WAIT',
+  'BROKER_TRANSMITTER', 'FT_IFTSHC_MUTEX', 'KSOURCE_WAKEUP',
+  'LOGMGR_QUEUE', 'ONDEMAND_TASK_QUEUE',
+  'REQUEST_FOR_DEADLOCK_SEARCH', 'XE_TIMER_EVENT', 'BAD_PAGE_PROCESS',
+  'DBMIRROR_EVENTS_QUEUE', 'BROKER_RECEIVE_WAITFOR',
+  'PREEMPTIVE_OS_GETPROCADDRESS', 'PREEMPTIVE_OS_AUTHENTICATIONOPS',
+  'WAITFOR', 'DISPATCHER_QUEUE_SEMAPHORE', 'XE_DISPATCHER_JOIN',
+  'RESOURCE_QUEUE' )
+ORDER BY wait_time_ms DESC</code>
+      </pre>
+      <p class="legenda"><strong>Exemplo 1.2</strong>: Encontrando os dez principais eventos de espera acumulativos.</p>
       <p>Em geral, ao examinar as estatísticas de espera, foco nas esperas principais, de acordo com o <code>wait_time_ms</code>, e procuro por tempos de espera elevados associados aos seguintes tipos de espera específicos, cada um deles é abordado com mais detalhes nos capítulos apropriados deste livro:</p>
-      <p><strong>CXPACKET</strong></p>
-      <p>Frequentemente indica apenas que determinadas consultas estão sendo executadas com paralelismo; as esperas CXPACKET no servidor não são um sinal imediato de problemas, embora possam ser o sintoma de outro problema, associado a um dos outros tipos de espera de alto valor na instância, conforme abordado no <em>Capítulo 3</em>.</p>
-      <p><strong>SOS_SCHEDULER_YIELD</strong></p>
-      <p>As tarefas em execução no sistema estão liberando o agendador, tendo excedido seu quantum, e precisam esperar na fila de tarefas em espera por outras tarefas para serem executadas. Isso pode indicar que o servidor está sob pressão de CPU. Consulte o <em>Capítulo 3</em> para obter mais informações sobre isso.</p>
-      <p><strong>THREADPOOL</strong></p>
-      <p>Uma tarefa teve que esperar para ter um worker associado a ela, a fim de ser executada. Isso pode ser um sinal de falta de threads de trabalho, exigindo um aumento no número de CPUs no servidor para lidar com uma carga de trabalho altamente concorrente, ou pode ser um sinal de bloqueio, resultando em um grande número de tarefas paralelas consumindo os threads de trabalho por longos períodos.</p>
-      <P><strong>LCK_*</strong></P>
-      <P>Esses tipos de espera indicam que está ocorrendo bloqueio no sistema e que as sessões tiveram que esperar para adquirir um bloqueio de um tipo específico, que estava sendo mantido por outra sessão de banco de dados. Esse problema pode ser investigado mais a fundo usando as informações do <code>sys.dm_db_index_operational_stats</code> e as técnicas descritas no <em>Capítulo 6</em> deste livro.</P>
-      <p><strong>PAGEIOLATCH_*, IO_COMPLETION, WRITELOG</strong></p>
-      <p>Essas esperas são comumente associadas a gargalos de E/S de disco, embora a causa raiz do problema possa ser, e geralmente é, uma consulta mal otimizada que consome quantidades excessivas de memória no servidor. As esperas <code>PAGEIOLATCH_*</code> estão especificamente relacionadas a atrasos na leitura ou gravação de dados nos arquivos de banco de dados. As esperas <code>WRITELOG</code> estão relacionadas a problemas na gravação nos arquivos de log. Essas esperas devem ser avaliadas em conjunto com as estatísticas de arquivo virtual, bem como os contadores de desempenho de disco físico, para determinar se o problema é específico de um único banco de dados, arquivo ou disco, ou se é abrangente na instância.</p>
-      <p><strong>PAGELATCH_*</strong></p>
-      <p>Esperas não relacionadas à E/S por latches em páginas de dados no buffer pool. Muitas vezes, as esperas <code>PAGELATCH_*</code> estão associadas a problemas de contenção de alocação. Um dos problemas de alocação mais conhecidos associados às esperas <code>PAGELATCH_*</code> ocorre no tempdb quando um grande número de objetos está sendo criado e destruído no tempdb e o sistema experimenta contenção nas páginas Shared Global Allocation Map (SGAM), Global Allocation Map (GAM) e Page Free Space (PFS) no banco de dados tempdb.</p>
-      <p><strong>LATCH_*</strong></p>
-      <p>Essas esperas estão associadas a objetos de sincronização leves e de curto prazo que são usados para proteger o acesso a caches internos, mas não ao cache de buffer. Essas esperas podem indicar uma série de problemas, dependendo do tipo de latch. A determinação da classe de latch específica que tem o tempo de espera acumulado mais longo associado a ela pode ser encontrada consultando o DMV <code>sys.dm_os_latch_stats</code>.</p>
-      <p><strong>ASYNC_NETWORK_IO</strong></p>
-      <p>Essa espera geralmente é atribuída erroneamente a um gargalo de rede. De fato, a causa mais comum dessa espera é um aplicativo cliente que está processando as linhas do conjunto de resultados vindos do SQL Server uma a uma (o cliente aceita uma linha, processa, aceita a próxima linha e assim por diante). Para corrigir esse tipo de espera, geralmente é necessário alterar o código do lado do cliente para ler o conjunto de resultados o mais rápido possível e, em seguida, realizar o processamento.</p>
+      <ul>
+        <li><strong><code>CXPACKET</code></strong></li>
+        <p>Frequentemente indica apenas que determinadas consultas estão sendo executadas com paralelismo; as esperas <code>CXPACKET</code> no servidor não são um sinal imediato de problemas, embora possam ser o sintoma de outro problema, associado a um dos outros tipos de espera de alto valor na instância, conforme abordado no <a href="cap03.html" target="_self">Capítulo 3</a>.</p>
+        <li><strong><code>SOS_SCHEDULER_YIELD</code></strong></li>
+        <p>As tarefas em execução no sistema estão liberando o agendador, tendo excedido seu quantum, e precisam esperar na fila de tarefas em espera por outras tarefas para serem executadas. Isso pode indicar que o servidor está sob pressão de CPU. Consulte o <a href="cap03.html" target="_self">Capítulo 3</a> para obter mais informações sobre isso.</p>
+        <li><strong><code>THREADPOOL</code></strong></li>
+        <p>Uma tarefa teve que esperar para ter um worker associado a ela, a fim de ser executada. Isso pode ser um sinal de falta de threads de trabalho, exigindo um aumento no número de CPUs no servidor para lidar com uma carga de trabalho altamente concorrente, ou pode ser um sinal de bloqueio, resultando em um grande número de tarefas paralelas consumindo os threads de trabalho por longos períodos.</p>
+        <li><strong><code>LCK_*</code></strong></li>
+        <P>Esses tipos de espera indicam que está ocorrendo bloqueio no sistema e que as sessões tiveram que esperar para adquirir um bloqueio de um tipo específico, que estava sendo mantido por outra sessão de banco de dados. Esse problema pode ser investigado mais a fundo usando as informações do <code>sys.dm_db_index_operational_stats</code> e as técnicas descritas no <a href="cap06.html" target="_self">Capítulo 6</a> deste livro.</P>
+        <li><strong><code>PAGEIOLATCH_*, IO_COMPLETION, WRITELOG</code></strong></li>
+        <p>Essas esperas são comumente associadas a gargalos de E/S de disco, embora a causa raiz do problema possa ser, e geralmente é, uma consulta mal otimizada que consome quantidades excessivas de memória no servidor. As esperas <code>PAGEIOLATCH_*</code> estão especificamente relacionadas a atrasos na leitura ou gravação de dados nos arquivos de banco de dados. As esperas <code>WRITELOG</code> estão relacionadas a problemas na gravação nos arquivos de log. Essas esperas devem ser avaliadas em conjunto com as estatísticas de arquivo virtual, bem como os contadores de desempenho de disco físico, para determinar se o problema é específico de um único banco de dados, arquivo ou disco, ou se é abrangente na instância.</p>
+        <li><strong><code>PAGELATCH_*</code></strong></li>
+        <p>Esperas não relacionadas à E/S por latches em páginas de dados no buffer pool. Muitas vezes, as esperas <code>PAGELATCH_*</code> estão associadas a problemas de contenção de alocação. Um dos problemas de alocação mais conhecidos associados às esperas <code>PAGELATCH_*</code> ocorre no <code>tempdb</code> quando um grande número de objetos está sendo criado e destruído no <code>tempdb</code> e o sistema experimenta contenção nas páginas Shared Global Allocation Map (SGAM), Global Allocation Map (GAM) e Page Free Space (PFS) no banco de dados <code>tempdb</code>.</p>
+        <li><strong><code>LATCH_*</code></strong></li>
+        <p>Essas esperas estão associadas a objetos de sincronização leves e de curto prazo que são usados para proteger o acesso a caches internos, mas não ao cache de buffer. Essas esperas podem indicar uma série de problemas, dependendo do tipo de latch. A determinação da classe de latch específica que tem o tempo de espera acumulado mais longo associado a ela pode ser encontrada consultando o DMV <code>sys.dm_os_latch_stats</code>.</p>
+        <li><strong><code>ASYNC_NETWORK_IO</code></strong></li>
+        <p>Essa espera geralmente é atribuída erroneamente a um gargalo de rede. De fato, a causa mais comum dessa espera é um aplicativo cliente que está processando as linhas do conjunto de resultados vindos do SQL Server uma a uma (o cliente aceita uma linha, processa, aceita a próxima linha e assim por diante). Para corrigir esse tipo de espera, geralmente é necessário alterar o código do lado do cliente para ler o conjunto de resultados o mais rápido possível e, em seguida, realizar o processamento.</p>
+      </ul>
       <p>Essas explicações básicas de cada um dos principais tipos de espera não o tornarão um especialista em análise de tipos de espera, mas a presença de qualquer um desses tipos de espera no topo da saída do Exemplo 1.2 certamente ajudará a direcionar suas investigações subsequentes. Por exemplo, se você ver espera <code>PAGEIOLATCH_*</code>, provavelmente desejará concentrar sua próxima análise nas estatísticas de arquivo virtual, conforme explicado no exemplo anterior.</p>
-      <p>Por outro lado, se os principais tipos de espera no sistema são esperas <code>LCK_*</code>, então você não vai querer perder tempo olhando para a configuração de E/S de disco, mas sim se concentrar em descobrir o que pode estar causando bloqueios dentro dos bancos de dados no servidor. Quando aparecem esperas <code>LCK_*</code>, eu tendo a pular imediatamente para uma solução de problemas mais avançada desse problema específico e começar a procurar bloqueios no sistema usando o DMV <code>sys.dm_exec_requests</code> e outros métodos descritos no <em>Capítulo 6</em>, em vez de aderir estritamente à minha metodologia normal. No entanto, dependendo do que eu encontrar, posso voltar para ver quais outros problemas existem no sistema.</p>
+      <p>Por outro lado, se os principais tipos de espera no sistema são esperas <code>LCK_*</code>, então você não vai querer perder tempo olhando para a configuração de E/S de disco, mas sim se concentrar em descobrir o que pode estar causando bloqueios dentro dos bancos de dados no servidor. Quando aparecem esperas <code>LCK_*</code>, eu tendo a pular imediatamente para uma solução de problemas mais avançada desse problema específico e começar a procurar bloqueios no sistema usando o DMV <code>sys.dm_exec_requests</code> e outros métodos descritos no <a href="cap06.html" target="_self">Capítulo 6</a>, em vez de aderir estritamente à minha metodologia normal. No entanto, dependendo do que eu encontrar, posso voltar para ver quais outros problemas existem no sistema.</p>
       <p>Após corrigir qualquer problema no servidor, a fim de validar que o problema foi realmente corrigido, as estatísticas de espera sendo rastreadas pelo servidor podem ser redefinidas usando o código na Listagem 1.3.</p>
-      <p><code>DBCC SQLPERF('sys.dm_os_wait_stats', clear)</code></p>
-      <p><strong>Exemplo 1.3</strong>: Limpando as estatísticas de espera em um servidor.</p>
+      <pre class="codigo">
+        <code>
+DBCC SQLPERF('sys.dm_os_wait_stats', clear)</code>
+      </pre>
+      <p class="legenda"><strong>Exemplo 1.3</strong>: Limpando as estatísticas de espera em um servidor.</p>
       <p>Uma das ressalvas associadas à limpeza das estatísticas de espera no servidor é que levará um período de tempo para que as estatísticas de espera acumulem ao ponto em que você saberá se um problema específico foi resolvido ou não.</p>
       <h2>Virtual File Statistics</h2>
       <p>Uma armadilha comum na minha experiência, ao usar as estatísticas de espera como fonte principal de dados para solução de problemas, é que a maioria dos servidores SQL apresentará sinais do que parece ser um gargalo de E/S de disco. Infelizmente, as estatísticas de espera não informam o que está causando a E/S e é fácil diagnosticar erroneamente a causa raiz.</p>
       <p>Essa é a razão pela qual uma análise das estatísticas virtuais de arquivos, juntamente com as estatísticas de espera, é quase sempre recomendada. As estatísticas virtuais de arquivos são expostas através da função <code>sys.dm_io_virtual_file_stats</code>, que, ao receber um <code>file_id</code> (e possivelmente <code>database_id</code>), fornecerá estatísticas cumulativas de E/S físicas, o número de leituras e gravações em cada arquivo de dados e o número de leituras e gravações em cada arquivo de log, para as várias bancos de dados na instância, a partir das quais é possível calcular a proporção de leituras para gravações. Isso também mostra o número de pausas de E/S e o tempo de pausa associado às solicitações, que é o tempo total que as sessões aguardaram a conclusão da E/S no arquivo.</p>
-      <pre>
+      <pre class="codigo">
         <code>
-      SELECT  DB_NAME(vfs.database_id) AS database_name ,
-          vfs.database_id ,
-          vfs.FILE_ID ,
-          io_stall_read_ms / NULLIF(num_of_reads, 0) AS avg_read_latency ,
-          io_stall_write_ms / NULLIF(num_of_writes, 0)
-          AS avg_write_latency ,
-          io_stall / NULLIF(num_of_reads + num_of_writes, 0)
-          AS avg_total_latency ,
-          num_of_bytes_read / NULLIF(num_of_reads, 0)
-          AS avg_bytes_per_read ,
-          num_of_bytes_written / NULLIF(num_of_writes, 0)
-          AS avg_bytes_per_write ,
-          vfs.io_stall ,
-          vfs.num_of_reads ,
-          vfs.num_of_bytes_read ,
-          vfs.io_stall_read_ms ,
-          vfs.num_of_writes ,
-          vfs.num_of_bytes_written ,
-          vfs.io_stall_write_ms ,
-          size_on_disk_bytes / 1024 / 1024. AS size_on_disk_mbytes ,
-          physical_name
-      FROM    sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
-          JOIN sys.master_files AS mf ON vfs.database_id = mf.database_id
-                                         AND vfs.FILE_ID = mf.FILE_ID
-      ORDER BY avg_total_latency DESC
-        </code>
+SELECT  DB_NAME(vfs.database_id) AS database_name ,
+        vfs.database_id ,
+        vfs.FILE_ID ,
+        io_stall_read_ms / NULLIF(num_of_reads, 0) AS avg_read_latency ,
+        io_stall_write_ms / NULLIF(num_of_writes, 0)
+                                               AS avg_write_latency ,
+        io_stall / NULLIF(num_of_reads + num_of_writes, 0)
+                                               AS avg_total_latency ,
+        num_of_bytes_read / NULLIF(num_of_reads, 0)
+                                               AS avg_bytes_per_read ,
+        num_of_bytes_written / NULLIF(num_of_writes, 0)
+                                               AS avg_bytes_per_write ,
+        vfs.io_stall ,
+        vfs.num_of_reads ,
+        vfs.num_of_bytes_read ,
+        vfs.io_stall_read_ms ,
+        vfs.num_of_writes ,
+        vfs.num_of_bytes_written ,
+        vfs.io_stall_write_ms ,
+        size_on_disk_bytes / 1024 / 1024. AS size_on_disk_mbytes ,
+        physical_name
+FROM    sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
+        JOIN sys.master_files AS mf ON vfs.database_id = mf.database_id
+                                       AND vfs.FILE_ID = mf.FILE_ID
+ORDER BY avg_total_latency DESC</code>
       </pre>
-      <p><strong>Exemplo 1.4</strong>: Virtual file statistics.</p>
+      <p class="legenda"><strong>Exemplo 1.4</strong>: Virtual file statistics.</p>
       <p>O que eu estou procurando principalmente nos resultados são padrões de atividade no arquivo, seja leitura intensa ou escrita intensa, e a latência média associada à E/S, pois isso direcionará uma investigação adicional e possíveis soluções.</p>
       <p>Se os arquivos de dados e log estiverem em um array de discos compartilhados no servidor e a <code>avg_total_latency</code> calculada for a mesma em todos os bancos de dados e maior do que o aceitável para a carga de trabalho específica, o problema pode ser que a carga de trabalho tenha excedido a capacidade do subsistema de E/S do disco.</p>
       <p>No entanto, se o servidor hospeda um banco de dados que é usado para arquivar dados em armazenamento mais lento, para relatórios ano a ano, pode ser que ter espera <code>PAGEIOLATCH_*</code> no banco de dados seja totalmente normal, e as informações <code>io_stall</code> para os arquivos de banco de dados específicos podem nos levar a determinar que as esperas são mais provavelmente atribuíveis ao processo de arquivamento. Isso destaca o fato de que é útil ter um conhecimento sólido da configuração subjacente e do tipo de carga de trabalho para o servidor, enquanto você está solucionando o problema.</p>
@@ -146,132 +146,131 @@
       <p>A ferramenta fornece modelos integrados que podem ser exportados para criar um <strong>conjunto de coletor de desempenho</strong> no Windows, cada conjunto contendo os contadores-chave para um produto específico. Ele inclui um modelo para o SQL Server 2005 e 2008. O maior benefício dessa ferramenta é que ela também possui modelos de limite integrados que podem ser usados para processar os dados do contador de desempenho depois que eles foram coletados. Eles podem ser usados para produzir um relatório detalhado, dividindo os dados em fatias de tempo e automatizando a análise dos dados em períodos de tempo e atividade. Se você quiser saber mais sobre todos os contadores relacionados ao desempenho do SQL Server, o que eles significam e quais são os valores limite atualmente recomendados pela Microsoft para esses contadores, eu recomendaria baixar a ferramenta e dar uma olhada em todas as informações contidas no arquivo de limite do SQL Server.</p>
       <p>No entanto, os contadores que investigo inicialmente estão limitados àqueles relacionados a áreas específicas do SQL Server e são aqueles que provaram ao longo dos anos fornecer informações críticas para determinar como continuar com o processo de solução de problemas. Os contadores estão todos disponíveis dentro do SQL Server por meio da DMV <code>sys.dm_os_performance_counters</code> e podem ser consultados apenas usando T-SQL.</p>
       <p>Uma das dificuldades ao consultar diretamente os dados brutos dos contadores de desempenho é que alguns deles são cumulativos, aumentando de valor com o tempo, e a análise dos dados requer a captura de duas capturas de tela dos dados e, em seguida, o cálculo da diferença entre elas. A consulta no Exemplo 1.5 realiza automaticamente as capturas de tela e os cálculos, permitindo que a saída seja analisada diretamente. Existem outros contadores de desempenho, não considerados no Exemplo 1.5, que têm um contador base secundário associado pelo qual o contador principal precisa ser dividido para chegar ao seu valor real.</p>
-      <pre>
+      <pre class="codigo">
         <code>
-      DECLARE @CounterPrefix NVARCHAR(30)
-      SET @CounterPrefix = CASE WHEN @@SERVICENAME = 'MSSQLSERVER'
-                               THEN 'SQLServer:'
-                            ELSE 'MSSQL$' + @@SERVICENAME + ':'
-                       END ;
-      -- Capture the first counter set
-      SELECT   CAST(1 AS INT) AS collection_instance ,
-           [OBJECT_NAME] ,
-           counter_name ,
-           instance_name ,
-           cntr_value ,
-           cntr_type ,
-           CURRENT_TIMESTAMP AS collection_time
-      INTO     #perf_counters_init
-      FROM     sys.dm_os_performance_counters
-      WHERE    ( OBJECT_NAME = @CounterPrefix + 'Access Methods'
-             AND counter_name = 'Full Scans/sec'
-           )
-           OR ( OBJECT_NAME = @CounterPrefix + 'Access Methods'
-                AND counter_name = 'Index Searches/sec'
-              )
-           OR ( OBJECT_NAME = @CounterPrefix + 'Buffer Manager'
-                AND counter_name = 'Lazy Writes/sec'
-              )
-           OR ( OBJECT_NAME = @CounterPrefix + 'Buffer Manager'
-                AND counter_name = 'Page life expectancy'
-              )
-           OR ( OBJECT_NAME = @CounterPrefix + 'General Statistics'
-                AND counter_name = 'Processes Blocked'
-              )
-           OR ( OBJECT_NAME = @CounterPrefix + 'General Statistics'
-                AND counter_name = 'User Connections'
-              )
-           OR ( OBJECT_NAME = @CounterPrefix + 'Locks'
-                AND counter_name = 'Lock Waits/sec'
-              )
-           OR ( OBJECT_NAME = @CounterPrefix + 'Locks'
-                AND counter_name = 'Lock Wait Time (ms)'
-              )
-           OR ( OBJECT_NAME = @CounterPrefix + 'SQL Statistics'
-                AND counter_name = 'SQL Re-Compilations/sec'
-              )
-           OR ( OBJECT_NAME = @CounterPrefix + 'Memory Manager'
-                AND counter_name = 'Memory Grants Pending'
-              )
-           OR ( OBJECT_NAME = @CounterPrefix + 'SQL Statistics'
-                AND counter_name = 'Batch Requests/sec'
-              )
-           OR ( OBJECT_NAME = @CounterPrefix + 'SQL Statistics'
-                AND counter_name = 'SQL Compilations/sec'
-              )
+DECLARE @CounterPrefix NVARCHAR(30)
+SET @CounterPrefix = CASE WHEN @@SERVICENAME = 'MSSQLSERVER'
+                         THEN 'SQLServer:'
+                      ELSE 'MSSQL$' + @@SERVICENAME + ':'
+                 END ;
+-- Capture the first counter set
+SELECT   CAST(1 AS INT) AS collection_instance ,
+     [OBJECT_NAME] ,
+     counter_name ,
+     instance_name ,
+     cntr_value ,
+     cntr_type ,
+     CURRENT_TIMESTAMP AS collection_time
+INTO     #perf_counters_init
+FROM     sys.dm_os_performance_counters
+WHERE    ( OBJECT_NAME = @CounterPrefix + 'Access Methods'
+       AND counter_name = 'Full Scans/sec'
+     )
+     OR ( OBJECT_NAME = @CounterPrefix + 'Access Methods'
+          AND counter_name = 'Index Searches/sec'
+        )
+     OR ( OBJECT_NAME = @CounterPrefix + 'Buffer Manager'
+          AND counter_name = 'Lazy Writes/sec'
+        )
+     OR ( OBJECT_NAME = @CounterPrefix + 'Buffer Manager'
+          AND counter_name = 'Page life expectancy'
+        )
+     OR ( OBJECT_NAME = @CounterPrefix + 'General Statistics'
+          AND counter_name = 'Processes Blocked'
+        )
+     OR ( OBJECT_NAME = @CounterPrefix + 'General Statistics'
+          AND counter_name = 'User Connections'
+        )
+     OR ( OBJECT_NAME = @CounterPrefix + 'Locks'
+          AND counter_name = 'Lock Waits/sec'
+        )
+     OR ( OBJECT_NAME = @CounterPrefix + 'Locks'
+          AND counter_name = 'Lock Wait Time (ms)'
+        )
+     OR ( OBJECT_NAME = @CounterPrefix + 'SQL Statistics'
+          AND counter_name = 'SQL Re-Compilations/sec'
+        )
+     OR ( OBJECT_NAME = @CounterPrefix + 'Memory Manager'
+          AND counter_name = 'Memory Grants Pending'
+        )
+     OR ( OBJECT_NAME = @CounterPrefix + 'SQL Statistics'
+          AND counter_name = 'Batch Requests/sec'
+        )
+     OR ( OBJECT_NAME = @CounterPrefix + 'SQL Statistics'
+          AND counter_name = 'SQL Compilations/sec'
+        )
       
-      -- Wait on Second between data collection
-      WAITFOR DELAY '00:00:01'
+-- Wait on Second between data collection
+WAITFOR DELAY '00:00:01'
       
-      -- Capture the second counter set
-      SELECT  CAST(2 AS INT) AS collection_instance ,
-          OBJECT_NAME ,
-          counter_name ,
-          instance_name ,
-          cntr_value ,
-          cntr_type ,
-          CURRENT_TIMESTAMP AS collection_time
-      INTO    #perf_counters_second
-      FROM    sys.dm_os_performance_counters
-      WHERE   ( OBJECT_NAME = @CounterPrefix + 'Access Methods'
-            AND counter_name = 'Full Scans/sec'
-          )
-          OR ( OBJECT_NAME = @CounterPrefix + 'Access Methods'
-               AND counter_name = 'Index Searches/sec'
-             )
-          OR ( OBJECT_NAME = @CounterPrefix + 'Buffer Manager'
-               AND counter_name = 'Lazy Writes/sec'
-             )
-          OR ( OBJECT_NAME = @CounterPrefix + 'Buffer Manager'
-               AND counter_name = 'Page life expectancy'
-             )
-          OR ( OBJECT_NAME = @CounterPrefix + 'General Statistics'
-               AND counter_name = 'Processes Blocked'
-             )
-          OR ( OBJECT_NAME = @CounterPrefix + 'General Statistics'
-               AND counter_name = 'User Connections'
-             )
-          OR ( OBJECT_NAME = @CounterPrefix + 'Locks'
-               AND counter_name = 'Lock Waits/sec'
-             )
-          OR ( OBJECT_NAME = @CounterPrefix + 'Locks'
-               AND counter_name = 'Lock Wait Time (ms)'
-             )
-          OR ( OBJECT_NAME = @CounterPrefix + 'SQL Statistics'
-               AND counter_name = 'SQL Re-Compilations/sec'
-             )
-          OR ( OBJECT_NAME = @CounterPrefix + 'Memory Manager'
-               AND counter_name = 'Memory Grants Pending'
-             )
-          OR ( OBJECT_NAME = @CounterPrefix + 'SQL Statistics'
-               AND counter_name = 'Batch Requests/sec'
-             )
-          OR ( OBJECT_NAME = @CounterPrefix + 'SQL Statistics'
-               AND counter_name = 'SQL Compilations/sec'
-             )
+-- Capture the second counter set
+SELECT  CAST(2 AS INT) AS collection_instance ,
+    OBJECT_NAME ,
+    counter_name ,
+    instance_name ,
+    cntr_value ,
+    cntr_type ,
+    CURRENT_TIMESTAMP AS collection_time
+INTO    #perf_counters_second
+FROM    sys.dm_os_performance_counters
+WHERE   ( OBJECT_NAME = @CounterPrefix + 'Access Methods'
+      AND counter_name = 'Full Scans/sec'
+    )
+    OR ( OBJECT_NAME = @CounterPrefix + 'Access Methods'
+         AND counter_name = 'Index Searches/sec'
+       )
+    OR ( OBJECT_NAME = @CounterPrefix + 'Buffer Manager'
+         AND counter_name = 'Lazy Writes/sec'
+       )
+    OR ( OBJECT_NAME = @CounterPrefix + 'Buffer Manager'
+         AND counter_name = 'Page life expectancy'
+       )
+    OR ( OBJECT_NAME = @CounterPrefix + 'General Statistics'
+         AND counter_name = 'Processes Blocked'
+       )
+    OR ( OBJECT_NAME = @CounterPrefix + 'General Statistics'
+         AND counter_name = 'User Connections'
+       )
+    OR ( OBJECT_NAME = @CounterPrefix + 'Locks'
+         AND counter_name = 'Lock Waits/sec'
+       )
+    OR ( OBJECT_NAME = @CounterPrefix + 'Locks'
+         AND counter_name = 'Lock Wait Time (ms)'
+       )
+    OR ( OBJECT_NAME = @CounterPrefix + 'SQL Statistics'
+         AND counter_name = 'SQL Re-Compilations/sec'
+       )
+    OR ( OBJECT_NAME = @CounterPrefix + 'Memory Manager'
+         AND counter_name = 'Memory Grants Pending'
+       )
+    OR ( OBJECT_NAME = @CounterPrefix + 'SQL Statistics'
+         AND counter_name = 'Batch Requests/sec'
+       )
+    OR ( OBJECT_NAME = @CounterPrefix + 'SQL Statistics'
+         AND counter_name = 'SQL Compilations/sec'
+       )
       
-      -- Calculate the cumulative counter values
-      SELECT  i.OBJECT_NAME ,
-          i.counter_name ,
-          i.instance_name ,
-          CASE WHEN i.cntr_type = 272696576
-                  THEN s.cntr_value - i.cntr_value
-               WHEN i.cntr_type = 65792 THEN s.cntr_value
-          END AS cntr_value
-      FROM    #perf_counters_init AS i
-          JOIN #perf_counters_second AS s
-                ON i.collection_instance + 1 = s.collection_instance
-                   AND i.OBJECT_NAME = s.OBJECT_NAME
-                   AND i.counter_name = s.counter_name
-                   AND i.instance_name = s.instance_name
-      ORDER BY OBJECT_NAME
+-- Calculate the cumulative counter values
+SELECT  i.OBJECT_NAME ,
+    i.counter_name ,
+    i.instance_name ,
+    CASE WHEN i.cntr_type = 272696576
+            THEN s.cntr_value - i.cntr_value
+         WHEN i.cntr_type = 65792 THEN s.cntr_value
+    END AS cntr_value
+FROM    #perf_counters_init AS i
+    JOIN #perf_counters_second AS s
+          ON i.collection_instance + 1 = s.collection_instance
+             AND i.OBJECT_NAME = s.OBJECT_NAME
+             AND i.counter_name = s.counter_name
+             AND i.instance_name = s.instance_name
+ORDER BY OBJECT_NAME
       
-      -- Cleanup tables
-      DROP TABLE #perf_counters_init
-      DROP TABLE #perf_counters_second
-        </code>
+-- Cleanup tables
+DROP TABLE #perf_counters_init
+DROP TABLE #perf_counters_second</code>
       </pre>
-      <p><strong>Listagem 1.5</strong>: Contadores de desempenho do SQL Server.</p>
+      <p class="legenda"><strong>Listagem 1.5</strong>: Contadores de desempenho do SQL Server.</p>
       <p>Os contadores de desempenho coletados por este script são:</p>
       <ul>
         <li>SQLServer:Access Methods\Full Scans/sec</li>
@@ -289,36 +288,35 @@
         <li>SQLServer:SQL Statistics\SQL Re-Compilations/sec</li>
       </ul>
       <p>Os dois contadores de <strong>Access Methods</strong> fornecem informações sobre as maneiras pelas quais as tabelas estão sendo acessadas no banco de dados. O mais importante é o contador <code>Full Scans/sec</code>, que pode nos dar uma ideia do número de varreduras de índices e tabelas que estão ocorrendo no sistema.</p>
-      <p>Se o subsistema de I/O de disco for o gargalo (o que, lembre-se, é mais frequentemente causado pela pressão exercida por um problema em outro lugar) e este contador estiver mostrando que há varreduras ocorrendo, pode ser um sinal de que há índices faltando ou código ineficiente no banco de dados. Quantas varreduras são problemáticas? Isso depende inteiramente do tamanho dos objetos sendo varridos e do tipo de carga de trabalho sendo executada. Em geral, quero que o número de <code>Index Searches/sec</code> seja maior que o número de <code>Full Scans/sec</code> por um fator de 800-1000. Se o número de Full Scans/sec for muito alto, consulte o <em>Capítulo 5, Índices Ausentes</em> para determinar se há índices faltando no banco de dados, resultando em operações de I/O excessivas.</p>
+      <p>Se o subsistema de I/O de disco for o gargalo (o que, lembre-se, é mais frequentemente causado pela pressão exercida por um problema em outro lugar) e este contador estiver mostrando que há varreduras ocorrendo, pode ser um sinal de que há índices faltando ou código ineficiente no banco de dados. Quantas varreduras são problemáticas? Isso depende inteiramente do tamanho dos objetos sendo varridos e do tipo de carga de trabalho sendo executada. Em geral, quero que o número de <code>Index Searches/sec</code> seja maior que o número de <code>Full Scans/sec</code> por um fator de 800-1000. Se o número de Full Scans/sec for muito alto, consulte o <a href="cap05.html" target="_self">Capítulo 5</a>, <em>Índices Ausentes</em>, para determinar se há índices faltando no banco de dados, resultando em operações de I/O excessivas.</p>
       <p>Os contadores <strong>Buffer Manager</strong> e <strong>Memory Manager</strong> podem ser usados, como um grupo, para identificar se o SQL Server está enfrentando pressão de memória. Os valores dos contadores <code>Page Life Expectancy</code>, <code>Free List Stalls/sec</code> e <code>Lazy Writes/sec</code>, quando correlacionados, validarão ou refutarão a teoria de que o cache de buffer está sob pressão de memória.</p>
       <p>Muitas referências online lhe dirão que se o contador de desempenho <code>Page Life Expectancy</code> (<code>PLE</code>) cair abaixo de 300, que é o número de segundos que uma página permanecerá no cache de dados, então você tem pressão de memória. No entanto, esse valor de referência para o contador PLE foi definido em um momento em que a maioria dos servidores SQL tinha apenas 4 GB de RAM e a porção de cache de dados do pool de buffers era geralmente de 1,6 GB. Em servidores modernos, onde é comum que os servidores SQL tenham 32 GB ou mais de RAM instalada e um cache de dados significativamente maior, ter 1,6 GB de dados percorrendo esse cache a cada 5 minutos não é necessariamente um evento significativo.</p>
-      <p>Em resumo, o valor apropriado para esse contador depende do tamanho do cache de dados do SQL Server, e um valor fixo de 300 não se aplica mais. Em vez disso, eu avalio o valor do contador PLE com base na memória instalada no servidor. Para fazer isso, eu tomo o valor base de 300 apresentado pela maioria dos recursos e determino um múltiplo desse valor com base no tamanho do cache de buffer configurado, que é a opção "<code>max server memory</code>" em "<code>sp_configure</code>" no SQL Server, dividido por 4 GB. Portanto, para um servidor com 32 GB alocados para o pool de buffer, o valor de PLE deve ser pelo menos (32/4)*300 = 2400. Consulte o <em>Capítulo 4, Gerenciamento de Memória</em>, para obter uma discussão mais detalhada sobre configuração e considerações de memória.</p>
+      <p>Em resumo, o valor apropriado para esse contador depende do tamanho do cache de dados do SQL Server, e um valor fixo de 300 não se aplica mais. Em vez disso, eu avalio o valor do contador PLE com base na memória instalada no servidor. Para fazer isso, eu tomo o valor base de 300 apresentado pela maioria dos recursos e determino um múltiplo desse valor com base no tamanho do cache de buffer configurado, que é a opção "<code>max server memory</code>" em "<code>sp_configure</code>" no SQL Server, dividido por 4 GB. Portanto, para um servidor com 32 GB alocados para o pool de buffer, o valor de PLE deve ser pelo menos (32/4)*300 = 2400. Consulte o <a href="cap04.html" target="_self">Capítulo 4</a>, <em>Gerenciamento de Memória</em>, para obter uma discussão mais detalhada sobre configuração e considerações de memória.</p>
       <p>Se o valor do <code>PLE</code> estiver consistentemente abaixo desse valor e o servidor estiver experimentando altas gravações preguiçosas por segundo (<coe>Lazy Writes/sec</coe>), que são despejos de página da memória cache fora do processo normal de <code>CHECKPOINT</code>, então o servidor provavelmente está experimentando pressão de memória na cache de dados, o que também aumentará o E/S de disco sendo executado pelo SQL Server. Neste ponto, os contadores de Métodos de Acesso devem ser investigados para determinar se estão sendo realizadas varreduras excessivas em tabelas ou índices no SQL Server.</p>
-      <p>Os contadores "<code>General Statistics\Processes Blocked</code>", "<code>Locks\Lock Waits/sec</code>" e "<code>Locks\Lock Wait Time (ms)</code>" fornecem informações sobre bloqueios no instância do SQL Server, no momento da coleta de dados. Se esses contadores retornarem um valor diferente de zero em coletas repetidas de dados, então bloqueios estão ocorrendo ativamente em um dos bancos de dados e as informações contidas no <em>Capítulo 6, Bloqueio</em> devem ser usadas para solucionar os problemas mais a fundo.</p>
+      <p>Os contadores "<code>General Statistics\Processes Blocked</code>", "<code>Locks\Lock Waits/sec</code>" e "<code>Locks\Lock Wait Time (ms)</code>" fornecem informações sobre bloqueios no instância do SQL Server, no momento da coleta de dados. Se esses contadores retornarem um valor diferente de zero em coletas repetidas de dados, então bloqueios estão ocorrendo ativamente em um dos bancos de dados e as informações contidas no <a href="cap06.html" target="_self">Capítulo 6</a>, <em>Bloqueio</em> devem ser usadas para solucionar os problemas mais a fundo.</p>
       <p>Os três contadores <code>SQL Statistics</code> fornecem informações sobre com que frequência o SQL Server está compilando ou recompilando um plano de execução, em relação ao número de lotes sendo executados no servidor. Quanto maior o número de <code>SQL Compilations/sec</code> em relação ao <code>Batch Requests/sec</code>, mais provável é que o SQL Server esteja experimentando uma carga de trabalho ad hoc que não esteja fazendo uso ideal do armazenamento em cache de plano. Quanto maior o número de <code>SQL Re-Compilations/sec</code> em relação ao <code>Batch Requests/sec</code>, mais provável é que haja uma ineficiência no design do código que esteja forçando uma recompilação do código sendo executado no SQL Server. Em qualquer caso, a investigação do Cache de Plano, conforme detalhado na próxima seção, deve identificar por que o servidor precisa compilar consistentemente planos de execução para a carga de trabalho.</p>
       <p>O contador de desempenho <code>Memory Manager\Memory Grants Pending</code> fornece informações sobre o número de processos aguardando uma concessão de memória de espaço de trabalho na instância. Se este contador tiver um valor alto, o SQL Server pode se beneficiar de memória adicional, mas pode haver ineficiências de consulta na instância que estão causando requisitos excessivos de concessão de memória, por exemplo, classificações ou hashes grandes que podem ser resolvidos ajustando a indexação ou consultas que estão sendo executadas.</p>
       <h2>Uso do cache de plano</h2>
       <p>Em minha experiência, o cache de plano no SQL Server 2005 e 2008 é um dos recursos mais subutilizados para solucionar problemas de desempenho no SQL Server. Como parte da execução normal de lotes e consultas, o SQL Server rastreia as informações de execução acumuladas para cada um dos planos armazenados dentro do cache de plano, até o ponto em que o plano é removido do cache como resultado de operações DDL, pressão de memória ou manutenção geral do cache. As informações de execução armazenadas dentro do cache de plano podem ser encontradas na exibição de gerenciamento dinâmico <code>sys.dm_exec_query_stats</code>, conforme mostrado na consulta de exemplo na Lista 1.6. Esta consulta listará os dez principais comandos com base no número médio de leituras físicas que os comandos realizaram como parte de sua execução.</p>
-      <pre>
+      <pre class="codigo">
         <code>
-        SELECT  TOP 10
-            execution_count ,
-            statement_start_offset AS stmt_start_offset ,
-            sql_handle ,
-            plan_handle ,
-            total_logical_reads / execution_count AS avg_logical_reads ,
-            total_logical_writes / execution_count AS avg_logical_writes ,
-            total_physical_reads / execution_count AS avg_physical_reads ,
-            t.text
-        FROM    sys.dm_exec_query_stats AS s
-            CROSS APPLY sys.dm_exec_sql_text(s.sql_handle) AS t
-        ORDER BY avg_physical_reads DESC
-        </code>
+SELECT  TOP 10
+        execution_count ,
+        statement_start_offset AS stmt_start_offset ,
+        sql_handle ,
+        plan_handle ,
+        total_logical_reads / execution_count AS avg_logical_reads ,
+        total_logical_writes / execution_count AS avg_logical_writes ,
+        total_physical_reads / execution_count AS avg_physical_reads ,
+        t.text
+FROM    sys.dm_exec_query_stats AS s
+        CROSS APPLY sys.dm_exec_sql_text(s.sql_handle) AS t
+ORDER BY avg_physical_reads DESC</code>
       </pre>
-      <p><strong>Listagem 1.6</strong>: Estatísticas de execução do SQL Server.</p>
+      <p class="legenda"><strong>Listagem 1.6</strong>: Estatísticas de execução do SQL Server.</p>
       <p>As informações armazenadas no cache de plano podem ser usadas para identificar as consultas mais caras com base nas operações físicas de E/S para leitura e gravação, ou com base em diferentes critérios, dependendo do tipo mais problemático de E/S para a instância, descoberto como resultado de análises anteriores das estatísticas de espera e de arquivos virtuais.</p>
       <p>Além disso, a função <code>sys.dm_exec_query_plan()</code> pode ser aplicada cruzadamente usando a coluna <code>plan_handle</code> da exibição de gerenciamento dinâmico <code>sys.dm_exec_query_stats</code> para obter o plano de execução armazenado no cache de plano. Analisando esses planos, podemos identificar operações problemáticas que são candidatas à otimização de desempenho.</p>
-      <div id="dica">
+      <div class="dica">
         <p><strong><em>Otimização de desempenho de consulta</em></strong></p>
         <p><em>Uma discussão completa sobre a otimização de desempenho de consulta está além do escopo deste livro. Na verdade, vários livros notáveis foram escritos apenas sobre esse tópico, incluindo "SQL Server 2008 Query Performance Tuning Distilled" (<a href="http://www.amazon.com/Server-Performance-Tuning-Distilled-Experts/dp/1430219025" target="_blank" rel="external">http://www.amazon.com/Server-Performance-Tuning-Distilled-Experts/dp/1430219025</a>) e "Inside Microsoft SQL Server 2008: T-SQL Querying" (<a href="http://www.amazon.com/Inside-Microsoft®-SQL-Server®-2008/dp/0735626030" target="_blank" rel="external">http://www.amazon.com/Inside-Microsoft®-SQL-Server®-2008/dp/0735626030</a>).</em></p>
       </div>
