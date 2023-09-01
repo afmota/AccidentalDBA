@@ -92,10 +92,11 @@ pre {
 
 .codigo {
     border-style: dotted;
-    width: 800px;
+    width: 95%;
     padding: 0px 20px;
     margin: auto;
     background-color: #8ea8bf33;
+    font-size: 1em;
 }
 
 .legenda {

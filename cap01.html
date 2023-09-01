@@ -33,7 +33,7 @@
       <p>Uma das razões pelas quais as estatísticas de espera são um bom ponto de partida para solucionar problemas de desempenho do SQL Server é que, muitas vezes, os usuários não definem bem os detalhes do problema ao relatá-lo. Na maioria das vezes, a descrição do problema se limita a "o processo x, y ou z está mais lento do que o normal, você pode consertá-lo?". Uma das maneiras mais fáceis de solucionar um problema desconhecido de desempenho é verificar onde e por que o SQL Server teve que esperar para continuar a execução de suas várias tarefas. Geralmente, patches do Windows Server e do SQL Server serão regularmente aplicados ao servidor, então você saberá há quanto tempo o servidor foi reiniciado e, portanto, por que período as estatísticas se acumularam (a menos que alguém as tenha apagado manualmente - veja mais adiante). Idealmente, você desejará que esse período seja superior a cerca de duas semanas (para garantir que as estatísticas cubram toda a carga de trabalho), mas não tão longo que os dados se tornem difíceis de analisar. Nesse último caso, você também pode considerar capturar os valores, esperar um período, capturar novamente e comparar os dois.</p>
       <p>Diagnosticar estatísticas de espera para uma única instância do SQL Server não é uma tarefa simples. Muitas vezes, as informações fornecidas pelas estatísticas de espera são apenas um sintoma do problema real. Para usar essa informação de espera de forma eficaz, é necessário entender a diferença entre esperas de recursos (ou seja, rastreáveis a um recurso de hardware) e esperas não relacionadas a recursos no sistema, bem como os outros resultados fornecidos pelo SQL Server, em relação às informações de espera que estão sendo rastreadas pela instância do SQL Server em geral.</p>
       <p>Como parte das operações normais do SQL Server, existem várias condições de espera que não apresentam problemas e geralmente são esperadas no servidor. Essas condições de espera podem ser consultadas no geral nas sessões do sistema da DMV <code>sys.dm_os_waiting_tasks</code>, conforme mostrado no exemplo 1.1.</p>
-      <pre class="codigo">
+      <div class="teste"><pre class="codigo">
         <code>
 SELECT  DISTINCT
         wt.wait_type
@@ -72,7 +72,7 @@ WHERE   wait_time_ms > 0 -- remove zero wait_time
   'WAITFOR', 'DISPATCHER_QUEUE_SEMAPHORE', 'XE_DISPATCHER_JOIN',
   'RESOURCE_QUEUE' )
 ORDER BY wait_time_ms DESC</code>
-      </pre>
+      </pre></div>
       <p class="legenda"><strong>Exemplo 1.2</strong>: Encontrando os dez principais eventos de espera acumulativos.</p>
       <p>Em geral, ao examinar as estatísticas de espera, foco nas esperas principais, de acordo com o <code>wait_time_ms</code>, e procuro por tempos de espera elevados associados aos seguintes tipos de espera específicos, cada um deles é abordado com mais detalhes nos capítulos apropriados deste livro:</p>
       <ul>
