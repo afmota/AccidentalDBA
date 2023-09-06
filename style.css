@@ -2,7 +2,11 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Anek+Malayalam:wght@100;200;300;400;500;600;700;800&family=Fredericka+the+Great&family=Kaushan+Script&family=Work+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
- @import url('https://fonts.googleapis.com/css2?family=Anek+Malayalam:wght@100;200;300;400;500;600;700;800&family=Cairo:wght@200;300;400;500;600;700;800;900;1000&family=Fredericka+the+Great&family=Kaushan+Script&family=Work+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Anek+Malayalam:wght@100;200;300;400;500;600;700;800&family=Cairo:wght@200;300;400;500;600;700;800;900;1000&family=Fredericka+the+Great&family=Kaushan+Script&family=Work+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+@import url('https://fonts.googleapis.com/css2?family=Anek+Malayalam:wght@100;200;300;400;500;600;700;800&family=Cairo:wght@200;300;400;500;600;700;800;900;1000&family=Fredericka+the+Great&family=Kaushan+Script&family=Roboto&family=Work+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+@import url('https://fonts.googleapis.com/css2?family=Anek+Malayalam:wght@100;200;300;400;500;600;700;800&family=Cairo:wght@200;300;400;500;600;700;800;900;1000&family=Fredericka+the+Great&family=Kaushan+Script&family=Rajdhani&family=Roboto&family=Work+Sans:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
 
 /*
 #1D1E26
@@ -13,12 +17,37 @@
 */
 
 * {
-    /*font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;*/
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+    /*font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;*/
+    font-family: 'Anek Malayalam', sans-serif;
+    font-family: 'Cairo', sans-serif;
+    font-family: 'Fredericka the Great', cursive;
+    font-family: 'Kaushan Script', cursive;
+    font-family: 'Roboto', sans-serif;
+    font-family: 'Work Sans', sans-serif;
 }
 
 body {
-    background-image: linear-gradient(to bottom, #8EA8BF, #F0F1F2);
+    background-image: linear-gradient(to bottom, #E61100, #e60f0067);
+}
+
+header {
+    background-color: black;
+    border-radius: 10px;
+    padding: 10px 50px 50px 50px;
+    width: 95%;
+    margin: 10px auto;
+    height: 100px;
+}
+
+header > h1 {
+    font-size: 2em;
+    color: white;
+}
+
+header > h2 {
+    font-size: 1.5em;
+    color: white;
 }
 
 main {
@@ -27,32 +56,33 @@ main {
     padding: 50px;
     width: 50%;
     margin: auto;
-    box-shadow: 5px 5px 15px #4A678C;
+    box-shadow: 5px 5px 15px rgba(0, 0, 0, 0.308);
+    ;
+    font-family: 'Roboto', sans-serif;
 }
 
 h1 {
-    color: black;
-    /*text-shadow: 1px 1px 2px #1D1E26;
-    font-family: 'Cairo', 'Anek Malayalam', sans-serif;*/
-    font-size: 2.5em;
+    color: #CC0000;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 3em;
+    font-weight: 900;
 }
 
 h2 {
-    color: #1D1E26;
-    /*text-shadow: 1px 1px 2px #4A678C;
-    font-family: 'Anek Malayalam', sans-serif;*/
-    font-size: 2em;
+    color: #660700;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 2.5em;
+    font-weight: 900;
 }
 
 h3 {
-    color: #4A678C;
-    /*text-shadow: 1px 1px 2px #8EA8BF;
-    font-family: 'Cairo', 'Anek Malayalam', sans-serif;*/
-    font-size: 1.5em;
+    color: #66231F;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 2em;
 }
 
 p {
-    /*font-family: 'Anek Malayalam', 'Cairo', sans-serif;*/
+    font-family: 'Roboto', sans-serif;
     font-size: 1em;
     text-align: justify;
 }
@@ -69,7 +99,7 @@ li {
 }
 
 a:hover {
-    background-color: #8EA8BF;
+    background-color: #e60f001e;
 }
 
 .dica {
@@ -78,6 +108,7 @@ a:hover {
     width: 75%;
     padding: 0px 40px;
     margin: auto;
+    font-family: 'Roboto', sans-serif;
 }
 
 code {
@@ -88,6 +119,7 @@ code {
 pre {
     margin: 1px;
     padding: 1px;
+    color: #2e0a08;
 }
 
 .codigo {
@@ -95,7 +127,7 @@ pre {
     width: 95%;
     padding: 0px 20px;
     margin: auto;
-    background-color: #8ea8bf33;
+    background-color: #ea514610;
     font-size: 1em;
 }
 

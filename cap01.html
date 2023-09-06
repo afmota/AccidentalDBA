@@ -7,12 +7,19 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <main>
+  <header>
+    <h1>Troubleshooting SQL Server</h1>
+    <h2>Um Guia para o DBA Acidental</h2>
+  </header>
+  <main>
+    <article>
       <h1>Capítulo 1: Uma metodologia de solução de problemas de desempenho</h1>
       <p>Saber por onde começar é a parte mais difícil de resolver um problema. Como Administrador de Banco de Dados Sênior, eu me orgulhava de ser capaz de identificar a causa raiz dos problemas em meus servidores e rapidamente restaurar os serviços ao funcionamento normal. A capacidade de fazer isso se deve em parte a um conhecimento sólido do ambiente do seu SQL Server, em parte ao uso das ferramentas e scripts corretos e em parte ao aprendizado de observar o que deve ser observado, com base em lições bem aprendidas no passado.</p>
       <p>Definir uma metodologia específica para solucionar problemas com o SQL Server é difícil, porque, é claro, o caminho exato para resolver o problema dependerá da natureza específica do problema e do ambiente. Uma das chaves para uma solução de problemas precisa não é apenas coletar e examinar todas as informações relevantes, mas também descobrir o que elas estão dizendo coletivamente. Há um famoso provérbio antigo, registrado no livro <em>"A dialogue conteining the number in effect of all the proverbes in the englishe tongue"</em> de John Heywood, que resume isso muito bem: <em>Eu vejo, mas não consigo ver a floresta por causa das árvores</em>.</p>
       <p>Se você coletar e examinar individualmente cinco peças separadas de dados de desempenho, é possível que cada uma possa levá-lo a um caminho separado. Vistas em conjunto, elas provavelmente o levarão ao sexto e correto caminho para resolver o problema. Se há uma lição a ser aprendida deste capítulo, bem como neste livro, é que focar em uma única informação pode muitas vezes levar a um diagnóstico incorreto de um problema.</p>
       <p>O que tento oferecer neste capítulo não é um conjunto de tábuas de pedra que prescrevem os passos exatos a serem tomados para resolver todos os problemas do SQL Server, mas sim uma abordagem básica e um conjunto de ferramentas que me serviram bem repetidamente nos seis anos em que trabalhei com o SQL Server, solucionando problemas de desempenho. Ele cobre uma descrição de alto nível da minha abordagem básica, seguida de seções mais detalhadas sobre cada uma das minhas áreas de foco, incluindo estatísticas de espera, estatísticas de arquivos virtuais, contadores de desempenho relacionados ao SQL Server e análise do cache de plano.</p>
+    </article>
+    <article>
       <h2>Definindo uma Metodologia de Solução de Problemas</h2>
       <p>Como notei na introdução deste capítulo, definir uma metodologia de solução de problemas é difícil, porque a metodologia real que eu aplico depende inteiramente do problema específico que estou tentando solucionar para um ambiente específico. No entanto, minha abordagem básica e as ferramentas que uso permanecem constantes, independentemente de o problema ser usuários reclamando de desempenho lento ou se estou apenas realizando uma verificação padrão de saúde do servidor.</p>
       <p>Quando estou examinando um servidor pela primeira vez, preciso estabelecer uma imagem de sua saúde geral e há vários itens nos quais me concentrarei para obter essa imagem. Para cada informação que coletar, a examinarei em relação aos pontos de dados anteriores, para validar ou refutar quaisquer indicadores anteriores quanto à natureza do problema.</p>
@@ -24,8 +31,10 @@
       <p>Depois de fornecer uma visão geral da minha abordagem básica, as seções a seguir aprofundarão um pouco mais nas áreas específicas de foco, como estatísticas de espera, estatísticas virtuais de arquivos, contadores de desempenho e uso do cache de plano. Vou explicar as informações que eles oferecem individualmente e como todas essas informações se inter-relacionam para ajudá-lo a obter uma compreensão completa do que está acontecendo dentro de um servidor.</p>
       <div class="dica">
         <p><strong><em>Não se esqueça do óbvio</em></strong></p>
-        <p><em>Apenas um lembrete suave: antes de se empolgar coletando dados diagnósticos, certifique-se de ter verificado os problemas óbvios. Se um usuário relatar que sua aplicação "não está funcionando corretamente", a primeira coisa que você provavelmente deve fazer é garantir que os serviços do SQL Server estejam realmente em execução em seu servidor. Se você abrir o <strong>SQL Server Configuration Manager (SSCM)</strong> e descobrir que o status do serviço de <strong>mecanismo de banco de dados</strong>, que tem um <strong>tipo de serviço</strong> SQL Server, está <strong>parado</strong>, então esta é muito provavelmente a causa do problema, a menos que a instância esteja sendo executada em um cluster de failover, momento em que você precisa olhar para o <strong>Failover Cluster Manager</strong> para identificar se o serviço e seus recursos dependentes estão online e começar a solucionar por que o serviço falha em iniciar com base no que você encontrar!</em></p>
+        <p><em>Apenas um lembrete suave: antes de se empolgar coletando dados diagnósticos, certifique-se de ter verificado os problemas óbvios. Se um usuário relatar que sua aplicação "não está funcionando corretamente", a primeira coisa que você provavelmente deve fazer é garantir que os serviços do SQL Server estejam realmente em execução em seu servidor. Se você abrir o        <strong>SQL Server Configuration Manager (SSCM)</strong> e descobrir que o status do serviço de <strong>mecanismo de banco de dados</strong>, que tem um <strong>tipo de serviço</strong> SQL Server, está <strong>parado</strong>, então esta é muito provavelmente a causa do problema, a menos que a instância esteja sendo executada em um cluster de failover, momento em que você precisa olhar para o <strong>Failover Cluster Manager</strong> para identificar se o serviço e seus recursos dependentes estão online e começar a solucionar por que o serviço falha em iniciar com base no que você encontrar!</em></p>
       </div>
+    </article>
+    <article>
       <h2>Wait Statistics: a Base para Resolução de Problemas</h2>
       <p>Um dos primeiros itens que verifico ao resolver problemas de desempenho em um SQL Server são as estatísticas de espera, que são registradas pelo SQLOS durante as operações normais de qualquer SQL Server.</p>
       <p>O SQLOS é um pseudo-sistema operacional que funciona como parte do mecanismo de banco de dados do SQL Server e fornece agendamento de threads, gerenciamento de memória e outras funções para o SQL Server. Normalmente, tais serviços seriam fornecidos pelo sistema operacional para quaisquer processos em execução dentro do sistema operacional. A razão pela qual o SQL Server fornece seu próprio ambiente de pseudo-sistema operacional é que ele sabe como agendar suas tarefas melhor do que o sistema operacional Windows, e o agendamento cooperativo implementado pelo SQLOS permite níveis mais altos de concorrência do que o agendamento preemptivo fornecido pelo sistema operacional Windows.</p>
@@ -73,9 +82,9 @@ WHERE   wait_time_ms > 0 -- remove zero wait_time
   'RESOURCE_QUEUE' )
 ORDER BY wait_time_ms DESC</code>
       </pre></div>
-      <p class="legenda"><strong>Exemplo 1.2</strong>: Encontrando os dez principais eventos de espera acumulativos.</p>
-      <p>Em geral, ao examinar as estatísticas de espera, foco nas esperas principais, de acordo com o <code>wait_time_ms</code>, e procuro por tempos de espera elevados associados aos seguintes tipos de espera específicos, cada um deles é abordado com mais detalhes nos capítulos apropriados deste livro:</p>
-      <ul>
+<p class="legenda"><strong>Exemplo 1.2</strong>: Encontrando os dez principais eventos de espera acumulativos.</p>
+<p>Em geral, ao examinar as estatísticas de espera, foco nas esperas principais, de acordo com o <code>wait_time_ms</code>, e procuro por tempos de espera elevados associados aos seguintes tipos de espera específicos, cada um deles é abordado com mais detalhes nos capítulos apropriados deste livro:</p>
+<ul>
         <li><strong><code>CXPACKET</code></strong></li>
         <p>Frequentemente indica apenas que determinadas consultas estão sendo executadas com paralelismo; as esperas <code>CXPACKET</code> no servidor não são um sinal imediato de problemas, embora possam ser o sintoma de outro problema, associado a um dos outros tipos de espera de alto valor na instância, conforme abordado no <a href="cap03.html" target="_self">Capítulo 3</a>.</p>
         <li><strong><code>SOS_SCHEDULER_YIELD</code></strong></li>
@@ -296,6 +305,8 @@ DROP TABLE #perf_counters_second</code>
       <p>Os contadores "<code>General Statistics\Processes Blocked</code>", "<code>Locks\Lock Waits/sec</code>" e "<code>Locks\Lock Wait Time (ms)</code>" fornecem informações sobre bloqueios no instância do SQL Server, no momento da coleta de dados. Se esses contadores retornarem um valor diferente de zero em coletas repetidas de dados, então bloqueios estão ocorrendo ativamente em um dos bancos de dados e as informações contidas no <a href="cap06.html" target="_self">Capítulo 6</a>, <em>Bloqueio</em> devem ser usadas para solucionar os problemas mais a fundo.</p>
       <p>Os três contadores <code>SQL Statistics</code> fornecem informações sobre com que frequência o SQL Server está compilando ou recompilando um plano de execução, em relação ao número de lotes sendo executados no servidor. Quanto maior o número de <code>SQL Compilations/sec</code> em relação ao <code>Batch Requests/sec</code>, mais provável é que o SQL Server esteja experimentando uma carga de trabalho ad hoc que não esteja fazendo uso ideal do armazenamento em cache de plano. Quanto maior o número de <code>SQL Re-Compilations/sec</code> em relação ao <code>Batch Requests/sec</code>, mais provável é que haja uma ineficiência no design do código que esteja forçando uma recompilação do código sendo executado no SQL Server. Em qualquer caso, a investigação do Cache de Plano, conforme detalhado na próxima seção, deve identificar por que o servidor precisa compilar consistentemente planos de execução para a carga de trabalho.</p>
       <p>O contador de desempenho <code>Memory Manager\Memory Grants Pending</code> fornece informações sobre o número de processos aguardando uma concessão de memória de espaço de trabalho na instância. Se este contador tiver um valor alto, o SQL Server pode se beneficiar de memória adicional, mas pode haver ineficiências de consulta na instância que estão causando requisitos excessivos de concessão de memória, por exemplo, classificações ou hashes grandes que podem ser resolvidos ajustando a indexação ou consultas que estão sendo executadas.</p>
+    </article>
+    <article>
       <h2>Uso do cache de plano</h2>
       <p>Em minha experiência, o cache de plano no SQL Server 2005 e 2008 é um dos recursos mais subutilizados para solucionar problemas de desempenho no SQL Server. Como parte da execução normal de lotes e consultas, o SQL Server rastreia as informações de execução acumuladas para cada um dos planos armazenados dentro do cache de plano, até o ponto em que o plano é removido do cache como resultado de operações DDL, pressão de memória ou manutenção geral do cache. As informações de execução armazenadas dentro do cache de plano podem ser encontradas na exibição de gerenciamento dinâmico <code>sys.dm_exec_query_stats</code>, conforme mostrado na consulta de exemplo na Lista 1.6. Esta consulta listará os dez principais comandos com base no número médio de leituras físicas que os comandos realizaram como parte de sua execução.</p>
       <pre class="codigo">
@@ -322,12 +333,19 @@ ORDER BY avg_physical_reads DESC</code>
       </div>
       <p>As informações na exibição de gerenciamento dinâmico <code>sys.dm_exec_query_stats</code> também podem ser usadas para identificar os comandos que consumiram mais tempo de CPU, que tiveram o tempo de execução mais longo ou que foram executados com mais frequência.</p>
       <p>No SQL Server 2008, foram adicionadas duas colunas adicionais, <code>query_hash</code> e <code>query_plan_hash</code>, na exibição de gerenciamento dinâmico <code>sys.dm_exec_query_stats</code>. O <code>query_hash</code> é um hash sobre o texto do comando para permitir que comandos semelhantes sejam agregados juntos. O <code>query_plan_hash</code> é um hash do formato do plano de consulta que permite que consultas com planos de execução semelhantes sejam agregadas juntas. Juntos, eles permitem que as informações contidas nesta exibição de gerenciamento dinâmico sejam agregadas para cargas de trabalho ad hoc, a fim de determinar o impacto total de comandos semelhantes que têm valores literais compilados diferentes.</p>
+    </article>
+    <article>
       <h2>Resumo</h2>
       <p>Este capítulo delineou minha abordagem básica para investigar problemas de desempenho no SQL Server. Essa abordagem é mais ou menos a mesma, independentemente se é um servidor que eu conheço bem ou se estou investigando pela primeira vez, sem conhecimento prévio da saúde e configuração da instância do SQL Server. Com base nas informações coletadas usando esta metodologia, é possível realizar um diagnóstico mais avançado das áreas problemáticas identificadas, utilizando as informações contidas nos capítulos subsequentes deste livro.</p>
       <p>O ponto mais importante que quero enfatizar neste capítulo introdutório é que nenhuma única informação no SQL Server deve ser usada para identificar um problema específico. A arte de controlar um SQL Server problemático é a arte de reunir as várias peças do quebra-cabeça para que você tenha uma compreensão completa do que está acontecendo dentro de um servidor. Se você se concentrar apenas no que está imediatamente à sua frente, na maioria dos casos, perderá o item mais importante, que é a verdadeira causa raiz de um problema específico no SQL Server. </p>
-      <a href="introducao.html" target="_self" rel="previous"><img src="imagens/previous.png" alt="Página Anterior"></a>
-      <a href="index.html" target="_self" rel="previous"><img src="imagens/index.png" alt="Página Principal"></a>
-      <a href="cap02.html" target="_self" rel="next"><img src="imagens/next.png" alt="Próxima Página"></a>
-    </main>
+    </article>
+  </main>
+  <nav>
+    <a href="introducao.html" target="_self" rel="previous"><img src="imagens/previous.png" alt="Página Anterior"></a>
+    <a href="index.html" target="_self" rel="previous"><img src="imagens/index.png" alt="Página Principal"></a>
+    <a href="cap02.html" target="_self" rel="next"><img src="imagens/next.png" alt="Próxima Página"></a>
+  </nav>
+  <footer>
+  </footer>
 </body>
 </html>
