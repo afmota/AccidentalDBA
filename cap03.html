@@ -7,6 +7,19 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <header>
+        <h1>Troubleshooting SQL Server</h1>
+        <h2>Um Guia para o DBA Acidental</h2>
+    </header>
+    <nav>
+		<a href="index.html" target="_self">Capa</a>
+		<a href="abertura.html" target="_self">Abertura</a>
+		<a href="introducao.html" target="_self">Introdução</a>
+		<a href="cap01.html" target="_self">Cap.1</a>
+		<a href="cap02.html" target="_self">Cap.2</a>
+		<a href="cap04.html" target="_self">Cap.4</a>
+        <a href="cap05.html" target="_self">Cap.5</a>
+	</nav>
     <main>
         <h1>Capítulo 3: Utilização Elevada da CPU</h1>
         <p>Um sistema dependente da CPU é relativamente fácil de identificar, mas nem sempre é tão fácil de diagnosticar. Se você perceber que uma ou mais CPUs estão trabalhando próximo à capacidade máxima, juntamente com uma diminuição drástica no desempenho do servidor, então provavelmente há um problema com a CPU. A CPU está envolvida em quase todas as atividades do SQL Server, desde a execução de consultas até a movimentação de dados dentro e fora da memória, e assim por diante, o que significa que uma CPU sobrecarregada pode ter consequências graves.</p>
@@ -46,7 +59,7 @@
         <h3>SQL Trace</h3>
         <p>A ferramenta Profiler incluída no SQL Server pode ser usada para examinar os detalhes dos comandos que estão sendo executados em um servidor SQL. É uma ferramenta útil para investigar os detalhes de problemas específicos depois que o problema geral foi identificado. A interface gráfica do Profiler faz uso de um conjunto de stored procedures, conhecidas coletivamente como <strong>SQL Trace</strong>. A própria interface gráfica deve ser usada com cautela em servidores mais movimentados, pois pode ter um efeito adverso no desempenho geral e na estabilidade do servidor. Em vez disso, deve-se executar um trace no lado do servidor, com a saída direcionada para um arquivo em uma unidade local rápida.</p>
         <p>O principal uso do SQL Trace é identificar consultas específicas que estão consumindo grandes quantidades de CPU. É menos útil para uma análise pontual do que as Dynamic Management Views, sendo mais útil para capturar cargas de trabalho para análise. Com as Dynamic Management Views (como <code>sys.dm_exec_requests</code>), é possível acompanhar o aumento do uso de recursos enquanto a consulta ainda está em execução, enquanto com o SQL Trace, a instrução ou lote deve ser concluído antes que o evento que mostra o uso total de recursos seja acionado.</p>
-        <p>Para capturar um conjunto de consultas que estão usando quantidades excessivas de CPU, é necessário executar um trace durante períodos de alto uso da CPU. Os detalhes sobre como configurar e executar um trace são apresentados no <em>Capítulo 5</em> e não serão repetidos aqui. A consideração adicional ao executar um trace para investigar consultas que consomem grandes quantidades de <strong>CPU</strong> é adicionar um filtro na coluna de CPU para evitar capturar um grande número de consultas sem interesse.</p>
+        <p>Para capturar um conjunto de consultas que estão usando quantidades excessivas de CPU, é necessário executar um trace durante períodos de alto uso da CPU. Os detalhes sobre como configurar e executar um trace são apresentados no <a href="cap05.html" target="_self">Capítulo 5</a> e não serão repetidos aqui. A consideração adicional ao executar um trace para investigar consultas que consomem grandes quantidades de <strong>CPU</strong> é adicionar um filtro na coluna de CPU para evitar capturar um grande número de consultas sem interesse.</p>
         <h3>Dynamic Management Views (DMVs)</h3>
         <p>Várias Dynamic Management Views (DMVs) fornecem uma variedade de informações que podem ajudar a diagnosticar problemas relacionados à CPU. Essas informações incluem estatísticas de desempenho agregadas das consultas, estatísticas de espera agregadas, detalhes do que está sendo executado, o que está esperando tempo de processamento, o que está esperando por outros recursos e outras informações que são difíceis ou impossíveis de obter de outra forma. Podemos investigar o alto uso da CPU pelo SQL Server examinando as estatísticas de espera relacionadas à CPU, os detalhes do escalonador e as estatísticas de desempenho agregadas das consultas, da seguinte forma:</p>
         <ul>
@@ -66,48 +79,48 @@
             <li><strong><code>signal_wait_time_ms</code></strong> - a quantidade total de tempo que as tarefas levam para começar a executar após serem sinalizadas (ou seja, após o recurso pelo qual estavam esperando estar disponível); esse é o tempo gasto na fila de execução e é uma espera puramente da CPU.</li>
         </ul>
         <p>Se o tempo de espera do sinal for uma parte significativa do tempo total de espera, significa que as tarefas estão aguardando um tempo relativamente longo para retomar a execução após os recursos pelos quais estavam esperando ficarem disponíveis. Isso pode indicar que há muitas consultas intensivas de CPU, que podem precisar de otimização, ou que o servidor precisa de mais CPU. A consulta no Exemplo 3.1 fornecerá uma medida de quanto do tempo total de espera é o tempo de espera do sinal.</p>
-        <pre>
+        <pre class="codigo">
             <code>
-        SELECT  SUM(signal_wait_time_ms) AS TotalSignalWaitTime ,
-            ( SUM(CAST(signal_wait_time_ms AS NUMERIC(20, 2)))
-              / SUM(CAST(wait_time_ms AS NUMERIC(20, 2))) * 100 )
-                             AS PercentageSignalWaitsOfTotalTime
-        FROM    sys.dm_os_wait_stats
-            </code>
+<plreservada>SELECT</plreservada>  <comando>SUM</comando>(signal_wait_time_ms) <plreservada>AS</plreservada> TotalSignalWaitTime ,
+        ( <comando>SUM</comando>(<comando>CAST</comando>(signal_wait_time_ms <plreservada>AS NUMERIC</plreservada>(20, 2)))
+          / <comando>SUM</comando>(<comando>CAST</comando>(wait_time_ms <plreservada>AS NUMERIC</plreservada>(20, 2))) * 100 )
+                         <plreservada>AS</plreservada> PercentageSignalWaitsOfTotalTime
+<plreservada>FROM</plreservada>    <view>sys.dm_os_wait_stats</view></code>
         </pre>
-        <p><strong>Exemplo 3.1</strong>: Verificando a pressão da CPU por meio do tempo de espera do sinal.</p>
+        <p class="legenda"><strong>Exemplo 3.1</strong>: Verificando a pressão da CPU por meio do tempo de espera do sinal.</p>
         <p>Como esta exibição de gerenciamento de espera (DMV) mostra tempos de espera e contagens agregadas desde que as estatísticas foram zeradas ou desde que o servidor foi iniciado, uma visualização pontual das estatísticas de espera geralmente não é muito útil. O que é mais útil é comparar as estatísticas de espera em um determinado momento com as estatísticas em um momento anterior e ver como elas mudaram. A outra opção é zerar as estatísticas de espera da DMV, usando <code>DBCC SQLPERF("sys.dm_os_wait_stats",CLEAR);</code>, esperar um pouco e, em seguida, fazer consultas para ver o que se acumulou nesse período de tempo conhecido e definido.</p>
-        <p><strong><em>Acompanhando esperas em nível de sessão e instrução</em></strong></p>
-        <p><em>Como os tempos de espera nesta DMV são agregados, é difícil relacionar um tempo de espera a uma consulta específica, a menos que você esteja em um sistema de teste com apenas uma sessão em execução. No entanto, no SQL Server 2008, é possível fazer isso se você usar Eventos Estendidos (Extended Events). Veja o meu artigo no blog: <a href="http://sqlblog.com/blogs/jonathan_kehayias/archive/2010/12/30/an-xevent-a-day-30-of-31-tracking-session-and-statement-level-waits.aspx" target="_blank" rel="external">http://sqlblog.com/blogs/jonathan_kehayias/archive/2010/12/30/an-xevent-a-day-30-of-31-tracking-session-and-statement-level-waits.aspx</a>.</em></p>
+        <div class="dica">
+            <p class="tdica">Acompanhando esperas em nível de sessão e instrução</p>
+            <p><em>Como os tempos de espera nesta DMV são agregados, é difícil relacionar um tempo de espera a uma consulta específica, a menos que você esteja em um sistema de teste com apenas uma sessão em execução. No entanto, no SQL Server 2008, é possível fazer isso se você usar Eventos Estendidos (Extended Events). Veja o meu artigo no blog: <a href="http://sqlblog.com/blogs/jonathan_kehayias/archive/2010/12/30/an-xevent-a-day-30-of-31-tracking-session-and-statement-level-waits.aspx" target="_blank" rel="external">http://sqlblog.com/blogs/jonathan_kehayias/archive/2010/12/30/an-xevent-a-day-30-of-31-tracking-session-and-statement-level-waits.aspx</a>.</em></p>
+        </div>
         <p>Também podemos usar a DMV <code>sys.dm_os_wait_stats</code> para descobrir quais são as esperas de recursos mais comuns em nosso sistema com restrição de CPU, como mostrado no Exemplo 3.2, onde identificamos os principais eventos de espera, ordenados de acordo com a quantidade total de tempo que os processos esperaram (<code>wait_time_ms</code>) nesse evento. É importante ignorar as esperas benignas, normalmente causadas por processos do sistema que se espera que estejam esperando a maior parte do tempo. Também estamos subtraindo o <code>signal_wait_time</code>, pois essa parte do tempo de espera não está esperando pelo recurso específico, mas esperando por tempo no agendador.</p>
-        <pre>
+        <pre class="codigo">
             <code>
-        SELECT TOP ( 10 )
-            wait_type ,
-            waiting_tasks_count ,
-            ( wait_time_ms - signal_wait_time_ms ) AS resource_wait_time ,
-            max_wait_time_ms ,
-            CASE waiting_tasks_count
-              WHEN 0 THEN 0
-              ELSE wait_time_ms / waiting_tasks_count
-            END AS avg_wait_time
-        FROM    sys.dm_os_wait_stats
-        WHERE   wait_type NOT LIKE '%SLEEP%' -- remove eg. SLEEP_TASK and
-                                         -- LAZYWRITER_SLEEP waits
-            AND wait_type NOT LIKE 'XE%'
-            AND wait_type NOT IN -- remove system waits
-        ( 'KSOURCE_WAKEUP', 'BROKER_TASK_STOP', 'FT_IFTS_SCHEDULER_IDLE_WAIT',
-          'SQLTRACE_BUFFER_FLUSH', 'CLR_AUTO_EVENT', 'BROKER_EVENTHANDLER',
-          'BAD_PAGE_PROCESS', 'BROKER_TRANSMITTER', 'CHECKPOINT_QUEUE',
-          'DBMIRROR_EVENTS_QUEUE', 'SQLTRACE_BUFFER_FLUSH', 'CLR_MANUAL_EVENT',
-          'ONDEMAND_TASK_QUEUE', 'REQUEST_FOR_DEADLOCK_SEARCH', 'LOGMGR_QUEUE',
-          'BROKER_RECEIVE_WAITFOR', 'PREEMPTIVE_OS_GETPROCADDRESS',
-          'PREEMPTIVE_OS_AUTHENTICATIONOPS', 'BROKER_TO_FLUSH' )
-        ORDER BY wait_time_ms DESC
-        -- **** Author: Jonathan Kaheyias ****
-            </code>
+SELECT TOP ( 10 )
+        wait_type ,
+        waiting_tasks_count ,
+        ( wait_time_ms - signal_wait_time_ms ) AS resource_wait_time ,
+        max_wait_time_ms ,
+        CASE waiting_tasks_count
+          WHEN 0 THEN 0
+          ELSE wait_time_ms / waiting_tasks_count
+        END AS avg_wait_time
+FROM    sys.dm_os_wait_stats
+WHERE   wait_type NOT LIKE '%SLEEP%' -- remove eg. SLEEP_TASK and
+                                     -- LAZYWRITER_SLEEP waits
+        AND wait_type NOT LIKE 'XE%'
+        AND wait_type NOT IN -- remove system waits
+( 'KSOURCE_WAKEUP', 'BROKER_TASK_STOP', 'FT_IFTS_SCHEDULER_IDLE_WAIT',
+  'SQLTRACE_BUFFER_FLUSH', 'CLR_AUTO_EVENT', 'BROKER_EVENTHANDLER',
+  'BAD_PAGE_PROCESS', 'BROKER_TRANSMITTER', 'CHECKPOINT_QUEUE',
+  'DBMIRROR_EVENTS_QUEUE', 'SQLTRACE_BUFFER_FLUSH', 'CLR_MANUAL_EVENT',
+  'ONDEMAND_TASK_QUEUE', 'REQUEST_FOR_DEADLOCK_SEARCH', 'LOGMGR_QUEUE',
+  'BROKER_RECEIVE_WAITFOR', 'PREEMPTIVE_OS_GETPROCADDRESS',
+  'PREEMPTIVE_OS_AUTHENTICATIONOPS', 'BROKER_TO_FLUSH' )
+ORDER BY wait_time_ms DESC
+-- **** Author: Jonathan Kaheyias ****</code>
         </pre>
-        <p><strong>Exemplo 3.2</strong>: Encontrando os 10 principais eventos de espera (cumulativos).</p>
+        <p class="legenda"><strong>Exemplo 3.2</strong>: Encontrando os 10 principais eventos de espera (cumulativos).</p>
         <p>Três tipos de espera interessantes para se observar, em relação à pressão da CPU, são <code>SOS_SCHEDULER_YIELD</code>, <code>CXPACKET</code> e <code>CMEMTHREAD</code>.</p>
         <h3>Esperas <code>SOS_SCHEDULER_YIELD</code></h3>
         <p>O agendador SQL é um agendador cooperativo de multitarefa. Isso significa que ele depende das consultas em execução para voluntariamente ceder a CPU após um determinado tempo de execução. Em contraste, o agendador do Windows é um agendador de multitarefa preemptivo, o que significa que ele remove as tarefas da CPU após um determinado tempo.</p>
@@ -122,51 +135,51 @@
         <h2>Investigando as filas do agendador</h2>
         <p>A DMV <code>sys.dm_os_schedulers</code> pode identificar se uma instância do SQL está com restrição de CPU ou não. Esta DMV retorna uma linha para cada um dos agendadores do SQL Server e lista o número total de tarefas atribuídas a cada agendador, bem como o número que está pronto para execução.</p>
         <p>Uma tarefa pronta para execução é aquela que está nas filas de prontidão, esperando pelo tempo da CPU. Outras tarefas no agendador que estão no <code>current_tasks_count</code>, mas não no <code>runnable_tasks_count</code>, estão ou dormindo ou aguardando um recurso (bloqueio, latch, E/S, memória, etc.).</p>
-        <pre>
+        <pre class="codigo">
             <code>
-        SELECT  scheduler_id ,
-            current_tasks_count ,
-            runnable_tasks_count
-        FROM    sys.dm_os_schedulers
-        WHERE   scheduler_id < 255
-            </code>
+SELECT  scheduler_id ,
+        current_tasks_count ,
+        runnable_tasks_count
+FROM    sys.dm_os_schedulers
+WHERE   scheduler_id < 255</code>
         </pre>
-        <p><strong>Exemplo 3.3</strong>: Investigando as filas do agendador.</p>
+        <p class="legenda"><strong>Exemplo 3.3</strong>: Investigando as filas do agendador.</p>
         <p>Novamente, não há um valor limite que represente a fronteira entre um número "bom" e "ruim" de tarefas prontas para execução, mas quanto menor, melhor. Um alto número de tarefas prontas para execução, assim como um alto tempo de espera do sinal, indica que não há CPU suficiente para a carga de consultas atual.</p>
         <p>O filtro para agendadores abaixo de 255 remove, do conjunto de resultados, os numerosos agendadores ocultos no SQL Server, que são usados para backups, a Conexão Administrativa Dedicada (DAC) e assim por diante, e não são de interesse ao investigar a carga geral da CPU.</p>
         <h2>Identificando consultas intensivas em CPU</h2>
         <p>Para determinar as consultas de pior desempenho no cache de plano do SQL Server, podem ser utilizadas as DMVs <code>sys.dm_exec_query_stats</code> e <code>sys.dm_exec_sql_text</code>. A DMV <code>sys.dm_exec_query_stats</code> fornece estatísticas agregadas e retorna uma linha para cada instrução de consulta no plano em cache. Muitas das colunas são contadores incrementais e fornecem informações sobre quantas vezes uma consulta foi executada e os recursos que foram utilizados. Por exemplo, as colunas <code>*_worker_time</code> representam o tempo gasto na CPU e as colunas <code>*_elapsed_time</code> mostram o tempo total de execução.</p>
-        <p>A consulta mostrada no Exemplo 3.4 retorna as dez consultas mais custosas em cache pelo tempo total de CPU. Juntamos as funções <code>sys.dm_exec_sql_text</code> e <p>sys.dm_exec_query_plan</p> para recuperar o texto e os planos de execução dessas consultas, dentro do lote.</p>
-        <pre>
+        <p>A consulta mostrada no Exemplo 3.4 retorna as dez consultas mais custosas em cache pelo tempo total de CPU. Juntamos as funções <code>sys.dm_exec_sql_text</code> e <code>sys.dm_exec_query_plan</code> para recuperar o texto e os planos de execução dessas consultas, dentro do lote.</p>
+        <pre class="codigo">
             <code>
-        SELECT TOP ( 10 )
-            SUBSTRING(ST.text, ( QS.statement_start_offset / 2 ) + 1,
-                      ( ( CASE statement_end_offset
-                            WHEN -1 THEN DATALENGTH(st.text)
-                            ELSE QS.statement_end_offset
-                        END - QS.statement_start_offset ) / 2 ) + 1)
-                    AS statement_text ,84
-            execution_count ,
-            total_worker_time / 1000 AS total_worker_time_ms ,
-             ( total_worker_time / 1000 ) / execution_count
-        AS avg_worker_time_ms ,
+SELECT TOP ( 10 )
+        SUBSTRING(ST.text, ( QS.statement_start_offset / 2 ) + 1,
+                  ( ( CASE statement_end_offset
+                        WHEN -1 THEN DATALENGTH(st.text)
+                        ELSE QS.statement_end_offset
+                      END - QS.statement_start_offset ) / 2 ) + 1)
+                 AS statement_text ,84
+        execution_count ,
+        total_worker_time / 1000 AS total_worker_time_ms ,
+        ( total_worker_time / 1000 ) / execution_count
+                 AS avg_worker_time_ms ,
         total_logical_reads ,
         total_logical_reads / execution_count AS avg_logical_reads ,
         total_elapsed_time / 1000 AS total_elapsed_time_ms ,
         ( total_elapsed_time / 1000 ) / execution_count
-        AS avg_elapsed_time_ms ,
+                 AS avg_elapsed_time_ms ,
         qp.query_plan
-        FROM sys.dm_exec_query_stats qs
+FROM    sys.dm_exec_query_stats qs
         CROSS APPLY sys.dm_exec_sql_text(qs.sql_handle) st
         CROSS APPLY sys.dm_exec_query_plan(qs.plan_handle) qp
-        ORDER BY total_worker_time DESC
-            </code>
+ORDER BY total_worker_time DESC</code>
         </pre>
-        <p><strong>Listagem 3.4</strong>: Encontrando as dez consultas que consomem mais CPU.</p>
+        <p class="legenda"><strong>Listagem 3.4</strong>: Encontrando as dez consultas que consomem mais CPU.</p>
         <p>O plano de execução pode ser visualizado clicando no link XML para abrir o plano em sua forma gráfica. O plano de execução retornado é para o lote inteiro, não apenas para a declaração de alto consumo de CPU.</p>
         <p>Ao consultar o cache de planos para investigar planos subótimos, observe que algumas consultas podem não ser listadas. Os planos de execução são retidos em cache até que o SQL Server decida que o plano envelheceu a ponto de ser removido para permitir que novos planos de execução sejam armazenados em cache, ou o cache é totalmente ou parcialmente limpo por comandos <code>DBCC</code>, alterações no estado do banco de dados (restauração de um banco de dados, desanexação ou colocação de um banco de dados offline, etc.) ou determinadas alterações de configuração em todo o servidor, ou o SQL Server é reiniciado. O SQL Server também removerá os planos de execução do cache se ele encontrar que memória extra é necessária em outros lugares do sistema.</p>
-        <p><strong><em>Limpando o cache de planos</em></strong></p>
-        <p><em>Você pode limpar todos os planos do cache usando</em> <code>DBCC FREEPROCCACHE</code><em>, ou fornecer um</em> <code>plan_handle</code> <em>ou </em><code>sql_handle</code> <em>para remover um plano de um lote específico. Alternativamente,</em> <code>DBCC FREEPROCINDB(db_id)</code> <em>pode ser usado para remover planos deuma base de dados específica.</em></p>
+        <div class="dica">
+            <p class="tdica"><strong><em>Limpando o cache de planos</em></strong></p>
+            <p><em>Você pode limpar todos os planos do cache usando</em> <code>DBCC FREEPROCCACHE</code><em>, ou fornecer um</em> <code>plan_handle</code> <em>ou </em><code>sql_handle</code> <em>para remover um plano de um lote específico. Alternativamente,</em> <code>DBCC FREEPROCINDB(db_id)</code> <em>pode ser usado para remover planos de uma base de dados específica.</em></p>
+        </div>
         <p>Também é importante observar que algumas consultas podem nunca aparecer no cache. Procedimentos marcados com <code>WITH RECOMPILE</code> e consultas com a dica <code>OPTION (RECOMPILE)</code> nunca são armazenados em cache. Além disso, as estatísticas da consulta são apagadas quando a consulta é recompilada por qualquer motivo, como alterações nas estatísticas ou no esquema. Como resultado, consultas que estão sujeitas a muitos eventos de recompilação também podem mostrar um tempo total muito baixo de execução, pois esse total se refere apenas ao plano atual, que pode não ter sido armazenado em cache por muito tempo.</p>
         <p>Esse problema vai além da recompilação; os resultados que você obtém de consultas como a Listagem 3.4 serão distorcidos em favor dos planos que estiveram no cache por mais tempo. Um plano frequentemente utilizado que esteve no cache por muito tempo aparecerá mais acima na lista do que um plano realmente ruim que tenha sido adicionado recentemente ao cache.</p>
         <p>Ainda é possível ter uma boa ideia das consultas que foram executadas e como foram executadas, mas a única maneira de garantir uma análise verdadeiramente imparcial é limpar o cache e depois realizar a análise após um período de tempo definido. No entanto, limpar o cache em um servidor de produção pode não ser a melhor ideia, especialmente se esse servidor já estiver conhecido por ter restrições de CPU. Por isso, se uma análise abrangente for necessária, recomendo o uso de rastreamento no lado do servidor para capturar todas as consultas em execução durante um determinado período de tempo.</p>
@@ -744,10 +757,5 @@
             </ul>
         </ul>
     </main>
-    <nav>
-        <a href="cap02.html" target="_self" rel="previous"><img src="imagens/previous.png" class="botao" alt="Página anterior"></a>
-        <a href="index.html" target="_self" rel="previous"><img src="imagens/index.png" class="botao" alt="Página principal"></a>
-        <a href="cap04.html" target="_self" rel="next"><img src="imagens/next.png" class="botao" alt="Próxima página"></a>
-</nav>
 </body>
 </html>

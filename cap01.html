@@ -11,6 +11,15 @@
     <h1>Troubleshooting SQL Server</h1>
     <h2>Um Guia para o DBA Acidental</h2>
   </header>
+  <nav>
+		<a href="index.html" target="_self">Capa</a>
+		<a href="abertura.html" target="_self">Abertura</a>
+		<a href="introducao.html" target="_self">Introdução</a>
+		<a href="cap02.html" target="_self">Cap.2</a>
+		<a href="cap03.html" target="_self">Cap.3</a>
+		<a href="cap04.html" target="_self">Cap.4</a>
+    <a href="cap05.html" target="_self">Cap.5</a>
+	</nav>
   <main>
     <article>
       <h1>Capítulo 1: Uma metodologia de solução de problemas de desempenho</h1>
@@ -30,7 +39,7 @@
       <p>Existem vários pontos nesse processo de solução de problemas em que seria muito fácil chegar à conclusão errada sobre a natureza do problema. Por exemplo, após revisar as estatísticas de arquivos virtuais e os contadores de desempenho para os discos físicos no servidor, seria fácil concluir que o subsistema de E/S de disco para o servidor estava dimensionado inadequadamente para a quantidade de trabalho sendo realizado e que discos adicionais precisavam ser comprados para lidar com as demandas de E/S de disco do servidor. Infelizmente, aumentar o tamanho de um subsistema de E/S de disco pode ser uma solução extremamente cara se o problema estiver relacionado a um índice ausente em uma consulta comumente executada ou à pressão de memória no pool de buffer. É possível que comprar uma configuração de disco grande o suficiente possa mascarar temporariamente o problema, mas, como a causa raiz subjacente não foi resolvida, pode-se ter certeza de que o mesmo problema ocorrerá mais tarde, à medida que o sistema continua a crescer.</p>
       <p>Depois de fornecer uma visão geral da minha abordagem básica, as seções a seguir aprofundarão um pouco mais nas áreas específicas de foco, como estatísticas de espera, estatísticas virtuais de arquivos, contadores de desempenho e uso do cache de plano. Vou explicar as informações que eles oferecem individualmente e como todas essas informações se inter-relacionam para ajudá-lo a obter uma compreensão completa do que está acontecendo dentro de um servidor.</p>
       <div class="dica">
-        <p><strong><em>Não se esqueça do óbvio</em></strong></p>
+        <p class="tdica">Não se esqueça do óbvio</p>
         <p><em>Apenas um lembrete suave: antes de se empolgar coletando dados diagnósticos, certifique-se de ter verificado os problemas óbvios. Se um usuário relatar que sua aplicação "não está funcionando corretamente", a primeira coisa que você provavelmente deve fazer é garantir que os serviços do SQL Server estejam realmente em execução em seu servidor. Se você abrir o        <strong>SQL Server Configuration Manager (SSCM)</strong> e descobrir que o status do serviço de <strong>mecanismo de banco de dados</strong>, que tem um <strong>tipo de serviço</strong> SQL Server, está <strong>parado</strong>, então esta é muito provavelmente a causa do problema, a menos que a instância esteja sendo executada em um cluster de failover, momento em que você precisa olhar para o <strong>Failover Cluster Manager</strong> para identificar se o serviço e seus recursos dependentes estão online e começar a solucionar por que o serviço falha em iniciar com base no que você encontrar!</em></p>
       </div>
     </article>
@@ -328,7 +337,7 @@ ORDER BY avg_physical_reads DESC</code>
       <p>As informações armazenadas no cache de plano podem ser usadas para identificar as consultas mais caras com base nas operações físicas de E/S para leitura e gravação, ou com base em diferentes critérios, dependendo do tipo mais problemático de E/S para a instância, descoberto como resultado de análises anteriores das estatísticas de espera e de arquivos virtuais.</p>
       <p>Além disso, a função <code>sys.dm_exec_query_plan()</code> pode ser aplicada cruzadamente usando a coluna <code>plan_handle</code> da exibição de gerenciamento dinâmico <code>sys.dm_exec_query_stats</code> para obter o plano de execução armazenado no cache de plano. Analisando esses planos, podemos identificar operações problemáticas que são candidatas à otimização de desempenho.</p>
       <div class="dica">
-        <p><strong><em>Otimização de desempenho de consulta</em></strong></p>
+        <p class="tdica">Otimização de desempenho de consulta</p>
         <p><em>Uma discussão completa sobre a otimização de desempenho de consulta está além do escopo deste livro. Na verdade, vários livros notáveis foram escritos apenas sobre esse tópico, incluindo "SQL Server 2008 Query Performance Tuning Distilled" (<a href="http://www.amazon.com/Server-Performance-Tuning-Distilled-Experts/dp/1430219025" target="_blank" rel="external">http://www.amazon.com/Server-Performance-Tuning-Distilled-Experts/dp/1430219025</a>) e "Inside Microsoft SQL Server 2008: T-SQL Querying" (<a href="http://www.amazon.com/Inside-Microsoft®-SQL-Server®-2008/dp/0735626030" target="_blank" rel="external">http://www.amazon.com/Inside-Microsoft®-SQL-Server®-2008/dp/0735626030</a>).</em></p>
       </div>
       <p>As informações na exibição de gerenciamento dinâmico <code>sys.dm_exec_query_stats</code> também podem ser usadas para identificar os comandos que consumiram mais tempo de CPU, que tiveram o tempo de execução mais longo ou que foram executados com mais frequência.</p>
@@ -340,12 +349,8 @@ ORDER BY avg_physical_reads DESC</code>
       <p>O ponto mais importante que quero enfatizar neste capítulo introdutório é que nenhuma única informação no SQL Server deve ser usada para identificar um problema específico. A arte de controlar um SQL Server problemático é a arte de reunir as várias peças do quebra-cabeça para que você tenha uma compreensão completa do que está acontecendo dentro de um servidor. Se você se concentrar apenas no que está imediatamente à sua frente, na maioria dos casos, perderá o item mais importante, que é a verdadeira causa raiz de um problema específico no SQL Server. </p>
     </article>
   </main>
-  <nav>
-    <a href="introducao.html" target="_self" rel="previous"><img src="imagens/previous.png" class="botao" alt="Página Anterior"></a>
-    <a href="index.html" target="_self" rel="previous"><img src="imagens/index.png" class="botao" alt="Página Principal"></a>
-    <a href="cap02.html" target="_self" rel="next"><img src="imagens/next.png" class="botao" alt="Próxima Página"></a>
-  </nav>
   <footer>
+    <p>Criado por Agnaldo Mota</p>
   </footer>
 </body>
 </html>
