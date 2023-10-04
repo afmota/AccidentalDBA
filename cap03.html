@@ -190,34 +190,32 @@ ORDER BY total_worker_time DESC</code>
         <h3>Índices ausentes</h3>
         <p>Pode surpreender algumas pessoas saber que índices ausentes podem causar alto uso de CPU, mas, na verdade, a falta de indexação apropriada é uma das causas mais comuns de alta utilização de CPU e E/S no SQL Server. Quando um índice apropriado não existe para satisfazer uma consulta, as leituras em tabela resultantes podem causar um uso significativo de CPU, já que o SQL precisa ler e processar muitas mais linhas do que o necessário para satisfazer a consulta.</p>
         <p>Usando os planos de execução obtidos no cache de planos, como mostrado na Listagem 3.4, podemos identificar quaisquer operações que podem ser substituídas por operações mais eficientes, adicionando índices de cobertura ou, em alguns casos, alterando os índices existentes. Vamos considerar uma consulta simples no banco de dados <code>Adventureworks2008</code>, como mostrado na Listagem 3.5.</p>
-        <pre>
+        <pre class="codigo">
             <code>
-        SELECT  per.FirstName ,
-            per.LastName ,
-            p.Name ,
-            p.ProductNumber ,
-            OrderDate ,
-            LineTotal ,
-            soh.TotalDue
-        FROM    Sales.SalesOrderHeader AS soh
-            INNER JOIN Sales.SalesOrderDetail sod
-            ON soh.SalesOrderID = sod.SalesOrderID
-            INNER JOIN Production.Product AS p ON sod.ProductID = p.ProductID
-            INNER JOIN Sales.Customer AS c ON soh.CustomerID = c.CustomerID
-            INNER JOIN Person.Person AS per
-                          ON c.PersonID = per.BusinessEntityID
-        WHERE LineTotal > 25000
-            </code>
+<plreservada>SELECT</plreservada>  per.FirstName ,
+        per.LastName ,
+        p.Name ,
+        p.ProductNumber ,
+        OrderDate ,
+        LineTotal ,
+        soh.TotalDue
+<plreservada>FROM</plreservada>    Sales.SalesOrderHeader <plreservada>AS</plreservada> soh
+        <clausula>INNER JOIN</clausula> Sales.SalesOrderDetail sod
+        <plreservada>ON</plreservada> soh.SalesOrderID = sod.SalesOrderID
+        <clausula>INNER JOIN</clausula> Production.Product <plreservada>AS</plreservada> p <plreservada>ON</plreservada> sod.ProductID = p.ProductID
+        <clausula>INNER JOIN</clausula> Sales.Customer <plreservada>AS</plreservada> c <plreservada>ON</plreservada> soh.CustomerID = c.CustomerID
+        <clausula>INNER JOIN</clausula> Person.Person <plreservada>AS</plreservada> per
+                      <plreservada>ON</plreservada> c.PersonID = per.BusinessEntityID
+<plreservada>WHERE</plreservada>   LineTotal > 25000 </code>
         </pre>
-        <p><strong>Listagem 3.5</strong>: Uma consulta simples no AdventureWorks.</p>
+        <p class="legenda"><strong>Listagem 3.5</strong>: Uma consulta simples no AdventureWorks.</p>
         <p>Esta consulta causa uma leitura completa da tabela SalesOrderDetail, pois não há um índice na coluna LineTotal. As características de execução (com todas as páginas necessárias no cache de dados, portanto, sem espera de E/S) são as seguintes:</p>
-        <pre>
+        <pre class="codigo">
             <code>
-        SQL Server parse and compile time:
-           CPU time = 0 ms, elapsed time = 0 ms.
-        SQL Server Execution Times:
-           CPU time = 452 ms, elapsed time = 458 ms.
-            </code>
+SQL Server parse and compile time:
+   CPU time = 0 ms, elapsed time = 0 ms.
+SQL Server Execution Times:
+   CPU time = 452 ms, elapsed time = 458 ms. </code>
         </pre>
         <p>Quase meio segundo de tempo de CPU para retornar 24 linhas; isso não é bom. Agora, vamos adicionar um índice simples, conforme mostrado na Listagem 3.6.</p>
         <pre>

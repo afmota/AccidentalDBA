@@ -53,43 +53,43 @@
       <p>Como parte das operações normais do SQL Server, existem várias condições de espera que não apresentam problemas e geralmente são esperadas no servidor. Essas condições de espera podem ser consultadas no geral nas sessões do sistema da DMV <code>sys.dm_os_waiting_tasks</code>, conforme mostrado no exemplo 1.1.</p>
       <div class="teste"><pre class="codigo">
         <code>
-SELECT  DISTINCT
+<plreservada>SELECT  DISTINCT</plreservada>
         wt.wait_type
-FROM    sys.dm_os_waiting_tasks AS wt
-        JOIN sys.dm_exec_sessions AS s ON wt.session_id = s.session_id
-WHERE   s.is_user_process = 0</code>
+<plreservada>FROM</plreservada>    <view>sys.dm_os_waiting_tasks</view> <plreservada>AS</plreservada> wt
+        JOIN <view>sys.dm_exec_sessions</view> <plreservada>AS</plreservada> s <plreservada>ON</plreservada> wt.session_id = s.session_id
+<plreservada>WHERE</plreservada>   s.is_user_process = 0</code>
       </pre>
       <p class="legenda"><strong>Exemplo 1.1</strong>: Descobrindo esperas de sessões do sistema.</p>
       <p>Ao analisar as estatísticas de espera sendo rastreadas pelo SQL Server, é importante eliminar esses tipos de espera da análise, permitindo que as esperas mais problemáticas do sistema sejam identificadas. Uma das coisas que faço como parte do rastreamento de informações de espera é manter um script que filtra os tipos de espera não problemáticos, conforme mostrado no exemplo 1.2.</p>
       <pre class="codigo">
         <code>
-SELECT  TOP 10
+<plreservada>SELECT  TOP 10</plreservada>
         wait_type ,
         max_wait_time_ms wait_time_ms ,
         signal_wait_time_ms ,
-        wait_time_ms - signal_wait_time_ms AS resource_wait_time_ms ,
-        100.0 * wait_time_ms / SUM(wait_time_ms) OVER ( )
-                                    AS percent_total_waits ,
-        100.0 * signal_wait_time_ms / SUM(signal_wait_time_ms) OVER ( )
-                                    AS percent_total_signal_waits ,
+        wait_time_ms - signal_wait_time_ms <plreservada>AS</plreservada> resource_wait_time_ms ,
+        100.0 * wait_time_ms / <funcao>SUM</funcao>(wait_time_ms) <plreservada>OVER</plreservada> ( )
+                                    <plreservada>AS</plreservada> percent_total_waits ,
+        100.0 * signal_wait_time_ms / <funcao>SUM</funcao>(signal_wait_time_ms) <plreservada>OVER</plreservada> ( )
+                                    <plreservada>AS</plreservada> percent_total_signal_waits ,
         100.0 * ( wait_time_ms - signal_wait_time_ms )
-        / SUM(wait_time_ms) OVER ( ) AS percent_total_resource_waits
-FROM    sys.dm_os_wait_stats
-WHERE   wait_time_ms > 0 -- remove zero wait_time
-        AND wait_type NOT IN -- filter out additional irrelevant waits
-( 'SLEEP_TASK', 'BROKER_TASK_STOP', 'BROKER_TO_FLUSH',
-  'SQLTRACE_BUFFER_FLUSH','CLR_AUTO_EVENT', 'CLR_MANUAL_EVENT',
-  'LAZYWRITER_SLEEP', 'SLEEP_SYSTEMTASK', 'SLEEP_BPOOL_FLUSH',
-  'BROKER_EVENTHANDLER', 'XE_DISPATCHER_WAIT', 'FT_IFTSHC_MUTEX',
-  'CHECKPOINT_QUEUE', 'FT_IFTS_SCHEDULER_IDLE_WAIT',
-  'BROKER_TRANSMITTER', 'FT_IFTSHC_MUTEX', 'KSOURCE_WAKEUP',
-  'LOGMGR_QUEUE', 'ONDEMAND_TASK_QUEUE',
-  'REQUEST_FOR_DEADLOCK_SEARCH', 'XE_TIMER_EVENT', 'BAD_PAGE_PROCESS',
-  'DBMIRROR_EVENTS_QUEUE', 'BROKER_RECEIVE_WAITFOR',
-  'PREEMPTIVE_OS_GETPROCADDRESS', 'PREEMPTIVE_OS_AUTHENTICATIONOPS',
-  'WAITFOR', 'DISPATCHER_QUEUE_SEMAPHORE', 'XE_DISPATCHER_JOIN',
-  'RESOURCE_QUEUE' )
-ORDER BY wait_time_ms DESC</code>
+        / <funcao>SUM</funcao>(wait_time_ms) <plreservada>OVER</plreservada> ( ) <plreservada>AS</plreservada> percent_total_resource_waits
+<plreservada>FROM</plreservada>    <view>sys.dm_os_wait_stats</view>
+<plreservada>WHERE</plreservada>   wait_time_ms > 0 <view>-- remove zero wait_time</view>
+        AND wait_type NOT IN <view>-- filter out additional irrelevant waits</view>
+( <string>'SLEEP_TASK'</string>, <string>'BROKER_TASK_STOP'</string>, <string>'BROKER_TO_FLUSH'</string>,
+  <string>'SQLTRACE_BUFFER_FLUSH'</string>, <string>'CLR_AUTO_EVENT'</string>, <string>'CLR_MANUAL_EVENT'</string>,
+  <string>'LAZYWRITER_SLEEP'</string>, <string>'SLEEP_SYSTEMTASK'</string>, <string>'SLEEP_BPOOL_FLUSH'</string>,
+  <string>'BROKER_EVENTHANDLER'</string>, <string>'XE_DISPATCHER_WAIT'</string>, <string>'FT_IFTSHC_MUTEX'</string>,
+  <string>'CHECKPOINT_QUEUE'</string>, <string>'FT_IFTS_SCHEDULER_IDLE_WAIT'</string>,
+  <string>'BROKER_TRANSMITTER'</string>, <string>'FT_IFTSHC_MUTEX'</string>, <string>'KSOURCE_WAKEUP'</string>,
+  <string>'LOGMGR_QUEUE'</string>, <string>'ONDEMAND_TASK_QUEUE'</string>,
+  <string>'REQUEST_FOR_DEADLOCK_SEARCH'</string>, <string>'XE_TIMER_EVENT'</string>, <string>'BAD_PAGE_PROCESS'</string>,
+  <string>'DBMIRROR_EVENTS_QUEUE'</string>, <string>'BROKER_RECEIVE_WAITFOR'</string>, 
+  <string>'PREEMPTIVE_OS_GETPROCADDRESS'</string>, <string>'PREEMPTIVE_OS_AUTHENTICATIONOPS'</string>,
+  <string>'WAITFOR'</string>, <string>'DISPATCHER_QUEUE_SEMAPHORE'</string>, <string>'XE_DISPATCHER_JOIN'</string>,
+  <string>'RESOURCE_QUEUE'</string>)
+<plreservada>ORDER BY</plreservada> wait_time_ms <plreservada>DESC</plreservada></code>
       </pre></div>
 <p class="legenda"><strong>Exemplo 1.2</strong>: Encontrando os dez principais eventos de espera acumulativos.</p>
 <p>Em geral, ao examinar as estatísticas de espera, foco nas esperas principais, de acordo com o <code>wait_time_ms</code>, e procuro por tempos de espera elevados associados aos seguintes tipos de espera específicos, cada um deles é abordado com mais detalhes nos capítulos apropriados deste livro:</p>
@@ -116,7 +116,7 @@ ORDER BY wait_time_ms DESC</code>
       <p>Após corrigir qualquer problema no servidor, a fim de validar que o problema foi realmente corrigido, as estatísticas de espera sendo rastreadas pelo servidor podem ser redefinidas usando o código na Listagem 1.3.</p>
       <pre class="codigo">
         <code>
-DBCC SQLPERF('sys.dm_os_wait_stats', clear)</code>
+<plreservada>DBCC</plreservada> SQLPERF(<string>'sys.dm_os_wait_stats'</string>, <plreservada>clear</plreservada>)</code>
       </pre>
       <p class="legenda"><strong>Exemplo 1.3</strong>: Limpando as estatísticas de espera em um servidor.</p>
       <p>Uma das ressalvas associadas à limpeza das estatísticas de espera no servidor é que levará um período de tempo para que as estatísticas de espera acumulem ao ponto em que você saberá se um problema específico foi resolvido ou não.</p>
@@ -125,18 +125,18 @@ DBCC SQLPERF('sys.dm_os_wait_stats', clear)</code>
       <p>Essa é a razão pela qual uma análise das estatísticas virtuais de arquivos, juntamente com as estatísticas de espera, é quase sempre recomendada. As estatísticas virtuais de arquivos são expostas através da função <code>sys.dm_io_virtual_file_stats</code>, que, ao receber um <code>file_id</code> (e possivelmente <code>database_id</code>), fornecerá estatísticas cumulativas de E/S físicas, o número de leituras e gravações em cada arquivo de dados e o número de leituras e gravações em cada arquivo de log, para as várias bancos de dados na instância, a partir das quais é possível calcular a proporção de leituras para gravações. Isso também mostra o número de pausas de E/S e o tempo de pausa associado às solicitações, que é o tempo total que as sessões aguardaram a conclusão da E/S no arquivo.</p>
       <pre class="codigo">
         <code>
-SELECT  DB_NAME(vfs.database_id) AS database_name ,
+<plreservada>SELECT</plreservada>  <funcao>DB_NAME</funcao>(vfs.database_id) <plreservada>AS</plreservada> database_name ,
         vfs.database_id ,
-        vfs.FILE_ID ,
-        io_stall_read_ms / NULLIF(num_of_reads, 0) AS avg_read_latency ,
-        io_stall_write_ms / NULLIF(num_of_writes, 0)
-                                               AS avg_write_latency ,
-        io_stall / NULLIF(num_of_reads + num_of_writes, 0)
-                                               AS avg_total_latency ,
-        num_of_bytes_read / NULLIF(num_of_reads, 0)
-                                               AS avg_bytes_per_read ,
-        num_of_bytes_written / NULLIF(num_of_writes, 0)
-                                               AS avg_bytes_per_write ,
+        vfs.<funcao>FILE_ID</funcao> ,
+        io_stall_read_ms / <funcao>NULLIF</funcao>(num_of_reads, 0) <plreservada>AS</plreservada> avg_read_latency ,
+        io_stall_write_ms / <funcao>NULLIF</funcao>(num_of_writes, 0)
+                                               <plreservada>AS</plreservada> avg_write_latency ,
+        io_stall / <funcao>NULLIF</funcao>(num_of_reads + num_of_writes, 0)
+                                               <plreservada>AS</plreservada> avg_total_latency ,
+        num_of_bytes_read / <funcao>NULLIF</funcao>(num_of_reads, 0)
+                                               <plreservada>AS</plreservada> avg_bytes_per_read ,
+        num_of_bytes_written / <funcao>NULLIF</funcao>(num_of_writes, 0)
+                                               <plreservada>AS</plreservada> avg_bytes_per_write ,
         vfs.io_stall ,
         vfs.num_of_reads ,
         vfs.num_of_bytes_read ,
@@ -144,12 +144,12 @@ SELECT  DB_NAME(vfs.database_id) AS database_name ,
         vfs.num_of_writes ,
         vfs.num_of_bytes_written ,
         vfs.io_stall_write_ms ,
-        size_on_disk_bytes / 1024 / 1024. AS size_on_disk_mbytes ,
+        size_on_disk_bytes / 1024 / 1024. <plreservada>AS</plreservada> size_on_disk_mbytes ,
         physical_name
-FROM    sys.dm_io_virtual_file_stats(NULL, NULL) AS vfs
-        JOIN sys.master_files AS mf ON vfs.database_id = mf.database_id
-                                       AND vfs.FILE_ID = mf.FILE_ID
-ORDER BY avg_total_latency DESC</code>
+<plreservada>FROM</plreservada>    <view>sys.dm_io_virtual_file_stats</view>(<clausula>NULL</clausula>, <clausula>NULL</clausula>) <plreservada>AS</plreservada> vfs
+        <clausula>JOIN</clausula> <view>sys.master_files</view> <plreservada>AS</plreservada> mf <plreservada>ON</plreservada> vfs.database_id = mf.database_id
+                                       <plreservada>AND</plreservada> vfs.<funcao>FILE_ID</funcao> = mf.<funcao>FILE_ID</funcao>
+<plreservada>ORDER BY</plreservada> avg_total_latency <plreservada>DESC</plreservada></code>
       </pre>
       <p class="legenda"><strong>Exemplo 1.4</strong>: Virtual file statistics.</p>
       <p>O que eu estou procurando principalmente nos resultados são padrões de atividade no arquivo, seja leitura intensa ou escrita intensa, e a latência média associada à E/S, pois isso direcionará uma investigação adicional e possíveis soluções.</p>
