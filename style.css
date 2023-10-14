@@ -201,6 +201,10 @@ div p.tdica {
     margin-top: 10px;
 }
 
+div#container {
+    overflow-y: auto;
+}
+
 footer {
     text-align: center;
     padding: 10px 0px;
