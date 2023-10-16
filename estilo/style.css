@@ -202,6 +202,7 @@ div p.tdica {
 }
 
 div#container {
+    color: black;
     border-style: unset;
     width: 95%;
     padding: 0px 20px;
@@ -223,21 +224,21 @@ footer p {
     font-size: 0.75em;
 }
 
-plreservada {
+cls {
     color: blue;
 }
 
-view {
+com {
     color: rgb(24, 139, 24);
     font-weight: bold;
 }
 
-funcao {
+func {
     color: rgb(233, 38, 168);
     font-weight: bold;
 }
 
-clausula {
+join {
     color: gray;
 }
 
