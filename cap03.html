@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DBA Acidental</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="estilo/style.css">
 </head>
 <body>
     <header>
@@ -79,14 +79,15 @@
             <li><strong><code>signal_wait_time_ms</code></strong> - a quantidade total de tempo que as tarefas levam para começar a executar após serem sinalizadas (ou seja, após o recurso pelo qual estavam esperando estar disponível); esse é o tempo gasto na fila de execução e é uma espera puramente da CPU.</li>
         </ul>
         <p>Se o tempo de espera do sinal for uma parte significativa do tempo total de espera, significa que as tarefas estão aguardando um tempo relativamente longo para retomar a execução após os recursos pelos quais estavam esperando ficarem disponíveis. Isso pode indicar que há muitas consultas intensivas de CPU, que podem precisar de otimização, ou que o servidor precisa de mais CPU. A consulta no Exemplo 3.1 fornecerá uma medida de quanto do tempo total de espera é o tempo de espera do sinal.</p>
-        <pre class="codigo">
-            <code>
-<plreservada>SELECT</plreservada>  <comando>SUM</comando>(signal_wait_time_ms) <plreservada>AS</plreservada> TotalSignalWaitTime ,
-        ( <comando>SUM</comando>(<comando>CAST</comando>(signal_wait_time_ms <plreservada>AS NUMERIC</plreservada>(20, 2)))
-          / <comando>SUM</comando>(<comando>CAST</comando>(wait_time_ms <plreservada>AS NUMERIC</plreservada>(20, 2))) * 100 )
-                         <plreservada>AS</plreservada> PercentageSignalWaitsOfTotalTime
-<plreservada>FROM</plreservada>    <view>sys.dm_os_wait_stats</view></code>
-        </pre>
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  <func>SUM</func>(signal_wait_time_ms) <cls>AS</cls> TotalSignalWaitTime ,
+        ( <func>SUM</func>(<func>CAST</func>(signal_wait_time_ms <cls>AS NUMERIC</cls>(20, 2)))
+          / <func>SUM</func>(<func>CAST</func>(wait_time_ms <cls>AS NUMERIC</cls>(20, 2))) * 100 )
+                         <cls>AS</cls> PercentageSignalWaitsOfTotalTime
+<cls>FROM</cls>    <com>sys.dm_os_wait_stats</com>
+            </code></pre>
+        </div>
         <p class="legenda"><strong>Exemplo 3.1</strong>: Verificando a pressão da CPU por meio do tempo de espera do sinal.</p>
         <p>Como esta exibição de gerenciamento de espera (DMV) mostra tempos de espera e contagens agregadas desde que as estatísticas foram zeradas ou desde que o servidor foi iniciado, uma visualização pontual das estatísticas de espera geralmente não é muito útil. O que é mais útil é comparar as estatísticas de espera em um determinado momento com as estatísticas em um momento anterior e ver como elas mudaram. A outra opção é zerar as estatísticas de espera da DMV, usando <code>DBCC SQLPERF("sys.dm_os_wait_stats",CLEAR);</code>, esperar um pouco e, em seguida, fazer consultas para ver o que se acumulou nesse período de tempo conhecido e definido.</p>
         <div class="dica">
