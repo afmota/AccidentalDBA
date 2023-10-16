@@ -201,6 +201,17 @@ div p.tdica {
     margin-top: 10px;
 }
 
+div#container {
+    border-style: unset;
+    width: 95%;
+    padding: 0px 20px;
+    margin: auto;
+    background-color: var(--cor0);
+    font-size: 1em;
+    border-radius: 10px;
+    overflow-y: auto;
+}
+
 footer {
     text-align: center;
     padding: 10px 0px;
