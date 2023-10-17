@@ -153,6 +153,7 @@ a:hover {
 code {
     font-family: var(--fonte-codigo);
     font-size: 1em;
+    word-wrap: break-word;
 }
 
 pre {

@@ -43,7 +43,7 @@
         </ul>
         <p>Basta abrir o PerfMon (<strong>Painel de Controle | Sistema e Segurança | Ferramentas Administrativas</strong>), clicar no botão <strong>Adicionar</strong> (representado por uma cruz verde) e adicionar os contadores, conforme mostrado na Figura 3.1.</p>
         <img src="imagens/addcounters.PNG" alt="Adicionando contadores">
-        <p><strong>Figura 3.1</strong>: Adicionando contadores de CPU no PerfMon.</p>
+        <p class="legenda"><strong>Figura 3.1</strong>: Adicionando contadores de CPU no PerfMon.</p>
         <p>Esses três contadores são suficientes para monitorar o uso geral da CPU, bem como o uso pelo SQL Server. No entanto, existem vários contadores de <code>SQL Statistics</code> (e um contador de Cache de Plano) que não monitoram diretamente o uso da CPU, mas monitoram eventos como eventos de compilação e recompilação, que podem consumir muitos ciclos de CPU ou são indicações de problemas que causam alto uso da CPU. Esses contadores são simplesmente listados aqui e discutidos em mais detalhes posteriormente no capítulo, em relação direta com os problemas que eles podem ser usados para investigar.</p>
         <ul>
             <li><strong>SQLServer:SQL Statistics/Auto-Param Attempts/sec</strong></li>
