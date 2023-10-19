@@ -350,45 +350,53 @@ SQL Server Execution Times:
         
         <p>SARGável, em que SARG significa Argumento de Busca, é um daqueles termos inventados irritantes que nós, como profissionais de TI, adoramos usar; simplesmente significa que um predicado pode ser usado em uma operação de busca de índice. As regras para predicados SARGáveis, em geral, são que a coluna deve ser comparada diretamente (igualdade ou desigualdade) a uma expressão, e qualquer função especificada na coluna tornará o predicado não-SARGável. Em outras palavras, <code>WHERE AlgumaFuncao(Coluna) = @Valor</code> não é SARGável, enquanto <code>WHERE Coluna = AlgumaOutraFuncao(@Valor)</code> é SARGável. Observe que a SARGabilidade não exclui o uso de operadores como <code>LIKE</code> ou <code>BETWEEN</code> (ambos são comparações de desigualdade) ou <code>IN</code> (tratado como um conjunto de comparações de igualdade).</p>
         <p>Predicados não-SARGáveis podem resultar em varreduras de tabela ou de índice e, assim como no caso de índices ausentes, isso causará um uso significativo de CPU, pois o SQL precisa ler e processar muito mais linhas do que o necessário. A Listagem 3.7 mostra um exemplo de um predicado da cláusula <code>WHERE</code> que é não-SARGável devido ao uso de algumas funções de manipulação de datas na coluna <code>ModifiedDate</code>. Este exemplo pressupõe que um índice tenha sido adicionado em <code>ModifiedDate</code>, já que não há um índice desse tipo no banco de dados padrão <code>AdventureWorks</code>.</p>
-        <pre>
-            <code>
-        SELECT  soh.SalesOrderID ,
-            OrderDate ,
-            DueDate ,
-            ShipDate ,
-            Status ,
-            SubTotal ,
-            TaxAmt ,
-            Freight ,
-            TotalDue
-        FROM    Sales.SalesOrderheader AS soh
-            INNER JOIN Sales.SalesOrderDetail AS sod
-                        ON soh.SalesOrderID = sod.SalesOrderID
-        WHERE   CONVERT(VARCHAR(10), sod.ModifiedDate, 101) = '01/01/2010'
-            </code>
-        </pre>
-        <p><code>Listagem 3.7</code>: Um predicado não-SARGável na condição de busca.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  soh.SalesOrderID ,
+        OrderDate ,
+        DueDate ,
+        ShipDate ,
+        Status ,
+        SubTotal ,
+        TaxAmt ,
+        Freight ,
+        TotalDue
+<cls>FROM</cls>    Sales.SalesOrderheader <cls>AS</cls> soh
+        <join>INNER JOIN</join> Sales.SalesOrderDetail <cls>AS</cls> sod
+                    <cls>ON</cls> soh.SalesOrderID = sod.SalesOrderID
+<cls>WHERE</cls>   <func>CONVERT</func>(<cls>VARCHAR</cls>(10), sod.ModifiedDate, 101) = '01/01/2010'
+            </code></pre>
+        </div>
+        
+        <p class="legenda"><strong>Listagem 3.7</strong>: Um predicado não-SARGável na condição de busca.</p>
+
         <p>A partir do plano de execução, podemos ver que o uso das funções na coluna ModifiedDate impossibilitou a realização de uma operação de busca no índice; todo o índice foi escaneado para localizar os valores correspondentes, como mostrado na Figura 3.2.</p>
+        
         <img src="imagens/fig32.PNG" alt="Index Scan">
-        <p><strong>Figura 3.2</strong>: Um escaneamento de índice no índice SalesOrderDetail.</p>
+        
+        <p class="legenda"><strong>Figura 3.2</strong>: Um escaneamento de índice no índice SalesOrderDetail.</p>
+
         <p>Este é um problema bastante comum no código SQL. As datas podem ser difíceis de lidar e muitas vezes as pessoas optam pela abordagem mais fácil, sem perceber o impacto que terá no desempenho. A mudança neste caso é simples; modifique o predicado para ser uma busca de intervalo (desigualdade) por datas e horários dentro do dia desejado.</p>
-        <pre>
-            <code>
-        SELECT  soh.SalesOrderID ,
-            OrderDate ,
-            DueDate ,
-            ShipDate ,
-            Status ,
-            SubTotal ,
-            TaxAmt ,
-            Freight ,
-            TotalDue
-        FROM    Sales.SalesOrderheader AS soh
-            INNER JOIN Sales.SalesOrderDetail AS sod ON soh.SalesOrderID = sod.SalesOrderID
-        WHERE sod.ModifiedDate >= '2010/01/01'
-        AND sod.ModifiedDate < '2010/01/02'
-            </code>
-        </pre>
+        
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  soh.SalesOrderID ,
+        OrderDate ,
+        DueDate ,
+        ShipDate ,
+        Status ,
+        SubTotal ,
+        TaxAmt ,
+        Freight ,
+        TotalDue
+<cls>FROM</cls>    Sales.SalesOrderheader <cls>AS</cls> soh
+        <join>INNER JOIN</join> Sales.SalesOrderDetail <cls>AS</cls> sod <cls>ON</cls> soh.SalesOrderID = sod.SalesOrderID
+<cls>WHERE</cls> sod.ModifiedDate >= '2010/01/01'
+        <join>AND</join> sod.ModifiedDate < '2010/01/02'
+        </code></pre>
+        </div>
+
         <p><strong>Listagem 3.8</strong>: Um predicado SARGável na condição de busca.</p>
         <p>A Figura 3.3 confirma que agora vemos uma operação de busca no índice.</p>
         <p>Esse é um problema bastante comum em muitos bancos de dados. Com frequência, vejo funções como <code>UPPER</code>, <code>LTRIM</code>, <code>ISNULL</code> sendo usadas em consultas, seja nos joins ou na cláusula <code>WHERE</code>, e em muitos casos simplesmente não há necessidade delas. Se as colunas usarem uma colação que não diferencia maiúsculas de minúsculas, os valores em maiúsculas e minúsculas são considerados iguais, e o uso das funções <code>UPPER</code> ou <code>LOWER</code> não faz nada além de degradar o desempenho. Da mesma forma, nas comparações de strings, o SQL ignora espaços finais, eliminando a necessidade da função <code>RTRIM</code>.</p>

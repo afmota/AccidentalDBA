@@ -199,7 +199,7 @@ p.titulo {
 div#container {
     color: black;
     border-style: unset;
-    width: 95%;
+    width: 90%;
     padding: 0px 20px;
     margin: auto;
     background-color: var(--cor0);
