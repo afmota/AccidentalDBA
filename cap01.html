@@ -52,7 +52,7 @@
     <p>Depois de fornecer uma visão geral da minha abordagem básica, as seções a seguir aprofundarão um pouco mais nas áreas específicas de foco, como estatísticas de espera, estatísticas virtuais de arquivos, contadores de desempenho e uso do cache de plano. Vou explicar as informações que eles oferecem individualmente e como todas essas informações se inter-relacionam para ajudá-lo a obter uma compreensão completa do que está acontecendo dentro de um servidor.</p>
     
     <div class="dica">
-      <p class="tdica">Não se esqueça do óbvio</p>
+      <p class="destaque">Não se esqueça do óbvio</p>
     
       <p><em>Apenas um lembrete suave: antes de se empolgar coletando dados diagnósticos, certifique-se de ter verificado os problemas óbvios. Se um usuário relatar que sua aplicação "não está funcionando corretamente", a primeira coisa que você provavelmente deve fazer é garantir que os serviços do SQL Server estejam realmente em execução em seu servidor. Se você abrir o <strong>SQL Server Configuration Manager (SSCM)</strong> e descobrir que o status do serviço de <strong>mecanismo de banco de dados</strong>, que tem um <strong>tipo de serviço</strong> SQL Server, está <strong>parado</strong>, então esta é muito provavelmente a causa do problema, a menos que a instância esteja sendo executada em um cluster de failover, momento em que você precisa olhar para o <strong>Failover Cluster Manager</strong> para identificar se o serviço e seus recursos dependentes estão online e começar a solucionar por que o serviço falha em iniciar com base no que você encontrar!</em></p>
     </div>
@@ -237,9 +237,9 @@
     <div id="container">
       <pre><code>
 <cls>DECLARE</cls> @CounterPrefix <cls>NVARCHAR</cls>(30)
-<cls>SET</cls> @CounterPrefix = <cls>CASE WHEN</cls> <func>@@SERVICENAME</func> = 'MSSQLSERVER'
-                             <cls>THEN</cls> 'SQLServer:'
-                          <cls>ELSE</cls> 'MSSQL$' + <func>@@SERVICENAME</func> + ':'
+<cls>SET</cls> @CounterPrefix = <cls>CASE WHEN</cls> <func>@@SERVICENAME</func> = <string>'MSSQLSERVER'</string>
+                             <cls>THEN</cls> <string>'SQLServer:'</string>
+                          <cls>ELSE</cls> <string>'MSSQL$'</string> + <func>@@SERVICENAME</func> + ':'
                       <cls>END</cls> ;
 <com>-- Capture the first counter set</com>
 <cls>SELECT</cls>   <func>CAST</func>(1 <cls>AS INT</cls>) <cls>AS</cls> collection_instance ,
@@ -254,42 +254,42 @@
 <cls>WHERE</cls>    ( OBJECT_NAME = @CounterPrefix + 'Access Methods'
            <join>AND</join> counter_name = 'Full Scans/sec'
          )
-         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'Access Methods'
-              <join>AND</join> counter_name = 'Index Searches/sec'
+         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'Access Methods'</string>
+              <join>AND</join> counter_name = <string>'Index Searches/sec'</string>
             )
-         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'Buffer Manager'
-              <join>AND</join> counter_name = 'Lazy Writes/sec'
+         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'Buffer Manager'</string>
+              <join>AND</join> counter_name = <string>'Lazy Writes/sec'</string>
             )
-         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'Buffer Manager'
-              <join>AND</join> counter_name = 'Page life expectancy'
+         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'Buffer Manager'</string>
+              <join>AND</join> counter_name = <string>'Page life expectancy'</string>
             )
-         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'General Statistics'
-              <join>AND</join> counter_name = 'Processes Blocked'
+         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'General Statistics'</string>
+              <join>AND</join> counter_name = <string>'Processes Blocked'</string>
             )
-         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'General Statistics'
-              <join>AND</join> counter_name = 'User Connections'
+         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'General Statistics'</string>
+              <join>AND</join> counter_name = <string>'User Connections'</string>
             )
-         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'Locks'
-              <join>AND</join> counter_name = 'Lock Waits/sec'
+         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'Locks'</string>
+              <join>AND</join> counter_name = <string>'Lock Waits/sec'</string>
             )
-         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'Locks'
-              <join>AND</join> counter_name = 'Lock Wait Time (ms)'
+         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'Locks'</string>
+              <join>AND</join> counter_name = <string>'Lock Wait Time (ms)'</string>
             )
-         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'SQL Statistics'
-              <join>AND</join> counter_name = 'SQL Re-Compilations/sec'
+         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'SQL Statistics'</string>
+              <join>AND</join> counter_name = <string>'SQL Re-Compilations/sec'</string>
             )
-         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'Memory Manager'
-              <join>AND</join> counter_name = 'Memory Grants Pending'
+         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'Memory Manager'</string>
+              <join>AND</join> counter_name = <string>'Memory Grants Pending'</string>
             )
-         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'SQL Statistics'
-              <join>AND</join> counter_name = 'Batch Requests/sec'
+         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'SQL Statistics'</string>
+              <join>AND</join> counter_name = <string>'Batch Requests/sec'</string>
             )
-         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'SQL Statistics'
-              <join>AND</join> counter_name = 'SQL Compilations/sec'
+         <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'SQL Statistics'</string>
+              <join>AND</join> counter_name = <string>'SQL Compilations/sec'</string>
             )
       
 <com>-- Wait on Second between data collection</com>
-<cls>WAITFOR DELAY</cls> '00:00:01'
+<cls>WAITFOR DELAY</cls> <string>'00:00:01'</string>
       
 <com>-- Capture the second counter set</com>
 <cls>SELECT</cls>  <func>CAST</func>(2 <cls>AS INT</cls>) <cls>AS</cls> collection_instance ,
@@ -301,41 +301,43 @@
         <func>CURRENT_TIMESTAMP</func> <cls>AS</cls> collection_time
 <cls>INTO</cls>    #perf_counters_second
 <cls>FROM</cls>    <com>sys.dm_os_performance_counters</com>
-<cls>WHERE</cls>   ( <func>OBJECT_NAME</func> = @CounterPrefix + 'Access Methods'
+<cls>WHERE</cls>   ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'Access Methods'</string>
           <join>AND</join> counter_name = 'Full Scans/sec'
         )
-        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'Access Methods'
-             <join>AND</join> counter_name = 'Index Searches/sec'
+        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'Access Methods'</string>
+             <join>AND</join> counter_name = <string>'Index Searches/sec'</string>
            )
-        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'Buffer Manager'
-             <join>AND</join> counter_name = 'Lazy Writes/sec'
+        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'Buffer Manager'</string>
+             <join>AND</join> counter_name = <string>'Lazy Writes/sec'</string>
            )
-        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'Buffer Manager'
-             <join>AND</join> counter_name = 'Page life expectancy'
+        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'Buffer Manager'</string>
+             <join>AND</join> counter_name = <string>'Page life expectancy'</string>
            )
-        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'General Statistics'
-             <join>AND</join> counter_name = 'Processes Blocked'
+        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'General Statisti</string>cs'
+             <join>AND</join> counter_name = <string>'Processes Blocked'</string>
            )
-        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'General Statistics'
-             <join>AND</join> counter_name = 'User Connections'
+        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'General Statisti</string>cs'
+             <join>AND</join> counter_name = <string>'User Connections'</string>
            )
-        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'Locks'
-             <join>AND</join> counter_name = 'Lock Waits/sec'
+        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'Locks'</string>
+             <join>AND</join> counter_name = <string>'Lock Waits/sec'</string>
            )
-        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'Locks'
-             <join>AND</join> counter_name = 'Lock Wait Time (ms)'
+        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'Locks'</string>
+             <join>AND</join> counter_name = <string>'Lock Wait Time (ms)'</string>
            )
-        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'SQL Statistics'
-             <join>AND</join> counter_name = 'SQL Re-Compilations/sec'
+        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'SQL Statistics'</string>
+             <string>
+               <join>AND</join> counter_name = <string>'SQL Re-Compilations/sec'</string>
+             </string>
            )
-        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'Memory Manager'
-             <join>AND</join> counter_name = 'Memory Grants Pending'
+        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'Memory Manager'</string>
+             <join>AND</join> counter_name = <string>'Memory Grants Pending'</string>
            )
-        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'SQL Statistics'
-             <join>AND</join> counter_name = 'Batch Requests/sec'
+        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'SQL Statistics'</string>
+             <join>AND</join> counter_name = <string>'Batch Requests/sec'</string>
            )
-        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + 'SQL Statistics'
-             <join>AND</join> counter_name = 'SQL Compilations/sec'
+        <join>OR</join> ( <func>OBJECT_NAME</func> = @CounterPrefix + <string>'SQL Statistics'</string>
+             <join>AND</join> counter_name = <string>'SQL Compilations/sec'</string>
            )
       
 <com>-- Calculate the cumulative counter values</com>
@@ -426,7 +428,7 @@
     <p>Além disso, a função <code>sys.dm_exec_query_plan()</code> pode ser aplicada cruzadamente usando a coluna <code>plan_handle</code> da exibição de gerenciamento dinâmico <code>sys.dm_exec_query_stats</code> para obter o plano de execução armazenado no cache de plano. Analisando esses planos, podemos identificar operações problemáticas que são candidatas à otimização de desempenho.</p>
     
     <div class="dica">
-      <p class="tdica">Otimização de desempenho de consulta</p>
+      <p class="destaque">Otimização de desempenho de consulta</p>
       <p><em>Uma discussão completa sobre a otimização de desempenho de consulta está além do escopo deste livro. Na verdade, vários livros notáveis foram escritos apenas sobre esse tópico, incluindo "SQL Server 2008 Query Performance Tuning Distilled" (<a href="http://www.amazon.com/Server-Performance-Tuning-Distilled-Experts/dp/1430219025" target="_blank" rel="external">http://www.amazon.com/Server-Performance-Tuning-Distilled-Experts/dp/1430219025</a>) e "Inside Microsoft SQL Server 2008: T-SQL Querying" (<a href="http://www.amazon.com/Inside-Microsoft®-SQL-Server®-2008/dp/0735626030" target="_blank" rel="external">http://www.amazon.com/Inside-Microsoft®-SQL-Server®-2008/dp/0735626030</a>).</em></p>
     </div>
     

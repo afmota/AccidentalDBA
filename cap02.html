@@ -64,7 +64,7 @@
         <p>Claro, isso pode levar a um aumento substancial na complexidade do sistema de armazenamento, e significa que o desempenho e o throughput do I/O do disco final são afetados, não apenas pelas características físicas do disco, mas também por questões como a configuração RAID escolhida, a arquitetura da matriz de armazenamento (DAS ou SAN, conforme discutido posteriormente), e o desempenho de outros componentes da matriz de armazenamento, como os adaptadores de barramento do host ou controladores RAID, e assim por diante.</p>
         
         <div class="dica">
-            <p class="tdica">Unidades de estado sólido</p>
+            <p class="destaque">Unidades de estado sólido</p>
             <p><em>Os discos de estado sólido modernos não possuem peças móveis, portanto, não estão sujeitos às mesmas limitações de throughput dos discos convencionais, e estão gradualmente empurrando o potencial de IOPS além das capacidades da maioria das grandes matrizes de discos convencionais, em um único dispositivo de hardware. Eles ainda são tecnologia relativamente nova e não são atualmente amplamente utilizados em sistemas de banco de dados transacionais, devido a considerações de custo e tempo de vida, e não são abordados mais neste capítulo. No entanto, eles podem redefinir o espaço de armazenamento no futuro próximo.</em></p>
         </div>
         
@@ -103,7 +103,7 @@
         
         <p>Os níveis RAID mais comuns usados com o SQL Server são RAID 1, 5, 6 e 1+0, já que estes garantem que os dados armazenados na matriz não serão perdidos ou danificados/corrompidos se um dos discos da matriz falhar catastroficamente. A proteção dos dados armazenados dentro do SQL Server deve ser considerada como o fator mais importante na seleção do nível RAID, seguida de perto pelo desempenho desejado para a característica da matriz de disco. A matriz de disco mais rápida do mundo não será útil se perder todas as informações da organização em uma única falha.</p>
         
-        <p><strong>RAID 0</strong></p>
+        <p class="titulo">RAID 0</p>
         
         <p>RAID 0, mais conhecido como striping, oferece melhorias nas taxas de I/O (em termos de IOPS) através do fracionamento dos dados em várias unidades, permitindo que as operações de leitura e gravação sejam compartilhadas entre as unidades dentro do conjunto. A figura 2.1 mostra uma implementação RAID 0 onde A1, A2 e assim por diante representam segmentos de dados sequenciais logicamente. Podemos ver que, embora A2 venha após A1 sequencialmente, ele é armazenado em uma unidade separada, permitindo que vários segmentos sejam acessados ​​simultaneamente.</p>
         
@@ -113,7 +113,7 @@
         
         <p>Este nível de RAID fornece o melhor desempenho tanto para operações de leitura quanto de gravação, porém não oferece redundância ou proteção contra perda de dados. No caso de falha de um único disco na matriz, todos os dados são perdidos. Portanto, este nível de RAID não é adequado para implementações do SQL Server.</p>
         
-        <p><strong>RAID 1</strong></p>
+        <p class="titulo">RAID 1</p>
         
         <p>RAID 1, mais comumente conhecido como espelhamento, oferece proteção contra a perda de dados de um único disco, espelhando as gravações em um segundo disco, como mostrado na Figura 2.2. Uma configuração RAID 1 fornece redundância, mas não oferece desempenho adicional de gravação para o sistema, uma vez que a taxa máxima de transferência para a matriz é limitada à capacidade de E/S de um único disco. Se você tiver uma configuração de duplicação (uma extensão do espelhamento em que ambos os discos do espelho podem ser lidos simultaneamente), teoricamente é possível obter um benefício de desempenho de leitura. Na prática, no entanto, as melhorias são altamente variáveis, embora geralmente pequenas, e dependentes da implementação de hardware.</p>
         
@@ -127,7 +127,7 @@
         
         <p>Se vários arquivos de log de transações forem colocados em um único conjunto RAID 1, o efeito líquido da atividade combinada de E/S sequencial para cada arquivo será uma E/S aleatória no nível físico, e haverá maior latência devido ao movimento da cabeça do disco para executar operações em cada um dos arquivos que estão sendo gravados sequencialmente.</p>
         
-        <p><strong>RAID 5 (and 6)</strong></p>
+        <p class="titulo">RAID 5 (and 6)</p>
         
         <p>O RAID 5 é comumente conhecido como "striping com paridade"; os dados são distribuídos em múltiplos discos, como no RAID 0, mas os dados de paridade são armazenados para fornecer proteção contra falha de um único disco. O número mínimo de discos necessários para um conjunto RAID 5 é três. Os blocos de paridade contendo os dados de paridade são distribuídos em intervalos entre as faixas dentro do conjunto, conforme mostrado na Figura 2.3. Por exemplo, o segmento <strong>Ap</strong> armazena os dados de paridade resultantes da comparação dos dados nos segmentos <strong>A1</strong> e <atrong>A2</atrong>. Se o Disco 2 falhar, os dados no segmento <strong>A2</strong> podem ser reconstruídos por meio da comparação dos dados em 
         <strong>A1</strong> com os dados de paridade.</p>
@@ -158,7 +158,7 @@
         
         <p>O RAID 6 é comum em aplicações de Storage Area Network (SAN), onde o número de discos em um único conjunto é maior do que na maioria das aplicações de Direct Attached Storage (DAS), aumentando a possibilidade de múltiplas falhas de disco durante o período em que um único disco pode estar offline. O RAID 6 possui uma penalidade de desempenho semelhante ao RAID 5 para operações de gravação, uma vez que o cálculo do bit de paridade afeta o desempenho.</p>
         
-        <p><strong>RAID 10</strong></p>
+        <p class="titulo">RAID 10</p>
         
         <p>O RAID 10, ou RAID 1+0, é um nível de RAID aninhado conhecido como "par espelhado listrado". Ele fornece redundância ao primeiro espelhar cada disco, usando o RAID 1, e depois listar esses discos espelhados, com RAID 0, para melhorar o desempenho. Há um aumento significativo no custo monetário associado a essa configuração, uma vez que apenas metade do espaço em disco está disponível para uso. No entanto, essa configuração oferece a melhor configuração de redundância, pois, potencialmente, permite várias falhas de disco enquanto ainda mantém o sistema em operação, sem degradar o desempenho do sistema.</p>
         
@@ -170,7 +170,7 @@
         
         <p>Como não há cálculos de paridade a serem realizados, o RAID 1+0 é a configuração de RAID mais rápida para gravações que também oferece redundância, proporcionando um desempenho próximo ou equivalente ao desempenho de uma configuração RAID 0. No entanto, em termos do número de discos que compõem o conjunto, o desempenho de leitura geralmente será menor do que um conjunto RAID 5 configurado com o mesmo número de discos físicos.</p>
         
-        <p><strong>RAID 01</strong></p>
+        <p class="titulo">RAID 01</p>
         
         <p>RAID 01 ou RAID 0+1, é um nível de RAID aninhado também conhecido como "pares espelhados de discos listrados". Em uma configuração RAID 0+1, os níveis aninhados são o oposto do RAID 1+0, em que os discos são primeiro listrados em um RAID 0 e depois espelhados usando RAID 1. No entanto, esse tipo de configuração permite apenas a perda de um único disco de um lado do conjunto, uma vez que uma falha de disco em um conjunto RAID 0 causa a falha desse conjunto. A perda de um único disco em ambos os conjuntos listrados RAID 0 resultaria em perda total de dados. O maior risco de perda de dados no RAID 01 significa que, na maioria dos casos, o RAID 1+0 é preferível para instalações do SQL Server.</p>
         
@@ -218,7 +218,7 @@
         <p>O SQLIO é um dos piores nomes para uma ferramenta, pois leva à ideia equivocada de que ele simula a carga de trabalho de E/S do SQL Server. A verdade é que essa ferramenta não tem absolutamente nada a ver com o SQL Server; é apenas uma ferramenta de estresse de E/S que gera operações de E/S com base nos parâmetros de comando fornecidos à ferramenta. O IOmeter também é uma ferramenta de teste de estresse de E/S, originalmente desenvolvida pela Intel e posteriormente lançada como um projeto de código aberto. Das duas ferramentas, o IOmeter é o mais flexível e pode gerar cargas de trabalho de E/S mistas que se aproximam mais do que poderia ser gerado pelo SQL Server. O IOmeter também possui uma interface gráfica do usuário que é usada para configurar os testes e monitorar seu progresso.</p>
         
         <div class="dica">
-            <p class="tdica">Baixando o SQLIO ou IOmeter</p>
+            <p class="destaque">Baixando o SQLIO ou IOmeter</p>
             <p><em>O SQLIO pode ser baixado gratuitamente no site da Microsoft em</em> <a href="http://www.microsoft.com/download/en/details.aspx?id=20163" target="_blank" rel="external">http://www.microsoft.com/download/en/details.aspx?id=20163</a>.</p>
             <p><em>O IOmeter pode ser baixado gratuitamente em</em> <a href="http://www.iometer.org/" target="_blank" rel="external">http://www.iometer.org/</a>.</p>
         </div>
@@ -226,7 +226,7 @@
         <p>A Microsoft fornece uma ferramenta separada para testar a confiabilidade e integridade de uma configuração de disco, chamada <strong>SQLIOSim</strong>. Essa ferramenta testa o armazenamento usando as mesmas operações de disco que o SQL Server executaria para leituras, gravações, checkpoints, backups e operações de leitura antecipada, para garantir que o armazenamento atenda aos requisitos de confiabilidade do SQL Server. Ao contrário do SQLIO e IOmeter, o SQLIOSim usa arquivos de dados e log separados para simular a atividade de leitura e gravação do SQL Server, usando os mesmos tipos de padrões de E/S para cada arquivo que ocorreriam durante as operações normais. Essa ferramenta deve ser usada para validar se o subsistema de E/S funciona corretamente sob cargas pesadas, mas não deve ser usada para testes de desempenho da configuração.</p>
         
         <div class="dica">
-            <p class="tdica">Baixando o SQLIOSim</p>
+            <p class="destaque">Baixando o SQLIOSim</p>
             <p><em>O SQLIOSim pode ser baixado no site da Microsoft em</em> <a href="http://support.microsoft.com/kb/231619/en-us" target="_blank" rel="external">http://support.microsoft.com/kb/231619/en-us</a>.</p>
         </div>
         
@@ -234,7 +234,7 @@
         
         <p>Conforme discutido anteriormente, há muitos fatores que influenciarão as escolhas que você faz para o subsistema de E/S de disco, especialmente o nível RAID, como a frequência com que os dados são gravados em comparação com a leitura e se a E/S é predominantemente sequencial ou aleatória. Também é importante distribuir corretamente sua carga de trabalho pelos recursos de hardware, colocando arquivos de dados e log em discos separados e dedicados, e dando consideração especial ao banco de dados <code>tempdb</code>.</p>
         
-        <p><strong>Arquivos de dados</strong></p>
+        <p class="titulo">Arquivos de dados</p>
         
         <p>A configuração de disco apropriada para os arquivos de dados de um banco de dados depende muito da proporção de leitura para gravação do banco de dados. O SQL Server acompanha o uso de E/S dos arquivos de banco de dados para uma instância e disponibiliza essas informações na função de Gerenciamento Dinâmico <code>sys.dm_io_virtual_file_stats</code>. Embora essas informações possam ser usadas para determinar se sua carga de trabalho geral é mais intensa em leituras ou gravações, as informações contidas na saída são baseadas nas operações que ocorreram desde a última inicialização da instância do SQL Server. Portanto, é importante garantir que sua carga de trabalho representativa normal para o servidor tenha ocorrido antes de usar essas informações para determinar a divisão da carga de trabalho.</p>
         
@@ -244,13 +244,13 @@
         
         <p>Para implementações OLTP de bancos de dados com intensa gravação, o RAID 1+0 oferece o melhor desempenho, pois não realiza cálculos de paridade durante as operações de gravação. No entanto, os arrays RAID 1+0 têm um custo de implementação muito mais alto, uma vez que o armazenamento disponível é exatamente a metade dos discos configurados no array.</p>
         
-        <p><strong>Arquivos de log</strong></p>
+        <p class="titulo">Arquivos de log</p>
         
         <p>Para bancos de dados sujeitos a uma quantidade substancial de atividade de gravação, o dimensionamento e a configuração dos discos para o arquivo de log de transações, e, portanto, o desempenho das gravações de log, podem ser fundamentais para o desempenho geral do sistema. Isso ocorre porque todas as alterações nos dados devem primeiro ser registradas no arquivo de log antes que uma transação de confirmação (implícita ou explícita) possa ser considerada concluída e antes que as páginas de dados possam ser gravadas no disco (no caso em que um <code>CHECKPOINT</code> ou o <code>LAZY WRITER</code> gravam uma página de dados suja no disco antes que a transação seja confirmada).</p>
         
         <p>Uma vez que o log de transações é gravado sequencialmente, o RAID 1 pode ser usado na maioria das situações. Para bancos de dados altamente transacionais, o log de transações de cada banco de dados deve estar localizado em discos físicos dedicados. Ter os arquivos de log de vários bancos de dados altamente transacionais nos mesmos discos físicos pode resultar em gargalos de E/S de gravação, frequentemente indicados por altos tempos de espera <code>WRITELOG</code> em <code>sys.dm_os_wait_stats</code> e por altos valores de <code>io_write_stall_ms</code> em <code>sys.dm_io_virtual_file_stats()</code> para o arquivo de log de transações. Essas esperas são causadas pelo reposicionamento da cabeça de disco através dos pratos do disco para realizar as gravações e podem ser piores quando vários arquivos de log de transações são fisicamente intercalados ou fisicamente fragmentados no disco.</p>
         
-        <p><strong>Considerações especiais para o tempdb</strong></p>
+        <p class="titulo">Considerações especiais para o tempdb</p>
         
         <p>O banco de dados <code>tempdb</code> no SQL Server é um banco de dados especial usado pelo mecanismo de banco de dados durante a execução de solicitações do usuário, para realizar classificações que excedem a memória alocada para a classificação, operações de hash e armazenar dados para tabelas temporárias e variáveis de tabela. No SQL Server 2005 e 2008, também é usado para manter informações do armazenamento de versão, para a execução de gatilhos, operações de índice online ao usar os níveis de isolamento <code>SNAPSHOT</code> e <code>READ COMMITTED SNAPSHOT</code> (também conhecidos como controle de versão de linha) e, no SQL Server 2008, para manter informações de Rastreamento de Mudanças. Além do uso geral do <code>tempdb</code>, algumas operações de manutenção, como <code>DBCC CHECKDB</code> e a reconstrução de índices realizada <code>ONLINE</code> ou usando a opção <code>SORT_IN_TEMPDB</code>, podem fazer uso intensivo do <code>tempdb</code>.</p>
         
@@ -263,7 +263,7 @@
         <p>O banco de dados <code>tempdb</code> está sujeito a problemas específicos que geralmente não afetam bancos de dados de usuário padrão, especificamente a contenção de <code>PFS</code>, <code>GAM</code> e <code>SGAM</code>, associada à criação e destruição consistentes de objetos temporários (consulte <a href="http://blogs.msdn.com/sqlserverstorageengine/archive/2009/01/04/what-is-allocation-bottleneck.aspx" target="_blank" rel="external">http://blogs.msdn.com/sqlserverstorageengine/archive/2009/01/04/what-is-allocation-bottleneck.aspx</a> para mais detalhes). Para minimizar o impacto desse problema e, na maioria dos casos, eliminá-lo, vários arquivos de dados podem ser criados para o banco de dados <code>tempdb</code>, que têm o mesmo tamanho e são configurados com as mesmas configurações de AutoCrescimento. Quando um banco de dados possui vários arquivos no mesmo grupo de arquivos, as alocações são feitas a partir de cada arquivo, usando um fator de preenchimento proporcional, o que faz com que os arquivos sejam usados igualmente em proporção ao seu tamanho e espaço livre disponível. Como cada arquivo tem suas próprias páginas de <code>PFS</code>, <code>GAM</code> e <code>SGAM</code>, criar vários arquivos para o <code>tempdb</code> reduzirá a contenção nessas páginas quando as alocações forem feitas.</p>
         
         <div class="dica">
-            <p class="tdica">Dica: configurando um único arquivo por processador, ou não!</em></strong></p>
+            <p class="destaque">Dica: configurando um único arquivo por processador, ou não!</em></strong></p>
             <p><em>O MVP do SQL Server, Paul Randal, fornece orientações sobre o problema do <code>PFS</code>, <code>GAM</code> e <code>SGAM</code> com o <code>tempdb</code> e o número apropriado de arquivos a serem configurados com base no número de processadores em suas postagens no blog: "Search Engine Q&A #12: Should you create multiple files for a user DB on a multi-core box?" (<a href="http://www.sqlskills.com/blogs/paul/post/Search-Engine-QA-12-Should-you-create-multiple-files-for-a-user-DB-on-a-multi-core-box.aspx" target="_blank" rel="external">http://www.sqlskills.com/blogs/paul/post/Search-Engine-QA-12-Should-you-create-multiple-files-for-a-user-DB-on-a-multi-core-box.aspx</a>) e "A SQL Server DBA myth a day: (12/30) tempdb should always have one data file per processor core" (<a href="http://sqlskills.com/BLOGS/PAUL/post/A-SQL-Server-DBA-myth-a-day-(1230)-tempdb-should-always-have-one-data-file-perprocessor-core.aspx" target="_blank" rel="external">http://sqlskills.com/BLOGS/PAUL/post/A-SQL-Server-DBA-myth-a-day-(1230)-tempdb-should-always-have-one-data-file-perprocessor-core.aspx</a>).</em></p>
         </div>
         
@@ -300,7 +300,7 @@
         <p>As implementações baseadas em SAN (Storage Area Network) fazem uso de HBAs (Host Bus Adapters), que são placas de rede específicas projetadas para fornecer acesso à rede de armazenamento (Fabric + Array, na Figura 2.8), por meio de cabos de fibra óptica (FC), Ethernet de rede padrão (iSCSI) ou uma combinação híbrida dos dois conhecida como Fiber Channel over Ethernet (FCoE). Dependendo da implementação específica utilizada e se a E/S de múltiplos caminhos (multi-path I/O) foi configurada adequadamente para o ambiente, o desempenho de E/S e a taxa de transferência podem ser limitados à velocidade da porta de um único HBA no servidor.</p>
         
         <div class="dica">
-            <p class="tdica">Multi-path I/O</em></strong></p>
+            <p class="destaque">Multi-path I/O</em></strong></p>
             <p><em>Multi-path I/O (MPIO) fornece múltiplos caminhos redundantes de um único servidor para a implementação SAN. Dependendo da configuração do MPIO, um dos benefícios também pode ser o balanceamento de carga entre as conexões, o que pode resultar em melhorias de desempenho em comparação com o uso de uma única conexão. Diferentes implementações de MPIO têm características distintas, e é melhor trabalhar com o fornecedor de hardware específico para configurar o MPIO em seu ambiente.</em></p>
         </div>
         
