@@ -12,12 +12,12 @@
         <h2>Um Guia para o DBA Acidental</h2>
     </header>
     <nav>
-		<a href="index.html" target="_self">Capa</a>
-		<a href="abertura.html" target="_self">Abertura</a>
-		<a href="introducao.html" target="_self">Introdução</a>
-		<a href="cap01.html" target="_self">Cap.1</a>
-		<a href="cap02.html" target="_self">Cap.2</a>
-		<a href="cap04.html" target="_self">Cap.4</a>
+		<a href="index.html" target="_self">Capa</a> | 
+		<a href="abertura.html" target="_self">Abertura</a> | 
+		<a href="introducao.html" target="_self">Introdução</a> | 
+		<a href="cap01.html" target="_self">Cap.1</a> | 
+		<a href="cap02.html" target="_self">Cap.2</a> | 
+		<a href="cap04.html" target="_self">Cap.4</a> | 
         <a href="cap05.html" target="_self">Cap.5</a>
 	</nav>
     <main>
@@ -397,157 +397,226 @@ SQL Server Execution Times:
         </code></pre>
         </div>
 
-        <p><strong>Listagem 3.8</strong>: Um predicado SARGável na condição de busca.</p>
+        <p class="legenda"><strong>Listagem 3.8</strong>: Um predicado SARGável na condição de busca.</p>
+
         <p>A Figura 3.3 confirma que agora vemos uma operação de busca no índice.</p>
+
         <p>Esse é um problema bastante comum em muitos bancos de dados. Com frequência, vejo funções como <code>UPPER</code>, <code>LTRIM</code>, <code>ISNULL</code> sendo usadas em consultas, seja nos joins ou na cláusula <code>WHERE</code>, e em muitos casos simplesmente não há necessidade delas. Se as colunas usarem uma colação que não diferencia maiúsculas de minúsculas, os valores em maiúsculas e minúsculas são considerados iguais, e o uso das funções <code>UPPER</code> ou <code>LOWER</code> não faz nada além de degradar o desempenho. Da mesma forma, nas comparações de strings, o SQL ignora espaços finais, eliminando a necessidade da função <code>RTRIM</code>.</p>
+
         <img src="imagens/fig33.PNG" alt="Index Seek">
-        <p><strong>Figura 3.3</strong>: Uma busca de índice no índice SalesOrderDetail.</p>
+
+        <p class="legenda"><strong>Figura 3.3</strong>: Uma busca de índice no índice SalesOrderDetail.</p>
+
         <p>Lidar com <code>NULLs</code> sempre é interessante. A função <code>ISNULL</code> é frequentemente usada desnecessariamente devido a uma incompreensão de como os <code>NULLs</code> funcionam em predicados. Por exemplo, os dois predicados abaixo na cláusula <code>WHERE</code> são completamente equivalentes em função.</p>
-        <pre>
-            <code>
-        WHERE ISNULL(SomeCol,0) > 0
-        WHERE SomeCol > 0
-            </code>
-        </pre>
+
+        <div id="container">
+            <pre><code>
+<cls>WHERE</cls> <func>ISNULL</func>(SomeCol,0) > 0
+<cls>WHERE</cls> SomeCol > 0
+            </code></pre>
+        </div>
+
         <p>No primeiro caso, qualquer linha com um valor <code>NULL</code> será excluída porque o <code>NULL</code> é convertido para zero e o filtro é para valores maiores que zero. No segundo caso, qualquer linha com um valor <code>NULL</code> será excluída porque os <code>NULLs</code> nunca retornam verdadeiro quando comparados a qualquer valor usando os operadores de igualdade (=), diferença (<>), menor que (<), maior que (>), ou qualquer outro operador de comparação. Eles só retornam verdadeiro para verificações de <code>IS NULL</code> ou <code>IS NOT NULL</code>. Portanto, ambos os predicados alcançam o mesmo resultado, mas apenas o segundo permite o uso de pesquisas de índice.</p>
+
         <h3>Conversões implícitas</h3>
+
         <p>Uma conversão implícita ocorre devido à comparação de tipos de dados diferentes. O SQL não pode comparar valores de tipos diferentes e, portanto, é necessário converter uma das colunas envolvidas para o mesmo tipo de dados que o outro, a fim de realizar a comparação.</p>
+
         <p>Quando ocorre uma conversão implícita em uma coluna usada em uma cláusula <code>WHERE</code> ou <code>FROM</code>, o Otimizador do SQL Server determina a conversão de todos os valores da coluna antes que o filtro possa ser aplicado. Isso significa que, durante a execução da consulta, o processador de consulta converterá o tipo de dados de menor precedência para o tipo de dados de maior precedência antes de aplicar o filtro ou a condição de junção. Isso implica que, assim como no caso de funções na coluna, o predicado é considerado não-SARGable, o que significa que não é possível usar pesquisas de índice. O SQL precisa processar mais linhas do que o necessário para obter os resultados, o que resulta em um maior uso da CPU.</p>
+
         <p>Uma manifestação comum desse problema é a comparação de parâmetros <code>NVARCHAR</code> com colunas do tipo <code>VARCHAR</code>. Existem algumas bibliotecas de acesso a dados (como o JDBC, por exemplo) que passam constantes de string como Unicode (<code>NVARCHAR</code>) por padrão. O problema é demonstrado no exemplo 3.9, onde a coluna AccountNumber é do tipo <code>VARCHAR</code> e o parâmetro é uma sequência Unicode (<code>NVARCHAR</code>), indicada pelo N antes das aspas de abertura.</p>
-        <pre>
-            <code>
-        SELECT  p.FirstName ,
-            p.LastName ,
-            c.AccountNumber
-        FROM    Sales.Customer AS c
-            INNER JOIN Person.Person AS p ON c.PersonID = p.BusinessEntityID
-        WHERE   AccountNumber = N'AW00029594'
-            </code>
-        </pre>
-        <p><strong>Exemplo 3.9</strong>: Uma conversão implícita de tipo de dados na condição de busca.</p>
-        <p>The relevant section of the execution plan, shown in Figure 3.4, confirms that we get an index scan operation.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  p.FirstName ,
+        p.LastName ,
+        c.AccountNumber
+<cls>FROM</cls>    Sales.Customer <cls>AS</cls> c
+        INNER JOIN Person.Person <cls>AS</cls> p <cls>ON</cls> c.PersonID = p.BusinessEntityID
+<cls>WHERE</cls>   AccountNumber = <string>N'AW00029594'</string>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Exemplo 3.9</strong>: Uma conversão implícita de tipo de dados na condição de busca.</p>
+
+        <p>A seção relevante do plano de execução, mostrada na Figura 3.4, confirma que estamos realizando uma operação de varredura de índice.</p>
+
         <img src="imagens/fig34.png" alt="O predicado não-SARGable resulta em uma varredura de índice.">
-        <p><strong>Figura 3.4</strong>: O predicado não-SARGable resulta em uma varredura de índice.</p>
+
+        <p class="legenda"><strong>Figura 3.4</strong>: O predicado não-SARGable resulta em uma varredura de índice.</p>
+
         <p>A janela de propriedades do filtro, na Figura 3.5, mostra a conversão implícita.</p>
+
         <img src="imagens/fig35.PNG" alt="O predicado do filtro dita a necessidade de converter todas as linhas na coluna AccountNumber para NVARCHAR.">
-        <p><strong>Figure 3.5</strong>: O predicado do filtro dita a necessidade de converter todas as linhas na coluna <code>AccountNumber</code> para <code>NVARCHAR</code>.</p>
+
+        <p class="legenda"><strong>Figure 3.5</strong>: O predicado do filtro dita a necessidade de converter todas as linhas na coluna <code>AccountNumber</code> para <code>NVARCHAR</code>.</p>
+
         <p>A solução para conversões implícitas é garantir que as colunas usadas em junções sejam sempre do mesmo tipo e que, na cláusula <code>WHERE</code>, quaisquer variáveis, parâmetros ou constantes sejam do mesmo tipo das colunas com as quais estão sendo comparados. Se não forem, faça uso cuidadoso das funções de conversão (<code>CAST</code>, <code>CONVERT</code>) nas variáveis, parâmetros ou constantes para que correspondam ao tipo de dados da coluna.</p>
+
         <p>Se estiver usando bibliotecas de acesso a dados como o JDBC, verifique as propriedades para garantir que elas não estejam passando todos os valores de string como <code>NVARCHAR</code>, independentemente do tipo de dados da coluna subjacente.</p>
+
         <h3>Parameter sniffing</h3>
+
         <p>O "parameter sniffing" é um processo usado pelo SQL Server ao criar um plano de execução para uma stored procedure, função ou consulta parametrizada. Na primeira vez em que o plano é compilado, o SQL Server examina, ou "sniffa", os valores dos parâmetros de entrada fornecidos e os utiliza, em conjunto com as estatísticas das colunas, para estimar o número de linhas que serão afetadas pela consulta. Em seguida, usa essa estimativa para calcular o custo de várias possíveis execuções do plano. Um problema surge apenas se os valores que foram passados como parâmetros de entrada na criação inicial do plano resultarem em um número de linhas atípico em relação ao que será obtido em futuras execuções da procedure. O "parameter sniffing" ocorre apenas no momento em que um plano é compilado ou recompilado, e todas as execuções subsequentes da stored procedure, função ou consulta parametrizada usarão o mesmo plano.</p>
         <p>Durante a compilação inicial, apenas os valores dos parâmetros de entrada podem ser "sniffados", pois as variáveis locais ainda não têm valor. Se uma instrução dentro do lote for recompilada, tanto os valores dos parâmetros quanto das variáveis podem ser "sniffados", pois as variáveis terão valores naquele momento.</p>
         <p>Como exemplo, usaremos novamente o banco de dados <code>AdventureWorks</code>, e especificamente a coluna <code>ShipDate</code> na tabela <code>Sales.SalesOrderHeader</code>. Essa coluna tem uma data mínima de 08/07/2004 e uma data máxima de 08/07/2011. O Exemplo 3.10 mostra uma stored procedure para encontrar todos os números de pedidos de venda (também nessa tabela) que estão entre duas datas de envio fornecidas.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>CREATE PROCEDURE</cls> user_GetCustomerShipDates
+(
+  @ShipDateStart <cls>DATETIME</cls> ,
+  @ShipDateEnd <cls>DATETIME</cls>
+)
+<cls>AS</cls>
+<cls>SELECT</cls>  CustomerID ,
+        SalesOrderNumber
+<cls>FROM</cls>    Sales.SalesOrderHeader
+<cls>WHERE</cls>   ShipDate <join>BETWEEN</join> @ShipDateStart <join>AND</join> @ShipDateEnd
+<cls>GO</cls>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Exemplo 3.10</strong>: A stored procedure <code>user_GetCustomerShipDates</code>.</p>
+
+        <p>Isso seria suportado por um índice não clusterizado em <code>ShipDate</code>, conforme mostrado no Exemplo 3.11.</p>
+
+        <div id="container">
         <pre>
             <code>
-        CREATE PROCEDURE user_GetCustomerShipDates
-        (
-          @ShipDateStart DATETIME ,
-          @ShipDateEnd DATETIME
-        )
-        AS
-        SELECT  CustomerID ,
-                SalesOrderNumber
-        FROM    Sales.SalesOrderHeader
-        WHERE   ShipDate BETWEEN @ShipDateStart AND @ShipDateEnd
-        GO
-            </code>
-        </pre>
-        <p><strong>Exemplo 3.10</strong>: A stored procedure <code>user_GetCustomerShipDates</code>.</p>
-        Isso seria suportado por um índice não clusterizado em <code>ShipDate</code>, conforme mostrado no Exemplo 3.11.
-        <pre>
-            <code>
-        CREATE NONCLUSTERED INDEX IDX_ShipDate_ASC
-         ON Sales.SalesOrderHeader (ShipDate)
-        GO
-            </code>
-        </pre>
-        <p><strong>Exemplo 3.11</strong>: Um índice não clusterizado na coluna <code>ShipDate</code>.</p>
+<cls>CREATE NONCLUSTERED INDEX</cls> IDX_ShipDate_ASC
+     <cls>ON</cls> Sales.SalesOrderHeader (ShipDate)
+<cls>GO</cls>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Exemplo 3.11</strong>: Um índice não clusterizado na coluna <code>ShipDate</code>.</p>
+
         <p>Agora, vamos executar a stored procedure duas vezes, conforme mostrado no Exemplo 3.12, com a primeira consulta abrangendo um intervalo de datas de vários anos e, portanto, retornando muitas linhas, e a segunda consulta abrangendo apenas um intervalo de dez dias. Certifique-se de obter o plano de execução real juntamente com os resultados.</p>
-        <pre>
-            <code>
-        DBCC FREEPROCCACHE
-        EXEC user_GetCustomerShipDates '2001/07/08', '2004/01/01'
-        EXEC user_GetCustomerShipDates '2001/07/10', '2001/07/20'
-            </code>
-        </pre>
-        <p><strong>Exemplo 3.12</strong>: Executando a stored procedure <code>user_GetCustomerShipDates</code>, com a primeira consulta abrangendo um intervalo de datas grande.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>DBCC FREEPROCCACHE</cls>
+<cls>EXEC</cls> user_GetCustomerShipDates <string>'2001/07/08'</string>, <string>'2004/01/01'</string>
+<cls>EXEC</cls> user_GetCustomerShipDates <string>'2001/07/10'</string>, <string>'2001/07/20'</string>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Exemplo 3.12</strong>: Executando a stored procedure <code>user_GetCustomerShipDates</code>, com a primeira consulta abrangendo um intervalo de datas grande.</p>
+
         <p>Observe que executamos o comando <code>DBCC FREEPROCCACHE</code> para limpar o cache de planos e garantir a criação de um novo plano. O plano é idêntico em ambos os casos, conforme mostrado na Figura 3.6.</p>
+
         <img src="imagens/fig36.PNG" alt="Planos de execução para a stored procedure user_GetCustomerShipDates.">
-        <p><strong>Figura 3.6</strong>: Planos de execução para a stored procedure <code>user_GetCustomerShipDates</code>.</p>
+
+        <p class="legenda"><strong>Figura 3.6</strong>: Planos de execução para a stored procedure <code>user_GetCustomerShipDates</code>.</p>
+
         <p>No plano, vemos que o otimizador optou por não utilizar o índice não clusterizado na coluna <code>ShipDate</code>, que criamos especialmente para esta stored procedure. A razão é que não se trata de um índice de cobertura (não inclui a coluna <code>SalesOrderNumber</code>) e o número de linhas estimado pelo otimizador, com base nos valores dos parâmetros para a execução inicial, juntamente com as estatísticas, foi muito alto para tornar a combinação de busca no índice/verificação da chave otimizada. Portanto, o otimizador ignora esse índice e faz uma varredura em outro.</p>
+
         <p>Agora, execute novamente o Exemplo 3.12, desta vez sem retornar o plano de execução, mas com as opções <code>STATISTICS IO</code> e <code>STATISTICS TIME</code> habilitadas. A razão para fazer uma execução separada é que retornar o plano de execução real tem um impacto no desempenho da consulta, portanto, as execuções que retornam o plano de execução não devem ser usadas para verificar as estatísticas de desempenho da consulta. Os resultados são os seguintes (os cabeçalhos separadores foram adicionados manualmente, para maior clareza).</p>
-        <pre>
-            <code>
-        ==FIRST EXECUTION (LARGE DATE RANGE)===
-        (Table 'SalesOrderHeader'. Scan count 1, logical reads 686, physical reads 0.
-        SQL Server Execution Times:
-          CPU time = 16 ms, elapsed time = 197 ms.
-        SQL Server Execution Times:
-          CPU time = 16 ms, elapsed time = 197 ms.
-        ==SECOND EXECUTION (SMALL DATE RANGE)===
-        Table 'SalesOrderHeader'. Scan count 1, logical reads 686, physical reads 0.
-        SQL Server Execution Times:
-          CPU time = 15 ms, elapsed time = 5 ms.
-        SQL Server Execution Times:
-          CPU time = 15 ms, elapsed time = 5 ms.
-            </code>
-        </pre>
+
+        <div id="container">
+            <pre><code>
+<string>==FIRST EXECUTION (LARGE DATE RANGE)===</string>
+
+(Table 'SalesOrderHeader'. Scan count 1, logical reads 686, physical reads 0.
+
+SQL Server Execution Times:
+  CPU time = 16 ms, elapsed time = 197 ms.
+
+SQL Server Execution Times:
+  CPU time = 16 ms, elapsed time = 197 ms.
+
+==SECOND EXECUTION (SMALL DATE RANGE)===
+
+Table 'SalesOrderHeader'. Scan count 1, logical reads 686, physical reads 0.
+
+SQL Server Execution Times:
+  CPU time = 15 ms, elapsed time = 5 ms.
+
+SQL Server Execution Times:
+  CPU time = 15 ms, elapsed time = 5 ms.
+            </code></pre>
+        </div>
+
         <p>As leituras lógicas são mostradas como 686 leituras para ambos os casos, mas é o tempo de CPU que é de maior interesse aqui. Vale ressaltar que a maioria do tempo decorrido é, na verdade, a transmissão e exibição das linhas, portanto, esse tempo será muito maior para 17.000 linhas (o primeiro conjunto) do que para 40 linhas (o segundo).</p>
         <p>Agora, vamos limpar o cache novamente e inverter a ordem de execução, para que a consulta com um intervalo de datas mais curto seja executada primeiro, conforme mostrado no Exemplo 3.13. Isso significa que, desta vez, o processo de parameter sniffing resultará em um número estimado de linhas muito menor.</p>
-        <pre>
-            <code>
-        DBCC FREEPROCCACHE
-        EXEC user_GetCustomerShipDates '2001/07/10', '2001/07/20'
-        EXEC user_GetCustomerShipDates '2001/07/08', '2004/01/01'
-            </code>
-        </pre>
-        <p><strong>Exemplo 3.13</strong>: Executando a stored procedure <code>user_GetCustomerShipDates</code>, com a consulta de intervalo de datas mais curto sendo executada primeiro.</p>
+        
+        <div id="container">
+            <pre><code>
+<cls>DBCC FREEPROCCACHE</cls>
+<cls>EXEC</cls> user_GetCustomerShipDates <string>'2001/07/10'</string>, <string>'2001/07/20'</string>
+<cls>EXEC</cls> user_GetCustomerShipDates <string>'2001/07/08'</string>, <string>'2004/01/01'</string>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Exemplo 3.13</strong>: Executando a stored procedure <code>user_GetCustomerShipDates</code>, com a consulta de intervalo de datas mais curto sendo executada primeiro.</p>
+
         <p>Como esperado, o plano de execução mudou drasticamente, como mostrado na Figura 3.7. O menor número de linhas estimadas leva o otimizador a usar uma busca no índice no nosso índice <code>IDX_ShipDate_ASC</code>, seguido por uma verificação de chave para recuperar as linhas restantes.</p>
+
         <img src="imagens/fig37.PNG" alt="Novos planos de execução para a stored procedure user_GetCustomerShipDates.">
-        <p><strong>Figura 3.7</strong>: Novos planos de execução para a stored procedure <code>user_GetCustomerShipDates</code>.</p>
+
+        <p class="legenda"><strong>Figura 3.7</strong>: Novos planos de execução para a stored procedure <code>user_GetCustomerShipDates</code>.</p>
+
         <p>Execute novamente o Exemplo 3.13, desta vez sem o plano de execução, mas com as estatísticas, e você verá que o plano funciona muito bem para a primeira execução, mas causa problemas para a próxima.</p>
-        <pre>
-            <code>
-        ==FIRST EXECUTION (SMALL DATE RANGE)===
-        Table 'SalesOrderHeader'. Scan count 1, logical reads 127, physical reads 0, readahead reads 0, lob logical reads 0, lob physical reads 0, loread-ahead reads0.
-        
-        SQL Server Execution Times:
-        CPU time = 0 ms, elapsed time = 0 ms.
-        ==SECOND EXECUTION (LARGE DATE RANGE)===
-        Table 'SalesOrderHeader'. Scan count 1, logical reads 52429, physical reads 0.
-        
-        SQL Server Execution Times:
-        CPU time = 47 ms, elapsed time = 182 ms.100
-            </code>
-        </pre>
+
+        <div id="container">
+            <pre><code>
+<string>==FIRST EXECUTION (SMALL DATE RANGE)===</string>
+
+Table 'SalesOrderHeader'. Scan count 1, logical reads 127, physical reads 0, readahead reads 0, lob logical reads 0, lob physical reads 0, loread-ahead reads0.
+
+SQL Server Execution Times:
+CPU time = 0 ms, elapsed time = 0 ms.
+
+<string>==SECOND EXECUTION (LARGE DATE RANGE)===</string>
+
+Table 'SalesOrderHeader'. Scan count 1, logical reads 52429, physical reads 0.
+
+SQL Server Execution Times:
+CPU time = 47 ms, elapsed time = 182 ms.100
+            </code></pre>
+        </div>
+
         <p>Embora não seja um grande salto no tempo de CPU, lembre-se de que mesmo a segunda execução está lidando com 17.000 linhas no conjunto de resultados. Com contagens de linhas maiores, esse problema pode ter um impacto muito significativo.</p>
+
         <p>Este é um exemplo clássico, embora em pequena escala, de como o parameter sniffing trabalha contra nós. O plano com as verificações de chave é ótimo apenas para contagens de linhas pequenas (tipicamente < 1% da tabela). Acima disso, a E/S adicional e o CPU adicional necessários para as verificações de chave se tornam muito significativos.</p>
+        
         <p>Existem várias maneiras diferentes de lidar com problemas de parameter sniffing, dependendo da situação e da versão do SQL Server que você está usando.</p>
+        
         <h2>Trace Flag 4136</h2>
+        
         <p>O SQL Server 2008 introduziu uma opção para desativar completamente o parameter sniffing para uma instância do SQL Server, simplesmente ativando o Trace Flag 4136. Essa opção foi adicionada no SQL Server 2008 SP1 CU7 e no SQL Server 2008 R2 CU2, e também foi retroportada para o SQL Server 2005 no SP3 CU9.</p>
+        
         <p>Quando o otimizador de consultas é capaz de "sniffar" o valor de um parâmetro, ele usa esse valor, juntamente com o histograma de estatísticas, para fornecer uma estimativa precisa do número de registros que serão retornados. Como discutido anteriormente, isso só é problemático se o valor inicial do parâmetro se mostrar completamente atípico.</p>
+        
         <p>Quando o parameter sniffing é evitado, o otimizador não consegue obter o valor do parâmetro e, portanto, não pode usar o histograma de estatísticas. Em vez disso, ele faz uma estimativa menos precisa do número de linhas que serão retornadas, assumindo uma distribuição uniforme dos dados em todos os valores. Por exemplo, considere uma coluna X contendo 10 linhas com valores 1, 2, 3, 3, 3, 3, 3, 4, 5, 5. O otimizador sempre estimaria que uma consulta "<code>WHERE X = valor</code>" retornará 2 linhas (número total de linhas dividido pelo número de valores distintos), e assim o plano sempre seria otimizado para esse número de linhas.</p>
+        
         <p>Em resumo, embora essa opção esteja disponível, o parameter sniffing é benéfico para a maioria dos procedimentos que são escritos para usar valores típicos. Desativar o parameter sniffing pode afetar inadvertidamente esses planos de maneira negativa. Como tal, esse Trace Flag deve ser considerado como último recurso absoluto se nada mais resolver o problema.</p>
+        
         <h2>Usando o hint OPTIMIZE FOR</h2>
+        
         <p>No SQL Server 2005 e posterior, podemos usar a dica <code>OPTIMIZE FOR</code> para especificar um valor de parâmetro para o otimizador usar ao compilar um plano, conforme mostrado no Listing 3.14.</p>
-        <pre>
-            <code>
-        CREATE PROCEDURE user_GetCustomerShipDates
-        (
-          @ShipDateStart DATETIME ,
-          @ShipDateEnd DATETIME
-        )
-        AS
-        SELECT  CustomerID ,
-                SalesOrderNumber
-        FROM    Sales.SalesOrderHeader
-        WHERE   ShipDate BETWEEN @ShipDateStart AND @ShipDateEnd
-        OPTION  ( OPTIMIZE FOR ( @ShipDateStart = '2001/07/08',
-                                  @ShipDateEnd = '2004/01/01' ) )
-        GO
-            </code>
-        </pre>
-        <p><strong>Listagem 3.14</strong>: Usando o hint de consulta <code>OPTIMIZE FOR</code>.</p>
+        
+        <div id="container">
+        <pre><code>
+<cls>CREATE PROCEDURE</cls> user_GetCustomerShipDates
+(
+  @ShipDateStart <cls>DATETIME</cls> ,
+  @ShipDateEnd <cls>DATETIME</cls>
+)
+<cls>AS</cls>
+<cls>SELECT</cls>  CustomerID ,
+        SalesOrderNumber
+<cls>FROM</cls>    Sales.SalesOrderHeader
+<cls>WHERE</cls>   ShipDate <join>BETWEEN</join> @ShipDateStart AND @ShipDateEnd
+<cls>OPTION</cls>  ( OPTIMIZE <cls>FOR</cls> ( @ShipDateStart = <string>'2001/07/08'</string>,
+                          @ShipDateEnd = <string>'2004/01/01'</string> ) )
+<cls>GO</cls>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 3.14</strong>: Usando o hint de consulta <code>OPTIMIZE FOR</code>.</p>
+        
         <p>Isso permite que o otimizador otimize o plano para um valor de parâmetro que se sabe ser mais comumente usado. Isso elimina a possibilidade de "parameter sniffing", mas ao mesmo tempo pode levar a um plano menos eficiente se valores atípicos forem usados.</p>
         <p>No SQL Server 2008, isso foi "estendido" para fornecer a dica <code>OPTIMIZE FOR UNKNOWN</code>, que instrui o SQL Server a não usar o "parameter sniffing" de forma alguma. Isso permite um controle de "parameter sniffing" consulta por consulta, enquanto o Trace Flag mencionado anteriormente controla a configuração para toda a instância. Na maioria dos casos, a dica é uma solução mais desejável, pois, em geral, o "parameter sniffing" é algo positivo.</p>
         <h2>Opções de recompilação</h2>
