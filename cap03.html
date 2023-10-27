@@ -618,143 +618,190 @@ CPU time = 47 ms, elapsed time = 182 ms.100
         <p class="legenda"><strong>Listagem 3.14</strong>: Usando o hint de consulta <code>OPTIMIZE FOR</code>.</p>
         
         <p>Isso permite que o otimizador otimize o plano para um valor de parâmetro que se sabe ser mais comumente usado. Isso elimina a possibilidade de "parameter sniffing", mas ao mesmo tempo pode levar a um plano menos eficiente se valores atípicos forem usados.</p>
+
         <p>No SQL Server 2008, isso foi "estendido" para fornecer a dica <code>OPTIMIZE FOR UNKNOWN</code>, que instrui o SQL Server a não usar o "parameter sniffing" de forma alguma. Isso permite um controle de "parameter sniffing" consulta por consulta, enquanto o Trace Flag mencionado anteriormente controla a configuração para toda a instância. Na maioria dos casos, a dica é uma solução mais desejável, pois, em geral, o "parameter sniffing" é algo positivo.</p>
+
         <h2>Opções de recompilação</h2>
+
         <p>Podemos usar a opção <code>WITH RECOMPILE</code> ao criar uma stored procedure como outra possível solução para problemas de "parameter sniffing". Isso significa que um plano nunca será armazenado em cache para a procedure, pois força uma recompilação e geração de um novo plano a cada execução. Isso significa que as estimativas de linhas serão sempre baseadas no valor atual do parâmetro, mas ao custo de aumentar o tempo de execução da procedure.</p>
-        <pre>
-            <code>
-        CREATE PROCEDURE user_GetCustomerShipDates
-           (
-          @ShipDateStart DATETIME ,
-          @ShipDateEnd DATETIME
-           )
-           WITH RECOMPILE
-        AS
-           SELECT  CustomerID ,
-               SalesOrderNumber
-           FROM    Sales.SalesOrderHeader
-           WHERE   ShipDate BETWEEN @ShipDateStart AND @ShipDateEnd
-        GO
-            </code>
-        </pre>
-        <p><strong>Listing 3.15</strong>: Usando a opção <code>WITH RECOMPILE</code>.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>CREATE PROCEDURE</cls> user_GetCustomerShipDates
+    (
+      @ShipDateStart <cls>DATETIME</cls> ,
+      @ShipDateEnd <cls>DATETIME</cls>
+    )
+    <cls>WITH RECOMPILE</cls>
+<cls>AS</cls>
+    <cls>SELECT</cls>  CustomerID ,
+            SalesOrderNumber
+    <cls>FROM</cls>    Sales.SalesOrderHeader
+    <cls>WHERE</cls>   ShipDate <join>BETWEEN</join> @ShipDateStart AND @ShipDateEnd
+<cls>GO</cls>
+            </code></pre>
+            </div>
+
+        <p class="legenda"><strong>Listing 3.15</strong>: Usando a opção <code>WITH RECOMPILE</code>.</p>
         <p>O hint de consulta <code>OPTION(RECOMPILE)</code> pode ser usado de maneira semelhante e pode ser uma opção melhor se houver várias consultas dentro da procedure e apenas uma parte delas sofrer com problemas de "parameter sniffing".</p>
-        <pre>
-            <code>
-        CREATE PROCEDURE user_GetCustomerShipDates
-           (
-          @ShipDateStart DATETIME ,
-          @ShipDateEnd DATETIME
-           )
-        AS
-           SELECT  CustomerID ,
-               SalesOrderNumber
-           FROM    Sales.SalesOrderHeader
-           WHERE   ShipDate BETWEEN @ShipDateStart AND @ShipDateEnd
-           OPTION  ( RECOMPILE )
-        GO
-            </code>
-        </pre>
-        <p><strong>Listing 3.16</strong>: Usando o hint de consulta <code>OPTION(RECOMPILE)</code>.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>CREATE PROCEDURE</cls> user_GetCustomerShipDates
+    (
+      @ShipDateStart <cls>DATETIME</cls> ,
+      @ShipDateEnd <cls>DATETIME</cls>
+    )
+<cls>AS</cls>
+    <cls>SELECT</cls>  CustomerID ,
+            SalesOrderNumber
+    <cls>FROM</cls>    Sales.SalesOrderHeader
+    <cls>WHERE</cls>   ShipDate <join>BETWEEN</join> @ShipDateStart AND @ShipDateEnd
+    <cls>OPTION</cls>  ( <cls>RECOMPILE</cls> )
+<cls>GO</cls>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listing 3.16</strong>: Usando o hint de consulta <code>OPTION(RECOMPILE)</code>.</p>
+
         <p>Essas técnicas são úteis quando o custo adicional das compilações é pequeno em comparação com a degradação de desempenho causada pelo reuso de planos inadequados. A dica <code>OPTION(RECOMPILE)</code> deve ser usada sempre que possível, em preferência ao <code>WITH RECOMPILE</code> para um procedimento armazenado, a fim de manter o impacto do processo de compilação repetida o mais baixo possível.</p>
+
         <h3>Consultas não parametrizadas ad hoc</h3>
+
         <p>As consultas ad hoc são declarações enviadas ao otimizador que não são predefinidas usando stored procedures, <code>sp_executesql</code> ou outras maneiras de forçar o reuso de planos de execução. O SQL Server sempre verificará o cache de planos para ver se um plano adequado pode ser reutilizado para uma determinada consulta, antes de passar pelo processo completo de geração de um novo plano de execução e armazená-lo em cache.</p>
+
         <p>Consultas ad hoc farão com que planos de execução sejam gerados para cada declaração. Isso causa um uso excessivo de recursos, especialmente da CPU. Considere as três consultas mostradas em Listing 3.17.</p>
-        <pre>
-            <code>
-        SELECT  soh.SalesOrderNumber ,
-            sod.ProductID
-        FROM    Sales.SalesOrderHeader AS soh
-            INNER JOIN Sales.SalesOrderDetail AS sod
-                   ON soh.SalesOrderID = sod.SalesOrderID
-        WHERE   soh.SalesOrderNumber = 'SO43662'
+
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  soh.SalesOrderNumber ,
+        sod.ProductID
+<cls>FROM</cls>    Sales.SalesOrderHeader <cls>AS</cls> soh
+        <join>INNER JOIN</join> Sales.SalesOrderDetail <cls>AS</cls> sod
+               <cls>ON</cls> soh.SalesOrderID = sod.SalesOrderID
+<cls>WHERE</cls>   soh.SalesOrderNumber = <string>'SO43662'</string>
         
-        SELECT  soh.SalesOrderNumber ,
-            sod.ProductID
-        FROM    Sales.SalesOrderHeader AS soh
-            INNER JOIN Sales.SalesOrderDetail AS sod
-                   ON soh.SalesOrderID = sod.SalesOrderID
-        WHERE   soh.SalesOrderNumber = 'SO58928'
+<cls>SELECT</cls>  soh.SalesOrderNumber ,
+        sod.ProductID
+<cls>FROM</cls>    Sales.SalesOrderHeader <cls>AS</cls> soh
+        <join>INNER JOIN</join> Sales.SalesOrderDetail <cls>AS</cls> sod
+               <cls>ON</cls> soh.SalesOrderID = sod.SalesOrderID
+<cls>WHERE</cls>   soh.SalesOrderNumber = <string>'SO58928'</string>
         
-        SELECT soh.SalesOrderNumber ,
-           sod.ProductID
-        FROM   Sales.SalesOrderHeader AS soh104
-           INNER JOIN Sales.SalesOrderDetail AS sod
-                  ON soh.SalesOrderID = sod.SalesOrderID
-        WHERE  soh.SalesOrderNumber = 'SO70907'
-            </code>
-        </pre>
-        <p><strong>Listing 3.17</strong>: Três consultas simples, mas não parametrizadas.</p>
+<cls>SELECT</cls> soh.SalesOrderNumber ,
+       sod.ProductID
+<cls>FROM</cls>   Sales.SalesOrderHeader <cls>AS</cls> soh104
+       <join>INNER JOIN</join> Sales.SalesOrderDetail <cls>AS</cls> sod
+              <cls>ON</cls> soh.SalesOrderID = sod.SalesOrderID
+<cls>WHERE</cls>  soh.SalesOrderNumber = <string>'SO70907'</string>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listing 3.17</strong>: Três consultas simples, mas não parametrizadas.</p>
+
         <p>Essas três declarações deveriam produzir o mesmo plano de execução, mas não o fazem. Os diferentes valores atribuídos hardcoded na cláusula WHERE significam que eles são considerados pelo otimizador como três consultas diferentes e, portanto, recebem planos de execução separados.</p>
+
         <p>Para consultas muito simples, o SQL Server pode usar uma técnica chamada <strong>parametrização simples</strong> para substituir os valores fixos por parâmetros e, assim, permitir o reuso de planos. No entanto, até mesmo as consultas na Listagem 3.17 são muito complexas para se qualificarem para a parametrização simples.</p>
+
         <p>O problema com consultas não parametrizadas é duplo:</p>
+
         <ol>
             <li><strong>O cache de planos é preenchido com muitos planos de uso único de consultas ad hoc</strong>. Isso significa que a memória é usada de forma menos eficiente. Também significa que os planos que poderiam ser reutilizáveis podem ser descartados do cache devido à pressão de memória, exigindo que sejam compilados novamente quando as consultas forem executadas novamente.</li>
             <li><strong>A compilação desses planos de uso único desperdiça CPU</strong>. A compilação é cara, usando quantidades relativamente grandes de CPU, e a compilação repetida de planos para consultas ad hoc, que provavelmente não serão reutilizados, é apenas um desperdício de recursos.</li>
         </ol>
+
         <p>Casos em que a falta de parametrização está causando uma compilação excessiva de planos, ou onde a parametrização simples (ou forçada) é tentada, mas falha, podem ser identificados usando os seguintes contadores dos objetos de Estatísticas SQL no Monitor de Desempenho:</p>
+
         <ul>
             <li><strong>SQLServer: SQL Statistics: SQL Compilations/Sec</strong></li>
             <li><strong>SQLServer: SQL Statistics: Auto-Param Attempts/Sec</strong></li>
             <li><strong>SQLServer: SQL Statistics: Failed Auto-Param/Sec</strong></li>
         </ul>
+
         <p>Referência: <a href="http://msdn.microsoft.com/en-us/library/ms190911(SQL.100).aspx" target="_blank" rel="external">http://msdn.microsoft.com/en-us/library/ms190911(SQL.100).aspx</a>.</p>
+
         <p>Se as consultas ad hoc não parametrizadas estiverem causando um problema, há algumas opções para resolvê-lo. A primeira e melhor opção é corrigir o problema na origem, no aplicativo que realiza as chamadas. Se isso não for possível, existem configurações no SQL Server que podem ser alteradas para amenizar o problema.</p>
+
         <h2>Corrigindo o aplicativo</h2>
+
         <p>Se for possível alterar o aplicativo que está enviando essas consultas ad hoc não parametrizadas para o SQL Server, essa opção deve ser escolhida. Isso pode envolver a migração do acesso aos dados de consultas ad hoc incorporadas no código da interface para procedimentos armazenados, ou pode envolver apenas a alteração das consultas ad hoc incorporadas no código da interface para suas versões parametrizadas. A Listagem 3.18 mostra uma consulta não parametrizada sendo enviada ao SQL Server.</p>
-        <pre>
-            <code>
-        cmd.CommandType = CommandType.Text;
-        cmd.CommandText = @"SELECT soh.SalesOrderNumber,
-                                sod.ProductID
-                        FROM   Sales.SalesOrderHeader AS soh
-                                  INNER JOIN Sales.SalesOrderDetail AS sod
-                                         ON soh.SalesOrderID = sod.SalesOrderID
-                        WHERE  soh.SalesOrderNumber = '" + txtSalesOrderNo.Text + "'";
+
+        <div id="container">
+            <pre><code>
+cmd.CommandType = CommandType.Text;
+cmd.CommandText = @"SELECT soh.SalesOrderNumber,
+                           sod.ProductID
+                    FROM   Sales.SalesOrderHeader AS soh
+                           INNER JOIN Sales.SalesOrderDetail AS sod
+                                     ON soh.SalesOrderID = sod.SalesOrderID
+                    WHERE  soh.SalesOrderNumber = '" + txtSalesOrderNo.Text + "'";
         
-        dtrSalesOrders = cmd.ExecuteReader();
-            </code>
-        </pre>
-        <p><strong>Listagem 3.18</strong>: Uma consulta não parametrizada sendo enviada ao SQL Server.</p>
+dtrSalesOrders = cmd.ExecuteReader();
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 3.18</strong>: Uma consulta não parametrizada sendo enviada ao SQL Server.</p>
+
         <p>A Listagem 3.19 mostra a mesma consulta, mas agora em uma forma parametrizada que permitirá o reuso do plano.</p>
-        <pre>
-            <code>
-        dtrSalesOrders.Close();
-        cmd.CommandType = CommandType.Text;
-        cmd.CommandText = @"SELECT soh.SalesOrderNumber,
-                                sod.ProductID
-                        FROM   Sales.SalesOrderHeader AS soh
-                                  INNER JOIN Sales.SalesOrderDetail AS sod
-                                         ON soh.SalesOrderID = sod.SalesOrderID
-                        WHERE  soh.SalesOrderNumber = @SalesOrderNo";
-        cmd.Parameters.Add("@SalesOrderNo", SqlDbType.NVarChar, 50);
-        cmd.Parameters["@SalesOrderNo"].Value = txtSalesOrderNo.Text;
+
+        <div id="container">
+            <pre><code>
+dtrSalesOrders.Close();
+cmd.CommandType = CommandType.Text;
+cmd.CommandText = @"SELECT soh.SalesOrderNumber,
+                            sod.ProductID
+                    FROM   Sales.SalesOrderHeader AS soh
+                           INNER JOIN Sales.SalesOrderDetail AS sod
+                                     ON soh.SalesOrderID = sod.SalesOrderID
+                    WHERE  soh.SalesOrderNumber = @SalesOrderNo";
+cmd.Parameters.Add("@SalesOrderNo", SqlDbType.NVarChar, 50);
+cmd.Parameters["@SalesOrderNo"].Value = txtSalesOrderNo.Text;
         
-        dtrSalesOrders = cmd.ExecuteReader();
-            </code>
-        </pre>
-        <p><strong>Listagem 3.19</strong>: Uma consulta parametrizada sendo enviada ao SQL Server.</p>
+dtrSalesOrders = cmd.ExecuteReader();
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 3.19</strong>: Uma consulta parametrizada sendo enviada ao SQL Server.</p>
+
         <p>Se não for possível alterar o aplicativo, como muitas vezes ocorre com aplicativos de fornecedores, ou quando o código-fonte do aplicativo não está disponível, existem duas opções no SQL Server que podem ajudar a aliviar o problema: <strong>parametrização forçada</strong> e <strong>otimização para cargas de trabalho ad hoc</strong>.</p>
+
         <h2>Parametrização forçada no SQL Server</h2>
+
         <p>O SQL Server 2005 e versões posteriores oferecem a capacidade de definir a opção <code>PARAMETERIZATION</code> em nível de banco de dados como <code>FORCED</code>, usando a instrução <code>ALTER DATABASE</code>, conforme mostrado na Listagem 3.20. Isso forçará todas as consultas ad hoc nesse banco de dados a serem parametrizadas antes do processo de compilação iniciar.</p>
-        <pre><code>ALTER DATABASE AdventureWorks SET PARAMETERIZATION FORCED</code></pre>
-        <p><strong>Listagem 3.20</strong>: Definindo a opção <code>PARAMETERIZATION</code> como <code>FORCED</code>.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>ALTER DATABASE</cls> AdventureWorks <cls>SET PARAMETERIZATION FORCED</cls>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 3.20</strong>: Definindo a opção <code>PARAMETERIZATION</code> como <code>FORCED</code>.</p>
+
         <p>Se você executar esse comando e depois executar novamente as três consultas da Listagem 3.17, a consulta que o Otimizador de Consulta do SQL recebe para otimizar será a versão parametrizada, e você verá que apenas um plano será criado em cache, e não três.</p>
+
         <p>Existem possíveis desvantagens no uso da parametrização forçada, pois essa configuração obriga o SQL a usar um plano para todas as consultas correspondentes, independentemente dos valores literais, o que significa que há uma possibilidade dos mesmos problemas de parameter sniffing aos quais as stored procedures estão suscetíveis. Se ocorrer um problema desse tipo, ele poderá ser investigado e resolvido de maneira semelhante ao discutido anteriormente neste capítulo para as stored procedures.</p>
+
         <h2>Otimização para cargas de trabalho ad hoc</h2>
+
         <p>No SQL Server 2008 e versões posteriores, podemos usar a opção "<code>optimize for ad hoc workloads</code>", que é uma configuração em nível de servidor, ou seja, afetará todos os bancos de dados no servidor (ao contrário da parametrização forçada, que é específica do banco de dados).</p>
+
         <p>Com essa configuração habilitada, o SQL Server não armazena em cache o plano de uma consulta ad hoc na primeira vez em que ela é encontrada. Em vez disso, é armazenado um plano "stub" que indica apenas que a consulta foi vista anteriormente. Somente se a consulta for vista novamente é que o plano será armazenado em cache. Isso não reduz o número de compilações para consultas ad hoc, mas torna menos provável que o cache de planos cresça tanto, pois o stub inicial ocupa muito pouca memória. Assim, reduz as chances de que outros planos que poderiam ser reutilizáveis sejam descartados devido à pressão de memória.</p>
+
         <p>Para habilitar a configuração "<code>optimize for ad hoc workloads</code>", use o procedimento armazenado <code>sp_configure</code>, conforme mostrado na Listagem 3.21.</p>
-        <pre>
-            <code>
-        EXEC sp_configure 'show advanced options',1
-        RECONFIGURE
-        EXEC sp_configure 'optimize for ad hoc workloads',1
-        RECONFIGURE
-            </code>
-        </pre>
-        <p><strong>Listagem 3.21</strong>: Habilitando a configuração "<code>optimize for ad hoc workloads</code>".</p>
+
+        <div id="container">
+            <pre><code>
+<cls>EXEC</cls> <proc>sp_configure</proc> <string>'show advanced options'</string>,1
+<cls>RECONFIGURE</cls>
+<cls>EXEC</cls> <proc>sp_configure</proc> 'optimize for ad hoc workloads',1
+<cls>RECONFIGURE</cls>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 3.21</strong>: Habilitando a configuração "<code>optimize for ad hoc workloads</code>".</p>
+
         <h3>Paralelismo inadequado</h3>
+
         <p>O SQL Server é projetado para ser capaz de aproveitar vários processadores ao processar solicitações de usuários. O paralelismo de consulta é o mecanismo usado pelo mecanismo de execução de consulta do SQL para dividir o trabalho de uma consulta em várias threads, cada uma das quais será executada em um agendador separado. As consultas são paralelizadas no nível do operador; em outras palavras, se a consulta for executada em paralelo, alguns dos operadores da consulta podem ser executados em sua forma paralela, enquanto outros não.</p>
         <img src="imagens/fig38.PNG" alt="Plano de execução mostrando que os operadores estão sendo executados em paralelo">
         <p><strong>Figura 3.8</strong>: Plano de execução mostrando que os operadores estão sendo executados em paralelo.</p>
