@@ -12,7 +12,7 @@
         <h2>Um Guia para o DBA Acidental</h2>
     </header>
     <nav>
-		<a href="index.html" target="_self">Capa</a> | 
+		<a href="index.html" target="_self">Índice</a> | 
 		<a href="abertura.html" target="_self">Abertura</a>
 		<a href="introducao.html" target="_self">Introdução</a>
 		<a href="cap01.html" target="_self">Cap.1</a>
@@ -31,7 +31,7 @@
         
         <p>Uma vez confirmado que o alto uso da CPU é devido ao processo do SQL Server, e o problema foi isolado para uma consulta específica (ou conjunto de consultas), podemos buscar aliviar a pressão da CPU por meio de mudanças no design, como ajustar consultas que consomem muita CPU, adicionar índices apropriados, substituir consultas SQL improvisadas por stored procedures para melhorar a reutilização de planos e assim por diante, ou ajustar as configurações de configuração do SQL Server e do Windows.</p>
         
-        <h2>Investigando a Pressão da CPU</h2>
+        <h2 id="investigando">Investigando a Pressão da CPU</h2>
         
         <p>Nesta seção, discutiremos as três principais ferramentas usadas para medir o uso da CPU e diagnosticar a pressão da CPU no SQL Server:</p>
         
@@ -41,7 +41,7 @@
             <li><strong>Dynamic Management Views</strong> - uma coleção de objetos do sistema que fornecem dados instantâneos e agregados sobre o uso de recursos no SQL Server.</li>
         </ul>
         
-        <h3>Performance Monitor</h3>
+        <h3 id="performance">Performance Monitor</h3>
         
         <p>Se o seu sistema SQL Server estiver enfrentando uma atividade excessivamente alta da CPU, a primeira ferramenta à qual você deve recorrer é o <strng>Performance Monitor</strng> (PerfMon). Essa ferramenta de monitoramento do Windows irá confirmar se o uso excessivo da CPU é devido à atividade do SQL Server ou se é causado por outros processos no servidor ou pelo próprio sistema operacional. Não faz sentido gastar tempo e energia valiosos investigando o SQL Server por uso excessivo da CPU se a causa raiz for um processo não relacionado ao SQL Server.</p>
         
@@ -77,13 +77,15 @@
             <p><em>Em uma máquina virtual (VM), o </em><code>%ProcessorTime</code> <em>é a porcentagem dos recursos alocados para a VM que está sendo utilizada, e não a porcentagem alocada ao hardware real. Portanto, se a VM tiver sido alocada com recursos de CPU muito mínimos, o PerfMon pode mostrar um </em><code>%ProcessorTime</code> <em>muito alto, mesmo que as CPUs reais estejam sendo pouco utilizadas. Um dos primeiros passos ao investigar alto uso da CPU em uma máquina virtual é verificar o uso de hardware da máquina virtual como um todo e garantir que as alocações de recursos sejam razoáveis.</em></p>
         </div>
 
-        <h3>SQL Trace</h3>
+        <h3 id="trace">SQL Trace</h3>
 
         <p>A ferramenta Profiler incluída no SQL Server pode ser usada para examinar os detalhes dos comandos que estão sendo executados em um servidor SQL. É uma ferramenta útil para investigar os detalhes de problemas específicos depois que o problema geral foi identificado. A interface gráfica do Profiler faz uso de um conjunto de stored procedures, conhecidas coletivamente como <strong>SQL Trace</strong>. A própria interface gráfica deve ser usada com cautela em servidores mais movimentados, pois pode ter um efeito adverso no desempenho geral e na estabilidade do servidor. Em vez disso, deve-se executar um trace no lado do servidor, com a saída direcionada para um arquivo em uma unidade local rápida.</p>
         
         <p>O principal uso do SQL Trace é identificar consultas específicas que estão consumindo grandes quantidades de CPU. É menos útil para uma análise pontual do que as Dynamic Management Views, sendo mais útil para capturar cargas de trabalho para análise. Com as Dynamic Management Views (como <code>sys.dm_exec_requests</code>), é possível acompanhar o aumento do uso de recursos enquanto a consulta ainda está em execução, enquanto com o SQL Trace, a instrução ou lote deve ser concluído antes que o evento que mostra o uso total de recursos seja acionado.</p>
+
         <p>Para capturar um conjunto de consultas que estão usando quantidades excessivas de CPU, é necessário executar um trace durante períodos de alto uso da CPU. Os detalhes sobre como configurar e executar um trace são apresentados no <a href="cap05.html" target="_self">Capítulo 5</a> e não serão repetidos aqui. A consideração adicional ao executar um trace para investigar consultas que consomem grandes quantidades de <strong>CPU</strong> é adicionar um filtro na coluna de CPU para evitar capturar um grande número de consultas sem interesse.</p>
-        <h3>Dynamic Management Views (DMVs)</h3>
+
+        <h3 id="dmv">Dynamic Management Views (DMVs)</h3>
 
         <p>Várias Dynamic Management Views (DMVs) fornecem uma variedade de informações que podem ajudar a diagnosticar problemas relacionados à CPU. Essas informações incluem estatísticas de desempenho agregadas das consultas, estatísticas de espera agregadas, detalhes do que está sendo executado, o que está esperando tempo de processamento, o que está esperando por outros recursos e outras informações que são difíceis ou impossíveis de obter de outra forma. Podemos investigar o alto uso da CPU pelo SQL Server examinando as estatísticas de espera relacionadas à CPU, os detalhes do escalonador e as estatísticas de desempenho agregadas das consultas, da seguinte forma:</p>
         
@@ -95,13 +97,13 @@
             <li>Observar o uso de recursos das consultas em execução atualmente com <code>sys.dm_exec_requests</code>.</li>
         </ul>
         
-        <h2>Investigando estatísticas de espera relacionadas à CPU</h2>
+        <h2 id="investigando2">Investigando estatísticas de espera relacionadas à CPU</h2>
 
         <p>Sempre que uma sessão precisa esperar antes que o trabalho solicitado possa continuar, o SQL Server registra o motivo da espera (o recurso pelo qual está esperando) e o tempo de espera. A DMV <code>sys.dm_os_wait_stats</code> expõe essas estatísticas de espera, agregadas em todas as sessões desde a última reinicialização do servidor ou desde a última vez em que as estatísticas de espera foram apagadas com o comando <code>DBCC SQLPERF('sys.dm_os_wait_stats', CLEAR)</code>. Essa DMV pode ser usada, entre outras coisas, para confirmar a pressão da CPU e estabelecer os tipos de espera mais comuns que um sistema com restrição de CPU está enfrentando.</p>
         
         <p>Vale ressaltar que algumas ferramentas de monitoramento de terceiros dependem das estatísticas nesta DMV não serem apagadas entre reinicializações do servidor, pois, se forem apagadas, isso pode afetar a precisão das informações exibidas por essas ferramentas de monitoramento.</p>
 
-        <h3>Tempo de espera do sinal</h3>
+        <h3 id="waittime">Tempo de espera do sinal</h3>
         
         <p>Junto com uma coluna <code>wait_type</code>, que indica o tipo de espera, o DMV <code>sys.dm_os_wait_stats</code> retorna vários tempos de espera úteis, incluindo:</p>
         
@@ -165,7 +167,7 @@
 
         <p>Três tipos de espera interessantes para se observar, em relação à pressão da CPU, são <code>SOS_SCHEDULER_YIELD</code>, <code>CXPACKET</code> e <code>CMEMTHREAD</code>.</p>
 
-        <h3>Esperas <code>SOS_SCHEDULER_YIELD</code></h3>
+        <h3 id="esperas">Esperas <code>SOS_SCHEDULER_YIELD</code></h3>
 
         <p>O agendador SQL é um agendador cooperativo de multitarefa. Isso significa que ele depende das consultas em execução para voluntariamente ceder a CPU após um determinado tempo de execução. Em contraste, o agendador do Windows é um agendador de multitarefa preemptivo, o que significa que ele remove as tarefas da CPU após um determinado tempo.</p>
         
@@ -175,17 +177,17 @@
         
         <p>Se as consultas mostrarem tempos de espera elevados em <code>sys.dm_exec_requests</code> ou <code>sys.dm_os_waiting_tasks</code> para o tipo de espera <code>SOS_SCHEDULER_YIELD</code>, isso indica que a consulta é extremamente intensiva em CPU. Se houver tempos de espera elevados para esse tipo de espera em geral no servidor, pode indicar que há muitas consultas intensivas em CPU, que podem precisar de otimização, ou que o servidor precisa de mais CPU. A atividade do agendador pode ser investigada ainda mais usando a DMV <code>sys.dm_os_schedulers</code> (discutida em breve).</p>
         
-        <h3>Esperas <code>CXPACKET</code></h3>
+        <h3 id="esperas2">Esperas <code>CXPACKET</code></h3>
         
         <p>As esperas <code>CXPACKET</code> ocorrem durante a sincronização do iterador de troca do processador de consulta entre os workers, para uma consulta em execução em paralelo em vários processadores. Se o servidor hospeda um data warehouse ou um banco de dados de relatórios que recebe um baixo volume de consultas, mas processa grandes quantidades de dados, o paralelismo pode reduzir substancialmente o tempo necessário para executar essas consultas. No entanto, em contraste, se o servidor hospeda um banco de dados OLTP que possui muitas consultas e transações pequenas, o paralelismo pode afetar negativamente o throughput e o desempenho. Para mais discussão sobre esperas <code>CXPACKET</code> elevadas e como lidar com esse problema, consulte a seção <em>Paralelismo inadequado</em>, posteriormente.</p>
         
-        <h3>Esperas <code>CMEMTHREAD</code></h3>
+        <h3 id="esperas3">Esperas <code>CMEMTHREAD</code></h3>
         
         <p>As esperas <code>CMEMTHREAD</code> são esperas por objetos de memória sincronizados. Alguns objetos de memória podem ser acessados por vários threads simultaneamente, enquanto outros não podem. Quando vários threads tentam acessar um objeto de memória, normalmente um cache, que deve ser acessado por um thread de cada vez, os threads em espera recebem uma espera <code>CMEMTHREAD</code>.</p>
         
         <p>Em geral, as esperas <code>CMEMTHREAD</code> não são comuns ou duradouras. No entanto, há um problema de memória conhecido no SQL Server 2005, em que, sob certas circunstâncias, um servidor pode mostrar alto uso de CPU, esperas <code>CMEMTHREAD</code> muito altas e consultas com desempenho muito ruim. Os detalhes disso serão discutidos posteriormente, na seção <em>TokenAndPermUser-Store</em>.</p>
         
-        <h2>Investigando as filas do agendador</h2>
+        <h2 id="investigando3">Investigando as filas do agendador</h2>
         
         <p>A DMV <code>sys.dm_os_schedulers</code> pode identificar se uma instância do SQL está com restrição de CPU ou não. Esta DMV retorna uma linha para cada um dos agendadores do SQL Server e lista o número total de tarefas atribuídas a cada agendador, bem como o número que está pronto para execução.</p>
         
@@ -207,7 +209,7 @@
         
         <p>O filtro para agendadores abaixo de 255 remove, do conjunto de resultados, os numerosos agendadores ocultos no SQL Server, que são usados para backups, a Conexão Administrativa Dedicada (DAC) e assim por diante, e não são de interesse ao investigar a carga geral da CPU.</p>
         
-        <h2>Identificando consultas intensivas em CPU</h2>
+        <h2 id="identificando">Identificando consultas intensivas em CPU</h2>
         
         <p>Para determinar as consultas de pior desempenho no cache de plano do SQL Server, podem ser utilizadas as DMVs <code>sys.dm_exec_query_stats</code> e <code>sys.dm_exec_sql_text</code>. A DMV <code>sys.dm_exec_query_stats</code> fornece estatísticas agregadas e retorna uma linha para cada instrução de consulta no plano em cache. Muitas das colunas são contadores incrementais e fornecem informações sobre quantas vezes uma consulta foi executada e os recursos que foram utilizados. Por exemplo, as colunas <code>*_worker_time</code> representam o tempo gasto na CPU e as colunas <code>*_elapsed_time</code> mostram o tempo total de execução.</p>
         
@@ -256,7 +258,7 @@
         
         <p>Ainda é possível ter uma boa ideia das consultas que foram executadas e como foram executadas, mas a única maneira de garantir uma análise verdadeiramente imparcial é limpar o cache e depois realizar a análise após um período de tempo definido. No entanto, limpar o cache em um servidor de produção pode não ser a melhor ideia, especialmente se esse servidor já estiver conhecido por ter restrições de CPU. Por isso, se uma análise abrangente for necessária, recomendo o uso de rastreamento no lado do servidor para capturar todas as consultas em execução durante um determinado período de tempo.</p>
         
-        <h2>Causas comuns de alto uso de CPU</h2>
+        <h2 id="causas">Causas comuns de alto uso de CPU</h2>
         
         <p>Independentemente do tamanho e custo do hardware e tecnologia que sustentam suas instalações do SQL Server, sempre há o risco de uma ou mais declarações T-SQL mal ajustadas causarem uma utilização excessiva dos recursos.</p>
         
@@ -264,7 +266,7 @@
         
         <p>Outra possibilidade é que o otimizador produza um plano que seja ótimo para uma execução da consulta (geralmente aquela que acionou a otimização) e não para outras execuções. Isso é comumente conhecido como "parameter sniffing", embora seja mais apropriado se referir a ele como "parameter sniffing inadequado", uma vez que o parameter sniffing em geral é algo bom, como discutiremos mais adiante no capítulo.</p>
         
-        <h3>Índices ausentes</h3>
+        <h3 id="indices">Índices ausentes</h3>
         
         <p>Pode surpreender algumas pessoas saber que índices ausentes podem causar alto uso de CPU, mas, na verdade, a falta de indexação apropriada é uma das causas mais comuns de alta utilização de CPU e E/S no SQL Server. Quando um índice apropriado não existe para satisfazer uma consulta, as leituras em tabela resultantes podem causar um uso significativo de CPU, já que o SQL precisa ler e processar muito mais linhas do que o necessário para satisfazer a consulta.</p>
         
@@ -329,7 +331,7 @@ SQL Server Execution Times:
 
         <p>Consulte o <a href="cap05.html" target="_self">Capítulo 5</a> para obter mais informações sobre índices ausentes.</p>
 
-        <h3>Estatísticas desatualizadas</h3>
+        <h3 id="estatisticas">Estatísticas desatualizadas</h3>
 
         <p>O Otimizador do SQL Server usa estatísticas para calcular a cardinalidade estimada para vários operadores de consulta. Essa cardinalidade, essencialmente o número de linhas, afeta o custo dos operadores. O custo dos operadores, por sua vez, determina o custo do plano. Se a estimativa de cardinalidade estiver incorreta, devido a estatísticas desatualizadas, o custo que o otimizador calcula para os operadores também estará incorreto, levando o otimizador a selecionar um plano que tem um custo estimado baixo, mas um custo real muito alto quando é executado.</p>
         
@@ -346,7 +348,7 @@ SQL Server Execution Times:
             <li>Um trabalho pode ser criado para atualizar as estatísticas específicas que sofrem com atualizações insuficientes e, consequentemente, resultam em problemas de desempenho. Esse trabalho pode ser agendado com a frequência necessária. Já ouvi falar de casos em que um trabalho desse tipo é executado a cada hora.</li>
         </ol>
 
-        <h3>Predicados não-SARGáveis</h3>
+        <h3 id="predicados">Predicados não-SARGáveis</h3>
         
         <p>SARGável, em que SARG significa Argumento de Busca, é um daqueles termos inventados irritantes que nós, como profissionais de TI, adoramos usar; simplesmente significa que um predicado pode ser usado em uma operação de busca de índice. As regras para predicados SARGáveis, em geral, são que a coluna deve ser comparada diretamente (igualdade ou desigualdade) a uma expressão, e qualquer função especificada na coluna tornará o predicado não-SARGável. Em outras palavras, <code>WHERE AlgumaFuncao(Coluna) = @Valor</code> não é SARGável, enquanto <code>WHERE Coluna = AlgumaOutraFuncao(@Valor)</code> é SARGável. Observe que a SARGabilidade não exclui o uso de operadores como <code>LIKE</code> ou <code>BETWEEN</code> (ambos são comparações de desigualdade) ou <code>IN</code> (tratado como um conjunto de comparações de igualdade).</p>
         <p>Predicados não-SARGáveis podem resultar em varreduras de tabela ou de índice e, assim como no caso de índices ausentes, isso causará um uso significativo de CPU, pois o SQL precisa ler e processar muito mais linhas do que o necessário. A Listagem 3.7 mostra um exemplo de um predicado da cláusula <code>WHERE</code> que é não-SARGável devido ao uso de algumas funções de manipulação de datas na coluna <code>ModifiedDate</code>. Este exemplo pressupõe que um índice tenha sido adicionado em <code>ModifiedDate</code>, já que não há um índice desse tipo no banco de dados padrão <code>AdventureWorks</code>.</p>
@@ -418,7 +420,7 @@ SQL Server Execution Times:
 
         <p>No primeiro caso, qualquer linha com um valor <code>NULL</code> será excluída porque o <code>NULL</code> é convertido para zero e o filtro é para valores maiores que zero. No segundo caso, qualquer linha com um valor <code>NULL</code> será excluída porque os <code>NULLs</code> nunca retornam verdadeiro quando comparados a qualquer valor usando os operadores de igualdade (=), diferença (<>), menor que (<), maior que (>), ou qualquer outro operador de comparação. Eles só retornam verdadeiro para verificações de <code>IS NULL</code> ou <code>IS NOT NULL</code>. Portanto, ambos os predicados alcançam o mesmo resultado, mas apenas o segundo permite o uso de pesquisas de índice.</p>
 
-        <h3>Conversões implícitas</h3>
+        <h3 id="conversoes">Conversões implícitas</h3>
 
         <p>Uma conversão implícita ocorre devido à comparação de tipos de dados diferentes. O SQL não pode comparar valores de tipos diferentes e, portanto, é necessário converter uma das colunas envolvidas para o mesmo tipo de dados que o outro, a fim de realizar a comparação.</p>
 
@@ -455,7 +457,7 @@ SQL Server Execution Times:
 
         <p>Se estiver usando bibliotecas de acesso a dados como o JDBC, verifique as propriedades para garantir que elas não estejam passando todos os valores de string como <code>NVARCHAR</code>, independentemente do tipo de dados da coluna subjacente.</p>
 
-        <h3>Parameter sniffing</h3>
+        <h3 id="sniffing">Parameter sniffing</h3>
 
         <p>O "parameter sniffing" é um processo usado pelo SQL Server ao criar um plano de execução para uma stored procedure, função ou consulta parametrizada. Na primeira vez em que o plano é compilado, o SQL Server examina, ou "sniffa", os valores dos parâmetros de entrada fornecidos e os utiliza, em conjunto com as estatísticas das colunas, para estimar o número de linhas que serão afetadas pela consulta. Em seguida, usa essa estimativa para calcular o custo de várias possíveis execuções do plano. Um problema surge apenas se os valores que foram passados como parâmetros de entrada na criação inicial do plano resultarem em um número de linhas atípico em relação ao que será obtido em futuras execuções da procedure. O "parameter sniffing" ocorre apenas no momento em que um plano é compilado ou recompilado, e todas as execuções subsequentes da stored procedure, função ou consulta parametrizada usarão o mesmo plano.</p>
         <p>Durante a compilação inicial, apenas os valores dos parâmetros de entrada podem ser "sniffados", pois as variáveis locais ainda não têm valor. Se uma instrução dentro do lote for recompilada, tanto os valores dos parâmetros quanto das variáveis podem ser "sniffados", pois as variáveis terão valores naquele momento.</p>
@@ -583,7 +585,7 @@ CPU time = 47 ms, elapsed time = 182 ms.100
         
         <p>Existem várias maneiras diferentes de lidar com problemas de parameter sniffing, dependendo da situação e da versão do SQL Server que você está usando.</p>
         
-        <h2>Trace Flag 4136</h2>
+        <h2 id="4136">Trace Flag 4136</h2>
         
         <p>O SQL Server 2008 introduziu uma opção para desativar completamente o parameter sniffing para uma instância do SQL Server, simplesmente ativando o Trace Flag 4136. Essa opção foi adicionada no SQL Server 2008 SP1 CU7 e no SQL Server 2008 R2 CU2, e também foi retroportada para o SQL Server 2005 no SP3 CU9.</p>
         
@@ -593,7 +595,7 @@ CPU time = 47 ms, elapsed time = 182 ms.100
         
         <p>Em resumo, embora essa opção esteja disponível, o parameter sniffing é benéfico para a maioria dos procedimentos que são escritos para usar valores típicos. Desativar o parameter sniffing pode afetar inadvertidamente esses planos de maneira negativa. Como tal, esse Trace Flag deve ser considerado como último recurso absoluto se nada mais resolver o problema.</p>
         
-        <h2>Usando o hint OPTIMIZE FOR</h2>
+        <h2 id="optimize">Usando o hint OPTIMIZE FOR</h2>
         
         <p>No SQL Server 2005 e posterior, podemos usar a dica <code>OPTIMIZE FOR</code> para especificar um valor de parâmetro para o otimizador usar ao compilar um plano, conforme mostrado no Listing 3.14.</p>
         
@@ -621,7 +623,7 @@ CPU time = 47 ms, elapsed time = 182 ms.100
 
         <p>No SQL Server 2008, isso foi "estendido" para fornecer a dica <code>OPTIMIZE FOR UNKNOWN</code>, que instrui o SQL Server a não usar o "parameter sniffing" de forma alguma. Isso permite um controle de "parameter sniffing" consulta por consulta, enquanto o Trace Flag mencionado anteriormente controla a configuração para toda a instância. Na maioria dos casos, a dica é uma solução mais desejável, pois, em geral, o "parameter sniffing" é algo positivo.</p>
 
-        <h2>Opções de recompilação</h2>
+        <h2 id="recomp">Opções de recompilação</h2>
 
         <p>Podemos usar a opção <code>WITH RECOMPILE</code> ao criar uma stored procedure como outra possível solução para problemas de "parameter sniffing". Isso significa que um plano nunca será armazenado em cache para a procedure, pois força uma recompilação e geração de um novo plano a cada execução. Isso significa que as estimativas de linhas serão sempre baseadas no valor atual do parâmetro, mas ao custo de aumentar o tempo de execução da procedure.</p>
 
@@ -666,7 +668,7 @@ CPU time = 47 ms, elapsed time = 182 ms.100
 
         <p>Essas técnicas são úteis quando o custo adicional das compilações é pequeno em comparação com a degradação de desempenho causada pelo reuso de planos inadequados. A dica <code>OPTION(RECOMPILE)</code> deve ser usada sempre que possível, em preferência ao <code>WITH RECOMPILE</code> para um procedimento armazenado, a fim de manter o impacto do processo de compilação repetida o mais baixo possível.</p>
 
-        <h3>Consultas não parametrizadas ad hoc</h3>
+        <h3 id="consultas">Consultas não parametrizadas ad hoc</h3>
 
         <p>As consultas ad hoc são declarações enviadas ao otimizador que não são predefinidas usando stored procedures, <code>sp_executesql</code> ou outras maneiras de forçar o reuso de planos de execução. O SQL Server sempre verificará o cache de planos para ver se um plano adequado pode ser reutilizado para uma determinada consulta, antes de passar pelo processo completo de geração de um novo plano de execução e armazená-lo em cache.</p>
 
@@ -722,7 +724,7 @@ CPU time = 47 ms, elapsed time = 182 ms.100
 
         <p>Se as consultas ad hoc não parametrizadas estiverem causando um problema, há algumas opções para resolvê-lo. A primeira e melhor opção é corrigir o problema na origem, no aplicativo que realiza as chamadas. Se isso não for possível, existem configurações no SQL Server que podem ser alteradas para amenizar o problema.</p>
 
-        <h2>Corrigindo o aplicativo</h2>
+        <h2 id="corrigir">Corrigindo o aplicativo</h2>
 
         <p>Se for possível alterar o aplicativo que está enviando essas consultas ad hoc não parametrizadas para o SQL Server, essa opção deve ser escolhida. Isso pode envolver a migração do acesso aos dados de consultas ad hoc incorporadas no código da interface para procedimentos armazenados, ou pode envolver apenas a alteração das consultas ad hoc incorporadas no código da interface para suas versões parametrizadas. A Listagem 3.18 mostra uma consulta não parametrizada sendo enviada ao SQL Server.</p>
 
@@ -765,7 +767,7 @@ dtrSalesOrders = cmd.ExecuteReader();
 
         <p>Se não for possível alterar o aplicativo, como muitas vezes ocorre com aplicativos de fornecedores, ou quando o código-fonte do aplicativo não está disponível, existem duas opções no SQL Server que podem ajudar a aliviar o problema: <strong>parametrização forçada</strong> e <strong>otimização para cargas de trabalho ad hoc</strong>.</p>
 
-        <h2>Parametrização forçada no SQL Server</h2>
+        <h2 id="parametro">Parametrização forçada no SQL Server</h2>
 
         <p>O SQL Server 2005 e versões posteriores oferecem a capacidade de definir a opção <code>PARAMETERIZATION</code> em nível de banco de dados como <code>FORCED</code>, usando a instrução <code>ALTER DATABASE</code>, conforme mostrado na Listagem 3.20. Isso forçará todas as consultas ad hoc nesse banco de dados a serem parametrizadas antes do processo de compilação iniciar.</p>
 
@@ -781,7 +783,7 @@ dtrSalesOrders = cmd.ExecuteReader();
 
         <p>Existem possíveis desvantagens no uso da parametrização forçada, pois essa configuração obriga o SQL a usar um plano para todas as consultas correspondentes, independentemente dos valores literais, o que significa que há uma possibilidade dos mesmos problemas de parameter sniffing aos quais as stored procedures estão suscetíveis. Se ocorrer um problema desse tipo, ele poderá ser investigado e resolvido de maneira semelhante ao discutido anteriormente neste capítulo para as stored procedures.</p>
 
-        <h2>Otimização para cargas de trabalho ad hoc</h2>
+        <h2 id="otimizacao">Otimização para cargas de trabalho ad hoc</h2>
 
         <p>No SQL Server 2008 e versões posteriores, podemos usar a opção "<code>optimize for ad hoc workloads</code>", que é uma configuração em nível de servidor, ou seja, afetará todos os bancos de dados no servidor (ao contrário da parametrização forçada, que é específica do banco de dados).</p>
 

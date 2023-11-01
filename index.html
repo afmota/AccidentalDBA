@@ -6,10 +6,6 @@
 	<title>DBA Acidental</title>
 	<link rel="stylesheet" href="estilo/style.css">
 	<style>
-		main p {
-			text-indent: 0px;
-		}
-
 		li.cap {
 			margin-top: 10px;
 		}
@@ -25,6 +21,14 @@
 
 		.n2 {
 		    margin-left: 25px;
+		}
+
+		main img {
+			box-shadow: 8px 8px 15px rgba(0, 0, 0, 0.562);
+		}
+
+		main p {
+			text-indent: 0px;
 		}
 
 		main a {
@@ -110,48 +114,48 @@
 				<li><a href="cap02.html#diagnostico" target="_self">Diagnosticando problemas de E/S de disco</a></li>
 				<li><a href="cap02.html#problemas" target="_self">Problemas Comuns de E/S de Disco</a></li>
 				<ul class="n2">
-					<li><a href="cap02.html#dimensao">Dimensionamento para capacidade em vez de desempenho de E/S</a></li>
-					<li><a href="cap02.html#isolamento">Isolamento incorreto da carga de trabalho</a></li>
-					<li><a href="cap02.html#alinhamento">Alinhamento incorreto de partições</a></li>
-					<li><a href="cap02.html#banda">Banda larga incorreta usando configurações SAN</a></li>
+					<li><a href="cap02.html#dimensao" target="_self">Dimensionamento para capacidade em vez de desempenho de E/S</a></li>
+					<li><a href="cap02.html#isolamento" target="_self">Isolamento incorreto da carga de trabalho</a></li>
+					<li><a href="cap02.html#alinhamento" target="_self">Alinhamento incorreto de partições</a></li>
+					<li><a href="cap02.html#banda" target="_self">Banda larga incorreta usando configurações SAN</a></li>
 				</ul>
-				<li><a href="cap02.html#resumo">Resumo</a></li>
+				<li><a href="cap02.html#resumo" target="_self">Resumo</a></li>
 			</ul>
 
-			<li class="cap">Capítulo 3: Utilização Elevada da CPU</li>
+			<li class="cap"><a href="cap03.html" target="_self" class="cap">Capítulo 3: Utilização Elevada da CPU</a></li>
 			<ul class="n1">
-				<li>Investigando a Pressão da CPU</li>
+				<li><a href="cap03.html#investigando" target="_self">Investigando a Pressão da CPU</a></li>
 				<ul class="n2">
-					<li>Performance Monitor</li>
-					<li>SQL Trace</li>
-					<li>Dynamic Management Views (DMVs)</li>
+					<li><a href="cap03.html#performance" target="_self">Performance Monitor</a></li>
+					<li><a href="cap03.html#trace" target="_self">SQL Trace</a></li>
+					<li><a href="cap03.html#dmv" target="_self">Dynamic Management Views (DMVs)</a></li>
 				</ul>
-				<li>Investigando estatísticas de espera relacionadas à CPU</li>
+				<li><a href="cap03.html#investigando2" target="_self">Investigando estatísticas de espera relacionadas à CPU</a></li>
 				<ul class="n2">
-					<li>Tempo de espera do sinal</li>
-					<li>Esperas <code>SOS_SCHEDULER_YIELD</code></li>
-					<li>Esperas <code>CXPACKET</code></li>
-					<li>Esperas <code>CMEMTHREAD</code></li>
+					<li><a href="cap03.html#waittime" target="_self">Tempo de espera do sinal</a></li>
+					<li><a href="cap03.html#esperas" target="_self">Esperas <code>SOS_SCHEDULER_YIELD</a></code></li>
+					<li><a href="cap03.html#esperas2" target="_self">Esperas <code>CXPACKET</code></a></li>
+					<li><a href="cap03.html#esperas3" target="_self">Esperas <code>CMEMTHREAD</code></a></li>
 				</ul>
-				<li>Investigando as filas do agendador</li>
-				<li>Identificando consultas intensivas em CPU</li>
-				<li>Causas comuns de alto uso de CPU</li>
+				<li><a href="cap03.html#investigando3" target="_self">Investigando as filas do agendador</a></li>
+				<li><a href="cap03.html#identificando" target="_self">Identificando consultas intensivas em CPU</a></li>
+				<li><a href="cap03.html#causas" target="_self">Causas comuns de alto uso de CPU</a></li>
 				<ul class="n2">
-					<li>Índices ausentes</li>
-					<li>Estatísticas desatualizadas</li>
-					<li>Predicados não-SARGáveis</li>
-					<li>Conversões implícitas</li>
-					<li>Parameter sniffing</li>
+					<li><a href="cap03.html#indices" target="_self">Índices ausentes</a></li>
+					<li><a href="cap03.html#estatisticas" target="_self">Estatísticas desatualizadas</a></li>
+					<li><a href="cap03.html#predicados" target="_self">Predicados não-SARGáveis</a></li>
+					<li><a href="cap03.html#conversoes" target="_self">Conversões implícitas</a></li>
+					<li><a href="cap03.html#sniffing" target="_self">Parameter sniffing</a></li>
 				</ul>
-				<li>Trace Flag 4136</li>
-				<li>Usando o hint <code>OPTIMIZE FOR</code></li>
-				<li>Opções de recompilação</li>
+				<li><a href="cap03.html#4136" target="_self">Trace Flag 4136</a></li>
+				<li><a href="cap03.html#optimize" target="_self">Usando o hint <code>OPTIMIZE FOR</code></a></li>
+				<li><a href="cap03.html#recomp" target="_self">Opções de recompilação</a></li>
 				<ul class="n2">
-					<li>Consultas não parametrizadas ad hoc</li>
+					<li><a href="cap03.html#consultas" target="_self">Consultas não parametrizadas ad hoc</a></li>
 				</ul>
-				<li>Corrigindo o aplicativo</li>
-				<li>Parametrização forçada no SQL Server</li>
-				<li>Otimização para cargas de trabalho ad hoc</li>
+				<li><a href="cap03.html#corrigir" target="_self">Corrigindo o aplicativo</a></li>
+				<li><a href="cap03.html#parametro" target="_self">Parametrização forçada no SQL Server</a></li>
+				<li><a href="cap03.html#otimizacao">Otimização para cargas de trabalho ad hoc</a></li>
 				<ul class="n2">
 					<li>Paralelismo inadequado</li>
 				</ul>
