@@ -6,13 +6,15 @@
     <title>DBA Acidental</title>
     <link rel="stylesheet" href="estilo/style.css">
 </head>
+
 <body>
     <header>
 		<h1>Troubleshooting SQL Server</h1>
 		<h2>Um Guia para o DBA Acidental</h2>	
 	</header>
+
     <nav>
-		<a href="index.html" target="_self">Capa</a>
+		<a href="index.html" target="_self">Índice</a>
 		<a href="abertura.html" target="_self">Abertura</a>
 		<a href="cap01.html" target="_self">Cap.1</a>
 		<a href="cap02.html" target="_self">Cap.2</a>
@@ -20,24 +22,41 @@
 		<a href="cap04.html" target="_self">Cap.4</a>
         <a href="cap05.html" target="_self">Cap.5</a>
 	</nav>
+
     <main>
         <h1>Introdução</h1>
+
         <p>Grande parte dos últimos seis anos da minha vida profissional foi dedicada a ajudar as pessoas a resolver problemas de desempenho relacionados ao SQL Server, seja no local de trabalho, como consultor em clientes, ou em vários fóruns de comunidades online, respondendo às perguntas das pessoas.</p>
+
         <p>Ao longo desse tempo, fui exposto a alguns problemas estranhos e maravilhosos do SQL Server, mas principalmente vi os mesmos problemas e as mesmas confusões surgirem repetidamente. Era apenas uma questão de tempo antes de eu chegar à conclusão imprudente de que deveria escrever um livro para explicar quais eram os problemas mais comuns, por que eles ocorriam e oferecer soluções sensatas e práticas, voltadas para a remoção da causa raiz do problema, em vez de simplesmente "tapar os buracos".</p>
+
         <p>Acabou se revelando uma tarefa muito mais desafiadora do que eu imaginava, por várias razões. Em primeiro lugar, este é, por sua própria natureza, um livro abrangente, que aborda tópicos que vão desde problemas de CPU até gerenciamento de memória, índices ausentes e logs de transação completos. Em segundo lugar, é surpreendente como alguns dos tópicos mais simples se tornam complexos quando você tenta escrevê-los em texto. Em terceiro lugar, a tecnologia muda rapidamente, e o solucionador de problemas, assim como os conselhos que ele oferece, devem se adaptar em conformidade. Houve vários casos na escrita deste livro em que uma mudança tecnológica significava que eu tinha que voltar e adaptar meu conselho original, ou onde minha própria opinião sobre o conteúdo e as metodologias de solução de problemas haviam evoluído a ponto de certas seções precisarem ser completamente reescritas.</p>
+
         <p>Apesar das ocasionais dificuldades, o que espero ter conseguido é um livro que aborda de forma clara e concisa os problemas mais comuns associados às versões atualmente suportadas do SQL Server, ou seja, SQL Server 2005, 2008 e 2008 R2. O primeiro capítulo explica minha abordagem básica para solução de problemas de desempenho e as ferramentas que utilizo. Ele enfatiza, em particular, como é raro que um problema possa ser diagnosticado olhando apenas para um único ponto de dados.</p>
+
         <p>A arte de domar um SQL Server indisciplinado é a arte de reunir as várias informações de que você precisa e, em seguida, montar o "quebra-cabeça" para que você tenha uma visão completa do que está acontecendo dentro de um servidor e uma compreensão real da causa raiz do problema.</p>
+
         <p>Os oito capítulos seguintes abordam as áreas em que vejo problemas surgindo com frequência alarmante: E/S de disco, alto uso de CPU, gerenciamento inadequado de memória, índices ausentes, bloqueios e deadlocks, logs de transação completos e perda acidental de dados.</p>
+
         <p>Em cada caso, descrevo os problemas mais comuns, por que eles ocorrem, como podem ser diagnosticados usando ferramentas como contadores do Monitor de Desempenho, Visualizações de Gerenciamento Dinâmico, rastreamento no lado do servidor, entre outros, e como resolvê-los.</p>
+
         <p>Ao aplicar os passos básicos que utilizo diariamente para solucionar esses problemas de desempenho, espero que você também possa começar a resolver os problemas de desempenho em seu ambiente de forma mais rápida e precisa.</p>
-        <h2>Para quem é este livro?</h2>
+
+        <h2 id="paraquem">Para quem é este livro?</h2>
+
         <p>O público principal deste livro é qualquer pessoa que se encontrou responsável pelo SQL Server "por acidente"; em outras palavras, os DBAs acidentais/involuntários e administradores de sistema que tiveram a responsabilidade de cuidar de bancos de dados do SQL Server adicionada às suas funções, porque há um SQL Server em seu ambiente e alguém precisa cuidar dele.</p>
+        
         <p>No entanto, os conceitos e metodologias de solução de problemas abordados neste livro podem ser aplicados por qualquer pessoa, incluindo administradores de banco de dados experientes, para identificar e resolver problemas comuns e aprender novas técnicas para gerenciar e manter o SQL Server. Qualquer pessoa que já tenha feito perguntas em um dos fóruns da comunidade provavelmente aprenderá algo novo com este livro.</p>
-        <h2>Exemplos de código</h2>
+        
+        <h2 id="exemplos">Exemplos de código</h2>
+
         <p>Ao longo deste livro, há scripts demonstrando várias maneiras de coletar dados de diagnóstico, e em alguns lugares, a apresentação do código completo foi adiada devido a restrições de espaço. Todo o código necessário para experimentar os exemplos neste livro pode ser obtido no seguinte URL:</p>
+
         <p><a href="http://www.simple-talk.com/RedGateBooks/JonathanKehayias/TroubleshootingSQLServer_Code.zip" target="_blank" rel="external">http://www.simple-talk.com/RedGateBooks/JonathanKehayias/TroubleshootingSQLServer_Code.zip</a></p>
+
         <p>Todos os exemplos devem ser executados em todas as versões do SQL Server a partir do SQL Server 2005, a menos que seja especificado de outra forma.</p>
     </main>
+    
     <footer>
         <P>Criado por Agnaldo Mota</P>
     </footer>

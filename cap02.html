@@ -12,7 +12,7 @@
         <h2>Um Guia para o DBA Acidental</h2>
     </header>
     <nav>
-		<a href="index.html" target="_self">Capa</a>
+		<a href="index.html" target="_self">Índice</a>
 		<a href="abertura.html" target="_self">Abertura</a>
 		<a href="introducao.html" target="_self">Introdução</a>
 		<a href="cap01.html" target="_self">Cap.1</a>
@@ -38,7 +38,7 @@
         
         <p>De longe, a melhor maneira de lidar com problemas de E/S de disco é trabalhar o mais duro possível durante a fase de design do sistema para evitá-los. A única maneira de ter certeza de que seu subsistema de E/S de disco atenderá aos seus requisitos de desempenho e taxa de transferência de E/S é entender quais são esses requisitos e testar o desempenho do seu subsistema de disco sob cargas realistas, usando uma ferramenta como o SQLIO ou IOmeter.</p>
         
-        <h2>Configuração de disco: Considerações Básicas</h2>
+        <h2 id="consideracoes">Configuração de disco: Considerações Básicas</h2>
         
         <p>A escalabilidade da memória melhorou substancialmente nos últimos anos. É relativamente barato fornecer mais capacidade de RAM para o SQL Server, para ajudar a minimizar a entrada/saída do disco. Da mesma forma, com processadores potentes com oito ou até doze núcleos físicos surgindo no mercado, muitos servidores modernos frequentemente possuem capacidade de CPU ociosa que, novamente, pode ser usada para ajudar a reduzir a pressão no sistema de entrada/saída do disco.</p>
         
@@ -46,7 +46,7 @@
         
         <p>Esta seção irá revisar brevemente algumas das principais considerações ao dimensionar e configurar o subsistema de disco e abordaremos cada um desses problemas conforme avançamos no capítulo.</p>
         
-        <h3>Tamanho do disco vs. throughput do disco</h3>
+        <h3 id="tamanho">Tamanho do disco vs. throughput do disco</h3>
         
         <p>Um dos erros mais comuns cometidos ao planejar e construir um subsistema de E/S de disco para o SQL Server é pensar puramente em termos de quanto espaço de disco é necessário, em vez do throughput do disco necessário para suportar a carga de trabalho transacional no banco de dados.</p>
         
@@ -68,7 +68,7 @@
             <p><em>Os discos de estado sólido modernos não possuem peças móveis, portanto, não estão sujeitos às mesmas limitações de throughput dos discos convencionais, e estão gradualmente empurrando o potencial de IOPS além das capacidades da maioria das grandes matrizes de discos convencionais, em um único dispositivo de hardware. Eles ainda são tecnologia relativamente nova e não são atualmente amplamente utilizados em sistemas de banco de dados transacionais, devido a considerações de custo e tempo de vida, e não são abordados mais neste capítulo. No entanto, eles podem redefinir o espaço de armazenamento no futuro próximo.</em></p>
         </div>
         
-        <h3>Leitura aleatória versus leitura sequencial</h3>
+        <h3 id="leitura">Leitura aleatória versus leitura sequencial</h3>
         
         <p>O bloco básico no SQL Server é conhecido como uma página, que tem tamanho de 8 KB. Para minimizar o número de solicitações de I/O ao ler dados do disco, o SQL Server usa um mecanismo de leitura antecipada que pode ler um número de páginas contíguas, até 128 páginas na edição Standard e 1.024 páginas na edição Enterprise, em uma única operação de I/O.</p>
         
@@ -80,7 +80,7 @@
         
         <p>A configuração de disco para os arquivos de dados do banco de dados deve ser otimizada para E/S de leitura aleatória de 64 KB e o desempenho deve ser testado para tamanhos de E/S de 8 KB, 64 KB, 128 KB e 256 KB para determinar a capacidade potencial de desempenho e throughput da configuração. Se o servidor estiver sendo usado principalmente para um grande armazém de dados ou um banco de dados de sistema de suporte à decisão (DSS), o subsistema de E/S deve ser testado para tamanhos de E/S maiores de até 1024 KB para operações de leitura adiante, dependendo do design do banco de dados e de como ele está sendo usado. No entanto, o <strong>log de transações</strong> no SQL Server realiza principalmente operações de gravação sequencial em tamanhos aleatórios de até 60 KB.</p>
         
-        <h2>Escolhendo o nível correto de RAID</h2>
+        <h2 id="escolha">Escolhendo o nível correto de RAID</h2>
         
         <p>RAID, sigla para Redundant Array of Independent Disks, é a tecnologia usada para atingir os seguintes objetivos:</p>
         
@@ -99,7 +99,7 @@
         
         <p>Existem vários níveis RAID disponíveis no mercado, cada um dos quais possui seus próprios custos e benefícios associados. Nas seções a seguir, examinaremos os níveis RAID padrão mais comuns (0, 1, 5 e 6), bem como os níveis RAID aninhados, como RAID 0+1 ou 1+0, em que uma matriz RAID é usada dentro de uma segunda matriz RAID. Explicaremos brevemente como funciona cada nível e seus méritos e desvantagens relativos para sistemas SQL Server.</p>
         
-        <h3>Uma breve visão geral das configurações RAID</h3>
+        <h3 id="visaogeral">Uma breve visão geral das configurações RAID</h3>
         
         <p>Os níveis RAID mais comuns usados com o SQL Server são RAID 1, 5, 6 e 1+0, já que estes garantem que os dados armazenados na matriz não serão perdidos ou danificados/corrompidos se um dos discos da matriz falhar catastroficamente. A proteção dos dados armazenados dentro do SQL Server deve ser considerada como o fator mais importante na seleção do nível RAID, seguida de perto pelo desempenho desejado para a característica da matriz de disco. A matriz de disco mais rápida do mundo não será útil se perder todas as informações da organização em uma única falha.</p>
         
@@ -178,7 +178,7 @@
         
         <p class="legenda"><strong>Figure 2.7</strong>: Implementação RAID 0+1.</p>
         
-        <h3>Considerações sobre o tamanho do disco e taxa de transferência</h3>
+        <h3 id="txtransf">Considerações sobre o tamanho do disco e taxa de transferência</h3>
         
         <p>Os discos rígidos modernos são muito maiores em tamanho do que os disponíveis anteriormente, possibilitando maiores capacidades com menos discos. No entanto, como discutido anteriormente, a compra de um pequeno número de discos grandes pode não ser a melhor opção em termos de desempenho de E/S e taxa de transferência. Por exemplo, considere um banco de dados com tamanho de 400 GB que realiza uma mistura equilibrada de operações de leitura e gravação aleatórias. O número de possíveis configurações de RAID e discos para esse banco de dados excede o espaço disponível para todo este livro. No entanto, algumas configurações potenciais são as seguintes:</p>
         
@@ -230,7 +230,7 @@
             <p><em>O SQLIOSim pode ser baixado no site da Microsoft em</em> <a href="http://support.microsoft.com/kb/231619/en-us" target="_blank" rel="external">http://support.microsoft.com/kb/231619/en-us</a>.</p>
         </div>
         
-        <h3>Considerações sobre a carga de trabalho</h3>
+        <h3 id="workload">Considerações sobre a carga de trabalho</h3>
         
         <p>Conforme discutido anteriormente, há muitos fatores que influenciarão as escolhas que você faz para o subsistema de E/S de disco, especialmente o nível RAID, como a frequência com que os dados são gravados em comparação com a leitura e se a E/S é predominantemente sequencial ou aleatória. Também é importante distribuir corretamente sua carga de trabalho pelos recursos de hardware, colocando arquivos de dados e log em discos separados e dedicados, e dando consideração especial ao banco de dados <code>tempdb</code>.</p>
         
@@ -267,11 +267,11 @@
             <p><em>O MVP do SQL Server, Paul Randal, fornece orientações sobre o problema do <code>PFS</code>, <code>GAM</code> e <code>SGAM</code> com o <code>tempdb</code> e o número apropriado de arquivos a serem configurados com base no número de processadores em suas postagens no blog: "Search Engine Q&A #12: Should you create multiple files for a user DB on a multi-core box?" (<a href="http://www.sqlskills.com/blogs/paul/post/Search-Engine-QA-12-Should-you-create-multiple-files-for-a-user-DB-on-a-multi-core-box.aspx" target="_blank" rel="external">http://www.sqlskills.com/blogs/paul/post/Search-Engine-QA-12-Should-you-create-multiple-files-for-a-user-DB-on-a-multi-core-box.aspx</a>) e "A SQL Server DBA myth a day: (12/30) tempdb should always have one data file per processor core" (<a href="http://sqlskills.com/BLOGS/PAUL/post/A-SQL-Server-DBA-myth-a-day-(1230)-tempdb-should-always-have-one-data-file-perprocessor-core.aspx" target="_blank" rel="external">http://sqlskills.com/BLOGS/PAUL/post/A-SQL-Server-DBA-myth-a-day-(1230)-tempdb-should-always-have-one-data-file-perprocessor-core.aspx</a>).</em></p>
         </div>
         
-        <h2>Direct Attached Storage vs. Storage Area Networks</h2>
+        <h2 id="storage">Direct Attached Storage vs. Storage Area Networks</h2>
         
         <p>As duas configurações mais comuns utilizadas para o armazenamento do SQL Server são o Direct Attached Storage (DAS) e as Storage Area Networks (SAN), e cada uma delas possui suas próprias vantagens e desvantagens que devem ser compreendidas para se chegar a uma implementação adequada para o SQL Server.</p>
         
-        <h3>Direct Attached Storage (DAS)</h3>
+        <h3 id="das">Direct Attached Storage (DAS)</h3>
         
         <p>O DAS é o método tradicional de fornecer armazenamento para servidores, onde os discos usados pelo servidor são conectados diretamente a ele. Os discos podem estar incorporados ao chassi do servidor ou serem colocados em compartimentos de expansão externos que são conectados ao servidor usando um controlador RAID.</p>
         
@@ -279,7 +279,7 @@
         
         <p>Com soluções de DAS, a solução de problemas de desempenho é simplificada, uma vez que o número de componentes é reduzido e há apenas um sistema utilizando o subsistema de E/S.</p>
         
-        <h3>Storage Area Networks (SAN)</h3>
+        <h3 id="san">Storage Area Networks (SAN)</h3>
         
         <p>As implementações de SAN são uma configuração mais avançada para requisitos de armazenamento em toda a empresa. O armazenamento é gerenciado centralmente em um ambiente compartilhado, permitindo uma maior densidade de uso do armazenamento disponível. Em outras palavras, os SANs são projetados para otimizar o uso de armazenamento, não necessariamente otimizar o desempenho do armazenamento. No entanto, os SANs oferecem um conjunto de recursos significativamente mais avançado do que geralmente está disponível por meio do DAS. Um exemplo básico de um ambiente SAN típico é mostrado na Figura 2.8.</p>
         
@@ -310,7 +310,7 @@
         
         <p>Essa é a razão pela qual solucionar problemas em implementações de SAN para o SQL Server pode ser extremamente difícil. Sempre que uma SAN está sendo utilizada com o SQL Server, solucionar problemas de desempenho no ambiente requer suporte adicional do administrador da SAN.</p>
         
-        <h2>Diagnosticando problemas de E/S de disco</h2>
+        <h2 id="diagnostico">Diagnosticando problemas de E/S de disco</h2>
         
         <p>Minha principal ferramenta para investigar problemas de E/S de disco é o PerfMon e, especificamente, os contadores <code>Physical Disk\Disk sec/Reads</code> e <code>Physical Disk\Disk sec/Writes</code>. A chave para o desempenho é ter a latência mais baixa possível e meus valores de referência para latência para cada um desses contadores são os seguintes:</p>
         
@@ -323,7 +323,7 @@
         
         <p>Além dos contadores de desempenho, tempos de espera elevados para <code>PAGEIOLATCH_*</code>, <code>ASYNC_IO_COMPLETION</code>, <code>IO_COMPLETION</code> ou waits <code>WRITELOG</code> podem ser sinais de gargalos de E/S de disco no servidor. A consulta para recuperar as estatísticas de espera para uma instância do SQL Server está incluída na seção "Estatísticas de Espera: A Base para Solução de Problemas" do <em>Capítulo 1</em>.</p>
         
-        <h2>Problemas Comuns de E/S de Disco</h2>
+        <h2 id="problemas">Problemas Comuns de E/S de Disco</h2>
         
         <p>Assim como em muitos dos problemas abordados ao longo deste livro, o primeiro passo ao tentar resolver problemas de E/S é garantir que a falta de indexação (<em>Capítulo 5</em>) ou consultas mal escritas não estejam causando uma quantidade desnecessariamente excessiva de E/S. Se o design do seu banco de dados e a carga de trabalho das consultas estiverem otimizados o máximo possível e o problema de E/S persistir, provavelmente você está enfrentando um problema de configuração inadequada do disco. Com base nas perguntas que vejo em fóruns técnicos online e na minha experiência como consultor, as seguintes configurações incorretas são a causa de muitos dos problemas de E/S de disco que encontro:</p>
         
@@ -336,7 +336,7 @@
         
         <p>Cada um desses problemas e as etapas necessárias para solucioná-los serão abordados nas seções restantes deste capítulo.</p>
         
-        <h3>Dimensionamento para capacidade em vez de desempenho de E/S</h3>
+        <h3 id="dimensao">Dimensionamento para capacidade em vez de desempenho de E/S</h3>
         
         <p>Como já abordado anteriormente neste capítulo, o dimensionamento adequado do subsistema de disco para o SQL Server é principalmente uma questão de desempenho e não de capacidade real de armazenamento. Muitas vezes, a menos que um DBA experiente esteja envolvido nas decisões de compra, o fator chave utilizado no provisionamento de hardware é o tamanho do banco de dados e não os requisitos de desempenho de E/S da carga de trabalho.</p>
         
@@ -346,7 +346,7 @@
         
         <p>Solucionar problemas de desempenho de E/S requer monitorar os contadores de desempenho do subsistema de E/S de disco, bem como monitorar os dados virtuais de arquivo e estatísticas de espera da instância do banco de dados, para determinar o impacto que o subsistema de E/S pode estar causando no desempenho do SQL Server.</p>
         
-        <h3>Isolamento incorreto da carga de trabalho</h3>
+        <h3 id="isolamento">Isolamento incorreto da carga de trabalho</h3>
         
         <p>O isolamento da carga de trabalho é fundamental para o planejamento de armazenamento do SQL Server. Como discutido anteriormente, as características de E/S dos arquivos de log de transações e arquivos de dados são significativamente diferentes, e a segregação da E/S para os dois arquivos é crucial para o desempenho geral do sistema. Para cargas de trabalho de alto volume de gravação, em particular, em que os arquivos de log de transações são constantemente gravados, a necessidade de isolar os arquivos de log de transações em arrays de discos físicos separados é primordial.</p>
         
@@ -356,7 +356,7 @@
         
         <p>Se um conjunto compartilhado de discos estiver sendo usado, é importante ter as ferramentas de monitoramento adequadas para a configuração. Ter um banco de dados do SQL Server, um banco de dados Oracle e um banco de caixas de correio do Exchange ocupado compartilhando um pequeno conjunto de discos provavelmente será problemático para os três em termos de desempenho, devido às cargas de trabalho de alta E/S em competição.</p>
         
-        <h3>Alinhamento incorreto de partições</h3>
+        <h3 id="alinhamento">Alinhamento incorreto de partições</h3>
         
         <p>Na PASS Summit 2008, Jimmy May, um membro da equipe SQLCAT, apresentou uma sessão sobre as <em>Melhores Práticas de Alinhamento de Partições de Disco</em> para o SQL Server, que posteriormente foi transformada em um white paper com o mesmo nome (<a href="http://msdn.microsoft.com/en-us/library/dd758814%28v=sql.100%29.aspx" target="_blank" rel="external">http://msdn.microsoft.com/en-us/library/dd758814%28v=sql.100%29.aspx</a>). Naquela época, poucas pessoas haviam ouvido falar do alinhamento de partições, quanto mais perceberam que isso há muito tempo era um vilão silencioso para o desempenho de matrizes de armazenamento de disco, muitas vezes reduzindo o desempenho em até 20-30% no geral.</p>
         
@@ -392,7 +392,7 @@ create partition primary align=64
         
         <p>Uma vez que a partição esteja alinhada, ela pode ser atribuída uma letra e formatada, usando o tamanho de unidade de alocação recomendado de 64 KB, e então colocada de volta em serviço como um host para arquivos de banco de dados, sem o impacto de desempenho custoso associado ao desalinhamento.</p>
         
-        <h3>Banda larga incorreta usando configurações SAN</h3>
+        <h3 id="banda">Banda larga incorreta usando configurações SAN</h3>
         
         <p>Em ambientes SAN, onde o armazenamento está conectado por meio de uma conexão de rede, um dos maiores fatores limitantes para o desempenho de armazenamento é a largura de banda disponível para a conexão. Isso é verdade independentemente se a conexão é Fibre Channel ou iSCSI, usando Ethernet tradicional para a conectividade.</p>
         
@@ -406,7 +406,7 @@ create partition primary align=64
         
         <p>Uma discussão completa sobre as configurações de múltiplos caminhos de SAN está além do nosso escopo, mas o ponto chave para determinar a largura de banda disponível é o <strong>benchmarking apropriado do subsistema de armazenamento</strong> usando ferramentas como SQLIO ou IOmeter. Se o desempenho do armazenamento não atender às expectativas da configuração, você terá que determinar exatamente onde está o gargalo na configuração e continuar a solução de problemas a partir daí. Pode ser que o número de discos subjacentes à matriz de armazenamento não possa atender aos requisitos de taxa de transferência, ou que o cache da SAN seja o gargalo, ou que a configuração de múltiplos caminhos não esteja funcionando como esperado e você esteja obtendo apenas um único caminho real para a SAN para operações de E/S.</p>
         
-        <h2>Resumo</h2>
+        <h2 id="resumo">Resumo</h2>
         
         <p>A configuração adequada do hardware, assim como do mecanismo de banco de dados do SQL Server, é fundamental para o desempenho ideal do sistema como um todo. Configurações incorretas de hardware, geralmente no subsistema de E/S de disco, frequentemente resultam em um sistema que não atende às expectativas de desempenho.</p>
         

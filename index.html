@@ -5,12 +5,42 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>DBA Acidental</title>
 	<link rel="stylesheet" href="estilo/style.css">
+	<style>
+		main p {
+			text-indent: 0px;
+		}
+
+		li.cap {
+			margin-top: 10px;
+		}
+
+		.cap {
+			font-weight: bolder;
+			color: black;
+		}
+
+		.n1 {
+    		margin-left: 25px;
+		}
+
+		.n2 {
+		    margin-left: 25px;
+		}
+
+		main a {
+			text-decoration: none;
+			color: black;
+			background-color: white;
+			font-weight: normal;
+		}
+	</style>
 </head>
 <body>
 	<header>
 		<h1>Troubleshooting SQL Server</h1>
 		<h2>Um Guia para o DBA Acidental</h2>	
 	</header>
+
 	<nav>
 		<a href="abertura.html" target="_self">Abertura</a>
 		<a href="introducao.html" target="_self">Introdução</a>
@@ -23,11 +53,14 @@
 
 	<main>
 		<img src="imagens/capa.jpg" class="capa" alt="Capa do livro">
+
 		<p>Troubleshooting SQL Server<br>
 			A Guide for the Accidental DBA<br>
 			By Jonathan Kehayias and Ted Krueger</p>
 		<p>With a Foreword from Paul S. Randal</p>
+
 		<p>First published by Simple Talk Publishing September 2011</p>
+
 		<p>
 			Direitos autorais de Jonathan Kehayias e Ted Krueger 2011<br>
 			ISBN 978-1-906434-77-9<br>
@@ -38,60 +71,63 @@
 			Imagem da capa por Andy Martin<br>
 			Diagramação e design por Matthew Tye & Gower Associates<br>
 		</p>
-		<h1>Table of Contents</h1>
+
+		<h1>Sumário</h1>
 		<ul type="disk">
-			<li><strong><a href="introducao.html" target="_self">Introduction</a></strong></li>
-			<ul>
-				<li>Who is this book for?</li>
-				<li>Code Examples</li>
+			<li class="cap"><a href="introducao.html" target="_self" class="cap">Introdução</a></li>
+			<ul class="n1">
+				<li><a href="introducao.html#paraquem" target="_self">Para quem é este livro?</a></li>
+				<li><a href="introducao.html#exemplos">Exemplos de código</a></li>
 			</ul>
-			<li><strong><a href="cap01.html">Chapter 1: A Performance Troubleshooting Methodology</a></strong></li>
-			<ul>
-				<li>Defining a Troubleshooting Methodology</li>
-				<li>Wait Statistics: the Basis for Troubleshooting</li>
-				<li>Virtual File Statistics</li>
-				<li>Performance Counters</li>
-				<li>Plan Cache Usage</li>
-				<li>Summary</li>
+			<li class="cap"><a href="cap01.html" class="cap">Capítulo 1: Uma metodologia de solução de problemas de desempenho</a></li>
+			<ul class="n1">
+				<li><a href="cap01.html#definindo" target="_self">Definindo uma Metodologia de Solução de Problemas</a></li>
+				<li><a href="cap01.html#wait" target="_self">Wait Statistics: a Base para Resolução de Problemas</a></li>
+				<li><a href="cap01.html#virtual" target="_self">Virtual File Statistics</a></li>
+				<li><a href="cap01.html#contadores" target="_self">Contadores de desempenho</a></li>
+				<li><a href="cap01.html#cache" target="_self">Uso do cache de plano</a></li>
+				<li><a href="cap01.html#resumo" target="_self">Resumo</a></li>
 			</ul>
-			<li><strong><a href="cap02.html" target="_self">Chapter 2: Disk I/O Configuration</a></strong></li>
-			<ul>
-				<li>Disk Configuration: Basic Considerations</li>
-				<ul>
-					<li>Disk size vs. disk throughput</li>
-					<li>Random versus sequential I/O</li>
+
+			<li class="cap"><a href="cap02.html" target="_self" class="cap">Capítulo 2: Configuração de E/S de Disco</a></li>
+			<ul class="n1">
+				<li><a href="cap02.html#consideracoes">Configuração de disco: Considerações Básicas</a></li>
+				<ul class="n2">
+					<li><a href="cap02.html#tamanho" target="_self">Tamanho do disco vs. throughput do disco</a></li>
+					<li><a href="cap02.html#leitura" target="_self">Leitura aleatória versus leitura sequencial</a></li>
 				</ul>
-				<li>Choosing the Right RAID Level</li>
-				<ul>
-					<li>A brief overview of RAID configurations</li>
-					<li>Disk size and throughput considerations</li>
-					<li>Workload considerations</li>
+				<li><a href="cap02.html#escolha" target="_self">Escolhendo o nível correto de RAID</a></li>
+				<ul class="n2">
+					<li><a href="cap02.html#visaogeral" target="_self">Uma breve visão geral das configurações RAID</a></li>
+					<li><a href="cap02.html#txtransf" target="_self">Considerações sobre o tamanho do disco e taxa de transferência</a></li>
+					<li><a href="cap02.html#workload" target="_self">Considerações sobre a carga de trabalho</a></li>
 				</ul>
-				<li>Direct Attached Storage vs. Storage Area Networks</li>
-				<ul>
-					<li>Direct Attached Storage</li>
-					<li>Storage Area Networks</li>
+				<li><a href="cap02.html#storage" target="_self">Direct Attached Storage vs. Storage Area Networks</a></li>
+				<ul class="n2">
+					<li><a href="cap02.html#das" target="_self">Direct Attached Storage</a></li>
+					<li><a href="cap02.html#san" target="_self">Storage Area Networks</a></li>
 				</ul>
-				<li>Diagnosing Disk I/O Issues</li>
-				<li>Common Disk I/O Problems</li>
-				<ul>
-					<li>Sizing for capacity instead of I/O performance</li>
-					<li>Incorrect workload isolation</li>
-					<li>Incorrect partition alignment</li>
-					<li>Incorrect bandwidth using SAN configurations</li>
+				<li><a href="cap02.html#diagnostico" target="_self">Diagnosticando problemas de E/S de disco</a></li>
+				<li><a href="cap02.html#problemas" target="_self">Problemas Comuns de E/S de Disco</a></li>
+				<ul class="n2">
+					<li><a href="cap02.html#dimensao">Dimensionamento para capacidade em vez de desempenho de E/S</a></li>
+					<li><a href="cap02.html#isolamento">Isolamento incorreto da carga de trabalho</a></li>
+					<li><a href="cap02.html#alinhamento">Alinhamento incorreto de partições</a></li>
+					<li><a href="cap02.html#banda">Banda larga incorreta usando configurações SAN</a></li>
 				</ul>
-				<li>Summary</li>
+				<li><a href="cap02.html#resumo">Resumo</a></li>
 			</ul>
-			<li><strong>Capítulo 3: Utilização Elevada da CPU</strong></li>
-			<ul>
+
+			<li class="cap">Capítulo 3: Utilização Elevada da CPU</li>
+			<ul class="n1">
 				<li>Investigando a Pressão da CPU</li>
-				<ul>
+				<ul class="n2">
 					<li>Performance Monitor</li>
 					<li>SQL Trace</li>
 					<li>Dynamic Management Views (DMVs)</li>
 				</ul>
 				<li>Investigando estatísticas de espera relacionadas à CPU</li>
-				<ul>
+				<ul class="n2">
 					<li>Tempo de espera do sinal</li>
 					<li>Esperas <code>SOS_SCHEDULER_YIELD</code></li>
 					<li>Esperas <code>CXPACKET</code></li>
@@ -100,7 +136,7 @@
 				<li>Investigando as filas do agendador</li>
 				<li>Identificando consultas intensivas em CPU</li>
 				<li>Causas comuns de alto uso de CPU</li>
-				<ul>
+				<ul class="n2">
 					<li>Índices ausentes</li>
 					<li>Estatísticas desatualizadas</li>
 					<li>Predicados não-SARGáveis</li>
@@ -110,13 +146,13 @@
 				<li>Trace Flag 4136</li>
 				<li>Usando o hint <code>OPTIMIZE FOR</code></li>
 				<li>Opções de recompilação</li>
-				<ul>
+				<ul class="n2">
 					<li>Consultas não parametrizadas ad hoc</li>
 				</ul>
 				<li>Corrigindo o aplicativo</li>
 				<li>Parametrização forçada no SQL Server</li>
 				<li>Otimização para cargas de trabalho ad hoc</li>
-				<ul>
+				<ul class="n2">
 					<li>Paralelismo inadequado</li>
 				</ul>
 				<li>Custo limite para paralelismo</li>
@@ -124,38 +160,39 @@
 				<li>Hyper-threading e paralelismo</li>
 				<li>Diagnosticando paralelismo inadequado</li>
 				<li>Resolvendo problemas de paralelismo</li>
-				<ul>
+				<ul class="n2">
 					<li>TokenAndPermUserStore</li>
 				</ul>
 				<li>Soluções temporárias no SQL Server 2005</li>
-				<ul>
+				<ul class="n2">
 					<li>Use a função de servidor sysadmin</li>
 					<li>Limpe regularmente o cache</li>
 					<li>Trace Flags</li>
 				</ul>
 				<li>Opções de configuração no SQL Server 2008</li>
-				<ul>
+				<ul class="n2">
 					<li>Opções de economia de energia do Windows Server e BIOS</li>
 				</ul>
 				<li>Summary</li>
 				<li>Additional Resources</li>
 			</ul>
-			<li><strong>Chapter 4: Memory Management</strong></li>
-			<ul>
+
+			<li class="cap">Chapter 4: Memory Management</li>
+			<ul class="n1">
 				<li>The Self-Tuning Database Engine</li>
 				<li>How SQL Server Allocates Memory</li>
-				<ul>
+				<ul class="n2">
 					<li>32-bit Virtual Address Space limitations</li>
 					<li>Using 64-bit SQL Server</li>
 					<li>Memory configuration options with 64-bit SQL Server</li>
 				</ul>
 				<li>Diagnosing Memory Pressure</li>
-				<ul>
+				<ul class="n2">
 					<li>Memory-related counters</li>
 					<li>Memory-related DMVs</li>
 				</ul>
 				<li>Common Memory-Related Problems</li>
-				<ul>
+				<ul class="n2">
 					<li>The SQL Server memory leak myth</li>
 					<li>Paging problems</li>
 					<li>OS instability due to Lock Pages in Memory</li>
@@ -167,16 +204,17 @@
 				</ul>
 				<li>Summary</li>
 			</ul>
-			<li><strong>Chapter 5: Missing Indexes</strong></li>
-			<ul>
+
+			<li class="cap">Chapter 5: Missing Indexes</li>
+			<ul class="n1">
 				<li>Index Selection and Design</li>
-				<ul>
+				<ul class="n2">
 					<li>Index key column order</li>
 					<li>Use of included columns</li>
 					<li>Index width</li>
 				</ul>
 				<li>Identifying Missing Indexes</li>
-				<ul>
+				<ul class="n2">
 					<li>Workload analysis with the Database Engine Tuning Advisor</li>
 					<li>Missing index feature</li>
 					<li>Missing indexes on foreign keys</li>
@@ -185,10 +223,11 @@
 				<li>Identifying Duplicate Indexes</li>
 				<li>Summary</li>
 			</ul>
-			<li><strong>Chapter 6: Blocking</strong></li>
-			<ul>
+
+			<li class="cap">Chapter 6: Blocking</li>
+			<ul class="n1">
 				<li>Locks and Concurrency (a Brief Review)</li>
-				<ul>
+				<ul class="n2">
 					<li>Lock modes</li>
 					<li>Lock types</li>
 					<li>Lock escalation</li>
@@ -196,21 +235,21 @@
 					<li>Latches and latch contention</li>
 				</ul>
 				<li>Monitoring Blocking</li>
-				<ul>
+				<ul class="n2">
 					<li>Using sysprocesses (SQL Server 2000 and later)</li>
 					<li>Cumulative wait statistics with DBCC SQLPERF (waitstats)</li>
 					<li>Dynamic Management Views</li>
 					<li>Performance Monitor</li>
 				</ul>
 				<li>Automated Detection and Notification of Blocking</li>
-				<ul>
+				<ul class="n2">
 					<li>The Sp_blocker_pss80 process</li>
 					<li>SQL Trace</li>
 					<li>Event notifications</li>
 					<li>Extended Events</li>
 				</ul>
 				<li>Resolving Blocking</li>
-				<ul>
+				<ul class="n2">
 					<li>Bad database design</li>
 					<li>Inappropriate isolation level</li>
 					<li>Poorly written queries</li>
@@ -219,16 +258,17 @@
 					<li>Outdated hardware</li>
 				</ul>
 				<li>Hints, Trace Flags and Other Last Resorts</li>
-				<ul>
+				<ul class="n2">
 					<li>Locking hints</li>
 				</ul>
 				<li>Summary</li>
 			</ul>
-			<li><strong>Chapter 7: Handling Deadlocks</strong></li>
-			<ul>
+
+			<li class="cap">Chapter 7: Handling Deadlocks</li>
+			<ul class="n1">
 				<li>The Lock Monitor</li>
 				<li>Capturing Deadlock Graphs</li>
-				<ul>
+				<ul class="n2">
 					<li>Trace Flag 1204</li>
 					<li>Trace Flag 1222</li>
 					<li>SQL Profiler XML Deadlock Graph event</li>
@@ -237,20 +277,20 @@
 					<li>Extended Events</li>
 				</ul>
 				<li>Reading Deadlock Graphs</li>
-				<ul>
+				<ul class="n2">
 					<li>Interpreting Trace Flag 1204 deadlock graphs</li>
 					<li>Interpreting Trace Flag 1222 deadlock graphs</li>
 					<li>Interpreting XML deadlock graphs</li>
 				</ul>
 				<li>Common types of deadlock and how to eliminate them</li>
-				<ul>
+				<ul class="n2">
 					<li>Bookmark lookup deadlock</li>
 					<li>Range scans caused by SERIALIZABLE isolation</li>
 					<li>Cascading constraint deadlocks</li>
 					<li>Intra-query parallelism deadlocks</li>
 					<li>Accessing objects in different orders</li>
 				</ul>
-				<ul>
+				<ul class="n2">
 					<li>Handling Deadlocks to Prevent Errors</li>
 					<li>T-SQL TRY…CATCH blocks</li>
 					<li>Handling ADO.NET SqlExceptions in .NET code</li>
@@ -258,16 +298,17 @@
 				<li>Controlling Deadlock Behavior with Deadlock Priority</li>
 				<li>Summary</li>
 			</ul>
-			<li><strong>Chapter 8: Large or Full Transaction Log</strong></li>
-			<ul>
+
+			<li class="cap">Chapter 8: Large or Full Transaction Log</li>
+			<ul class="n1">
 				<li>How the Transaction Log Works</li>
-				<ul>
+				<ul class="n2">
 					<li>How SQL Server writes to the transaction log</li>
 					<li>Understanding log truncation</li>
 					<li>Sizing and growing the log</li>
 				</ul>
 				<li>Diagnosing a Runaway Transaction Log</li>
-				<ul>
+				<ul class="n2">
 					<li>Excessive logging: index maintenance operations</li>
 					<li>Lack of log space reuse</li>
 					<li>Other possible causes of log growth</li>
@@ -280,17 +321,18 @@
 				<li>Proper Log Management</li>
 				<li>Summary</li>
 			</ul>
-			<li><strong>Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen</strong></li>
-			<ul>
+
+			<li class="cap">Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen</li>
+			<ul class="n1">
 				<li>Example Case: The Missing Sales Order Data</li>
 				<li>Recovering Lost Data</li>
-				<ul>
+				<ul class="n2">
 					<li>Recovering from backup</li>
 					<li>Recovering without a backup</li>
 				</ul>
 				<li>Finding the Culprit</li>
 				<li>Prevention is Better than Cure</li>
-				<ul>
+				<ul class="n2">
 					<li>Plan for recovery from all data losses</li>
 					<li>Implement a change control process</li>
 					<li>Implement an appropriate security model</li>
@@ -298,11 +340,12 @@
 				</ul>
 				<li>Summary</li>
 			</ul>
-			<li><strong>Appendix: What to Do When All Else Fails</strong></li>
-			<ul>
+
+			<li class="cap">Appendix: What to Do When All Else Fails</li>
+			<ul class="n1">
 				<li>Microsoft Customer Support Services</li>
 				<li>Online Resources</li>
-				<ul>
+				<ul class="n2">
 					<li>Articles</li>
 					<li>Blogs</li>
 					<li>Forums</li>

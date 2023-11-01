@@ -13,7 +13,7 @@
   </header>
   
   <nav>
-    <a href="index.html" target="_self">Capa</a>
+    <a href="index.html" target="_self">Índice</a>
     <a href="abertura.html" target="_self">Abertura</a>
     <a href="introducao.html" target="_self">Introdução</a>
     <a href="cap02.html" target="_self">Cap.2</a>
@@ -33,7 +33,7 @@
     
     <p>O que tento oferecer neste capítulo não é um conjunto de tábuas de pedra que prescrevem os passos exatos a serem tomados para resolver todos os problemas do SQL Server, mas sim uma abordagem básica e um conjunto de ferramentas que me serviram bem repetidamente nos seis anos em que trabalhei com o SQL Server, solucionando problemas de desempenho. Ele cobre uma descrição de alto nível da minha abordagem básica, seguida de seções mais detalhadas sobre cada uma das minhas áreas de foco, incluindo estatísticas de espera, estatísticas de arquivos virtuais, contadores de desempenho relacionados ao SQL Server e análise do cache de plano.</p>
     
-    <h2>Definindo uma Metodologia de Solução de Problemas</h2>
+    <h2 id="definindo">Definindo uma Metodologia de Solução de Problemas</h2>
     
     <p>Como notei na introdução deste capítulo, definir uma metodologia de solução de problemas é difícil, porque a metodologia real que eu aplico depende inteiramente do problema específico que estou tentando solucionar para um ambiente específico. No entanto, minha abordagem básica e as ferramentas que uso permanecem constantes, independentemente de o problema ser usuários reclamando de desempenho lento ou se estou apenas realizando uma verificação padrão de saúde do servidor.</p>
     
@@ -57,7 +57,7 @@
       <p><em>Apenas um lembrete suave: antes de se empolgar coletando dados diagnósticos, certifique-se de ter verificado os problemas óbvios. Se um usuário relatar que sua aplicação "não está funcionando corretamente", a primeira coisa que você provavelmente deve fazer é garantir que os serviços do SQL Server estejam realmente em execução em seu servidor. Se você abrir o <strong>SQL Server Configuration Manager (SSCM)</strong> e descobrir que o status do serviço de <strong>mecanismo de banco de dados</strong>, que tem um <strong>tipo de serviço</strong> SQL Server, está <strong>parado</strong>, então esta é muito provavelmente a causa do problema, a menos que a instância esteja sendo executada em um cluster de failover, momento em que você precisa olhar para o <strong>Failover Cluster Manager</strong> para identificar se o serviço e seus recursos dependentes estão online e começar a solucionar por que o serviço falha em iniciar com base no que você encontrar!</em></p>
     </div>
     
-    <h2>Wait Statistics: a Base para Resolução de Problemas</h2>
+    <h2 id="wait">Wait Statistics: a Base para Resolução de Problemas</h2>
     
     <p>Um dos primeiros itens que verifico ao resolver problemas de desempenho em um SQL Server são as estatísticas de espera, que são registradas pelo SQLOS durante as operações normais de qualquer SQL Server.</p>
     
@@ -122,7 +122,6 @@
     <p>Em geral, ao examinar as estatísticas de espera, foco nas esperas principais, de acordo com o <code>wait_time_ms</code>, e procuro por tempos de espera elevados associados aos seguintes tipos de espera específicos, cada um deles é abordado com mais detalhes nos capítulos apropriados deste livro:</p>
 
     <ul>
-      
       <li><strong><code>CXPACKET</code></strong></li>
       
       <p>Frequentemente indica apenas que determinadas consultas estão sendo executadas com paralelismo; as esperas <code>CXPACKET</code> no servidor não são um sinal imediato de problemas, embora possam ser o sintoma de outro problema, associado a um dos outros tipos de espera de alto valor na instância, conforme abordado no <a href="cap03.html" target="_self">Capítulo 3</a>.</p>
@@ -172,7 +171,7 @@
     
     <p>Uma das ressalvas associadas à limpeza das estatísticas de espera no servidor é que levará um período de tempo para que as estatísticas de espera acumulem ao ponto em que você saberá se um problema específico foi resolvido ou não.</p>
     
-    <h2>Virtual File Statistics</h2>
+    <h2 id="virtual">Virtual File Statistics</h2>
     
     <p>Uma armadilha comum na minha experiência, ao usar as estatísticas de espera como fonte principal de dados para solução de problemas, é que a maioria dos servidores SQL apresentará sinais do que parece ser um gargalo de E/S de disco. Infelizmente, as estatísticas de espera não informam o que está causando a E/S e é fácil diagnosticar erroneamente a causa raiz.</p>
     
@@ -220,7 +219,7 @@
     
     <p>Esperançosamente, esta discussão destacou o elemento chave da resolução efetiva de problemas, que é examinar muitos "pontos de dados" juntos, para chegar a um diagnóstico verdadeiro. A descoberta de pressão de I/O, revelada por esperas relacionadas a I/O, pode ser causada por capacidade inadequada ou configuração do subsistema de disco, mas sua causa raiz é mais provável de estar em outro lugar, como um gargalo de memória no buffer pool, ou varreduras excessivas de índice e / ou tabela devido a consultas mal escritas (consulte a seção Uso do Cache de Plano deste capítulo) e falta de indexação.</p>
     
-    <h2>Contadores de desempenho</h2>
+    <h2 id="contadores">Contadores de desempenho</h2>
     
     <p>Muitos artigos, white papers e posts em blogs na Internet tentam fornecer listas detalhadas dos contadores de desempenho importantes que devem ser monitorados para instâncias do SQL Server, juntamente com diretrizes gerais para valores aceitáveis ​​para esses contadores. No entanto, se você tentar coletar e analisar os valores de todos os contadores disponíveis, rapidamente encontrará uma tarefa avassaladora.</p>
     
@@ -400,7 +399,7 @@
     
     <p>O contador de desempenho <code>Memory Manager\Memory Grants Pending</code> fornece informações sobre o número de processos aguardando uma concessão de memória de espaço de trabalho na instância. Se este contador tiver um valor alto, o SQL Server pode se beneficiar de memória adicional, mas pode haver ineficiências de consulta na instância que estão causando requisitos excessivos de concessão de memória, por exemplo, classificações ou hashes grandes que podem ser resolvidos ajustando a indexação ou consultas que estão sendo executadas.</p>
 
-    <h2>Uso do cache de plano</h2>
+    <h2 id="cache">Uso do cache de plano</h2>
 
     <p>Em minha experiência, o cache de plano no SQL Server 2005 e 2008 é um dos recursos mais subutilizados para solucionar problemas de desempenho no SQL Server. Como parte da execução normal de lotes e consultas, o SQL Server rastreia as informações de execução acumuladas para cada um dos planos armazenados dentro do cache de plano, até o ponto em que o plano é removido do cache como resultado de operações DDL, pressão de memória ou manutenção geral do cache. As informações de execução armazenadas dentro do cache de plano podem ser encontradas na exibição de gerenciamento dinâmico <code>sys.dm_exec_query_stats</code>, conforme mostrado na consulta de exemplo na Lista 1.6. Esta consulta listará os dez principais comandos com base no número médio de leituras físicas que os comandos realizaram como parte de sua execução.</p>
 
@@ -436,7 +435,7 @@
     
     <p>No SQL Server 2008, foram adicionadas duas colunas adicionais, <code>query_hash</code> e <code>query_plan_hash</code>, na exibição de gerenciamento dinâmico <code>sys.dm_exec_query_stats</code>. O <code>query_hash</code> é um hash sobre o texto do comando para permitir que comandos semelhantes sejam agregados juntos. O <code>query_plan_hash</code> é um hash do formato do plano de consulta que permite que consultas com planos de execução semelhantes sejam agregadas juntas. Juntos, eles permitem que as informações contidas nesta exibição de gerenciamento dinâmico sejam agregadas para cargas de trabalho ad hoc, a fim de determinar o impacto total de comandos semelhantes que têm valores literais compilados diferentes.</p>
 
-    <h2>Resumo</h2>
+    <h2 id="resumo">Resumo</h2>
     
     <p>Este capítulo delineou minha abordagem básica para investigar problemas de desempenho no SQL Server. Essa abordagem é mais ou menos a mesma, independentemente se é um servidor que eu conheço bem ou se estou investigando pela primeira vez, sem conhecimento prévio da saúde e configuração da instância do SQL Server. Com base nas informações coletadas usando esta metodologia, é possível realizar um diagnóstico mais avançado das áreas problemáticas identificadas, utilizando as informações contidas nos capítulos subsequentes deste livro.</p>
     
