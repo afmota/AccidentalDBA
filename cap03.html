@@ -802,74 +802,114 @@ dtrSalesOrders = cmd.ExecuteReader();
 
         <p class="legenda"><strong>Listagem 3.21</strong>: Habilitando a configuração "<code>optimize for ad hoc workloads</code>".</p>
 
-        <h3>Paralelismo inadequado</h3>
+        <h3 id="inadequado">Paralelismo inadequado</h3>
 
         <p>O SQL Server é projetado para ser capaz de aproveitar vários processadores ao processar solicitações de usuários. O paralelismo de consulta é o mecanismo usado pelo mecanismo de execução de consulta do SQL para dividir o trabalho de uma consulta em várias threads, cada uma das quais será executada em um agendador separado. As consultas são paralelizadas no nível do operador; em outras palavras, se a consulta for executada em paralelo, alguns dos operadores da consulta podem ser executados em sua forma paralela, enquanto outros não.</p>
+
         <img src="imagens/fig38.PNG" alt="Plano de execução mostrando que os operadores estão sendo executados em paralelo">
-        <p><strong>Figura 3.8</strong>: Plano de execução mostrando que os operadores estão sendo executados em paralelo.</p>
+
+        <p class="legenda"><strong>Figura 3.8</strong>: Plano de execução mostrando que os operadores estão sendo executados em paralelo.</p>
+
         <p>Quando uma consulta é enviada para processamento no SQL Server, o otimizador de consulta compila um plano de execução otimizado para permitir que a consulta seja executada da maneira mais rápida possível. Se o custo estimado de executar o plano serialmente exceder a opção '<code>cost threshold for parallelism</code>' do <code>sp_configure</code>, o número de CPUs lógicas disponíveis para o SQL Server for maior que um, e a opção '<code>max degree of parallelism</code>' do <code>sp_configure</code> estiver definida como o valor padrão de zero ou maior que um, o plano gerado incluirá o paralelismo. O Grau de Paralelismo (DOP) não é incluído como parte do plano; isso é determinado no momento da execução com base no número de processadores lógicos, na opção '<code>max degree of parallelism</code>' do <code>sp_configure</code> ou, se estiver sendo usado o hint <code>MAXDOP</code> na consulta, o valor especificado pelo hint, e no número de threads de trabalho disponíveis.</p>
+
         <p>O processamento de consultas paralelas pode reduzir o tempo necessário para processar uma consulta, particionando horizontalmente os dados de entrada, distribuindo as partições em várias CPUs lógicas e executando simultaneamente a mesma operação em vários núcleos do processador. Isso pode ser muito benéfico para operações de data warehouse e relatórios, que possuem algumas consultas grandes que lidam com volumes de dados e ocorrem apenas algumas solicitações simultaneamente. Ao dividir a solicitação em várias threads do sistema operacional em vários núcleos do processador, o otimizador aumenta a utilização dos recursos de hardware, distribuindo a carga entre todos os processadores no servidor, resultando em uma redução do tempo total de execução.</p>
+
         <p>O impacto específico de uma carga de trabalho paralela depende de vários fatores, incluindo a capacidade dos demais componentes de hardware do sistema para lidar com as demandas intensas de alocação de memória e E/S de disco que uma carga de trabalho paralela pode gerar. Quando o paralelismo é usado de forma apropriada, em consultas de alto custo, pode ter um efeito muito benéfico no desempenho geral do servidor. No entanto, pode ser muito prejudicial para ambientes OLTP, nos quais a carga de trabalho consiste em várias consultas menores executando simultaneamente, pois a operação paralela pode utilizar todos os núcleos do processador no servidor, fazendo com que outras solicitações aguardem para executar. Se o uso principal do servidor for um banco de dados OLTP com muitas solicitações menores e concorrentes, o paralelismo de uma única consulta comum pode reduzir a taxa de transferência.</p>
+
         <p>Conforme mencionado acima, o SQL Server possui duas opções de configuração que controlam a execução paralela de consultas pelo mecanismo. Elas são as opções de configuração <code>cost threshold for parallelism</code> e <code>max degree of parallelism</code> do <code>sp_configure</code>. A opção <code>max degree of parallelism</code> existe para evitar que uma única consulta utilize todos os núcleos do processador em um SQL Server. A opção <code>cost threshold for parallelism</code> existe para controlar o limite para uma consulta que faz com que o otimizador use o paralelismo para executar a consulta.</p>
+
         <p>Com muita frequência, quando surgem problemas de CPU relacionados a "paralelismo inadequado", a solução sugerida parece se concentrar apenas em alterar o valor para <code>max degree of parallelism</code>. Por exemplo, uma rápida pesquisa online do problema, especialmente do tipo de espera <code>CXPACKET</code> (um indicador clássico de problemas relacionados a paralelismo, como discutido um pouco mais adiante), resultará em numerosas postagens que recomendam reduzir o <code>max degree of parallelism</code> para metade ou um quarto do número de processadores lógicos ou núcleos do processador no servidor, ou até mesmo desabilitar completamente o paralelismo definindo-o como 1. Embora isso possa resolver o problema, pode não ser a solução ideal. A melhor solução é considerar, em conjunto, o valor apropriado para cada uma dessas opções.</p>
-        <h2>Custo limite para paralelismo</h2>
+
+        <h2 id="limite">Custo limite para paralelismo</h2>
+
         <p>Como discutido, a opção de configuração <code>cost threshold for parallelism</code> determina um limiar de "custo" que, quando excedido, faz com que um plano de execução paralela seja gerado para executar a solicitação do usuário. A execução paralela é possível apenas em sistemas de vários processadores, portanto, a opção de <code>cost threshold for parallelism</code> só é utilizada pelo mecanismo de banco de dados quando existem vários processadores, o servidor não está afetado a um único processador e o <code>max degree of parallelism</code> é definido como um valor diferente de 1.</p>
+
         <p>O "custo" é a quantidade estimada de tempo em segundos que levaria para executar a consulta de forma sequencial, com base em um plano de execução específico. O valor padrão é cinco, o que significa que um plano paralelo só será gerado e utilizado por consultas que tenham uma estimativa de tempo de execução sequencial superior a cinco segundos no sistema em questão. Em bancos de dados maiores, esse limite pode ser baixo o suficiente para causar múltiplas execuções concorrentes de consultas comuns, resultando em contenção no sistema.</p>
         <p>Para determinar qual pode ser uma configuração adequada para a opção de <code>cost threshold for parallelism</code>, é possível consultar os planos existentes no cache de planos para determinar os custos associados aos planos que foram executados com paralelismo, conforme mostrado no Exemplo 3.22.</p>
-        <pre>
-            <code>
-        SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED ;
+
+        <div id="container">
+            <pre><code>
+<cls>SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED</cls> ;
         
-        WITH XMLNAMESPACES
-           (DEFAULT 'http://schemas.microsoft.com/sqlserver/2004/07/showplan')
-        SELECT query_plan AS CompleteQueryPlan ,
-           n.value('(@StatementText)[1]', 'VARCHAR(4000)') AS StatementText ,
-           n.value('(@StatementOptmLevel)[1]', 'VARCHAR(25)')
-                     AS StatementOptimizationLevel ,
-           n.value('(@StatementSubTreeCost)[1]', 'VARCHAR(128)')
-                     AS StatementSubTreeCost ,
-           n.query('.') AS ParallelSubTreeXML ,
-           ecp.usecounts ,
-           ecp.size_in_bytes
-        FROM   sys.dm_exec_cached_plans AS ecp
-           CROSS APPLY sys.dm_exec_query_plan(plan_handle) AS eqp
-           CROSS APPLY query_plan.nodes
-                  ('/ShowPlanXML/BatchSequence/Batch/Statements/StmtSimple')
-           AS qn ( n )
-        WHERE n.query('.').exist('//RelOp[@PhysicalOp="Parallelism"]') = 1
-            </code>
-        </pre>
-        <p><strong>Exemplo 3.22</strong>: Determinando o custo estimado dos planos de execução paralela.</p>
+<cls>WITH</cls> XMLNAMESPACES
+   (<cls>DEFAULT</cls> <string>'http://schemas.microsoft.com/sqlserver/2004/07/showplan'</string>)
+<cls>SELECT</cls>  query_plan AS CompleteQueryPlan ,
+        n.value(<string>'(@StatementText)[1]'</string>, <string>'VARCHAR(4000)'</string>) AS StatementText ,
+        n.value(<string>'(@StatementOptmLevel)[1]'</string>, <string>'VARCHAR(25)'</string>)
+             <cls>AS</cls> StatementOptimizationLevel ,
+        n.value(<string>'(@StatementSubTreeCost)[1]'</string>, <string>'VARCHAR(128)'</string>)
+             <cls>AS</cls> StatementSubTreeCost ,
+        n.query(<string>'.'</string>) <cls>AS</cls> ParallelSubTreeXML ,
+        ecp.usecounts ,
+        ecp.size_in_bytes
+<cls>FROM</cls>    <com>sys.dm_exec_cached_plans</com> <cls>AS</cls> ecp
+        <join>CROSS APPLY</join> <com>sys.dm_exec_query_plan</com>(plan_handle) <cls>AS</cls> eqp
+        <join>CROSS APPLY</join> query_plan.nodes
+               (<string>'/ShowPlanXML/BatchSequence/Batch/Statements/StmtSimple'</string>)
+        <cls>AS</cls> qn ( n )
+<cls>WHERE</cls>   n.query(<string>'.'</string>).exist(<string>'//RelOp[@PhysicalOp="Parallelism"]'</string>) = 1
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Exemplo 3.22</strong>: Determinando o custo estimado dos planos de execução paralela.</p>
+
         <p>A análise das declarações mais frequentemente executadas que resultam em consultas paralelas pode orientar a configuração apropriada da opção de <code>cost threshold for parallelism</code>, a fim de minimizar o impacto de várias solicitações paralelas executadas simultaneamente, que geram contenção de CPU e E/S no sistema.</p>
-        <h2>Grau máximo de paralelismo</h2>
+
+        <h2 id="maximo">Grau máximo de paralelismo</h2>
+
         <p>Sempre que o custo estimado de executar uma consulta serialmente exceder nosso valor cuidadosamente avaliado para o <code>cost threshold for parallelism</code>, o mecanismo do banco de dados pode distribuir a carga de execução dessa consulta entre vários processadores disponíveis, de acordo com o grau de paralelismo ditado pela opção <code>max degree of parallelism</code>. O número de processadores utilizados será determinado pelo valor mais baixo dos três seguintes:</p>
+
         <ul>
             <li>número de processadores disponíveis</li>
             <li>opção <code>max degree of parallelism</code></li>
             <li>dica de consulta MAXDOP fornecida para a consulta em execução (que substitui o valor especificado por <code>max degree of parallelism</code>).</li>
         </ul>
+
         <p>Geralmente, como discutimos, o valor apropriado para a opção <code>max degree of parallelism</code> depende em grande parte do tipo de carga de trabalho sendo executada e da capacidade dos outros subsistemas de hardware para lidar com a carga adicional associada à execução paralela no sistema. Se o sistema estiver apresentando problemas relacionados à paralelização (consulte a seção <em>Diagnosticando paralelismo inadequado</em>), pode ser necessário limitar o grau de paralelismo, em conjunto com a sintonização do cost threshold for parallelism para resolver o problema.</p>
+
         <p>Uma das recomendações mais comuns online é desabilitar completamente a paralelização definindo <code>max degree of parallelism</code> como 1. Existem casos em que essa configuração pode fazer sentido, por exemplo, em cargas de trabalho verdadeiramente OLTP, onde todas as transações são pequenas e muitas transações estão sendo executadas em simultâneo. Esses tipos de bancos de dados raramente existem hoje em dia, e desabilitar completamente a paralelização é mais provável de reduzir o desempenho a longo prazo.</p>
+
         <p>Ao longo dos anos, fiz várias recomendações diferentes sobre como configurar o <code>max degree of parallelism</code>. Por exemplo, em um sistema SMP, defini-lo como metade do número de núcleos físicos do processador disponíveis, ou como o número de núcleos físicos em um único chip de processador, ou até mesmo definindo-o como 1 para desabilitar completamente a paralelização. Hoje em dia, faço uma recomendação com base na análise da carga de trabalho da consulta e na revisão dos tipos de espera dos trabalhadores associados e subtarefas que estão sendo executados usando a paralelização.</p>
+
         <p>Em particular, analisarei as ocorrências do tipo de espera de sessão <code>CXPACKET</code>. Na maioria dos sistemas, o <code>CXPACKET</code> é o sintoma e não o problema; geralmente, há um tipo de espera subjacente diferente que pode ser observado em <code>sys.dm_os_waiting_tasks</code> para a sessão. Ao focar nesse tipo de espera, uma decisão melhor sobre a opção apropriada <code>max degree of parallelism</code> pode ser tomada. Por exemplo, se o tipo de espera subjacente for <code>PAGEIOLATCH_SH</code>, então a operação paralela está esperando uma leitura do subsistema de E/S de disco, e reduzir o <code>max degree of parallelism</code> não resolverá o problema raiz; apenas reduzirá o número de trabalhadores sendo usados no sistema e reduzirá o tempo acumulado de espera para o tipo de espera <code>CXPACKET</code>. No entanto, isso pode reduzir a carga adicional que as operações de paralelismo exercem no subsistema de E/S de disco e dar tempo para aumentar o desempenho de E/S do servidor.</p>
+
         <p>Existem, no entanto, algumas considerações específicas relacionadas à arquitetura de memória dos processadores. Em sistemas baseados em NUMA (Acesso Não Uniforme à Memória), a opção <code>max degree of parallelism</code> deve ser definida como o número mínimo de processadores disponíveis em um único nó NUMA. Isso é feito para evitar o processamento paralelo entre nós, o que gera um custo significativo, pois o compartilhamento de memória entre nós é uma operação dispendiosa.</p>
+
         <p>Em sistemas de Multiprocessamento Simétrico (SMP), um dos compromissos com vários núcleos de processador em um único chip é o uso de caches L2 compartilhados entre vários núcleos, o que pode resultar em falhas de cache para aplicativos que consomem muita memória, como o SQL Server, e afetar o desempenho de cargas de trabalho altamente concorrentes em níveis mais elevados de paralelismo. Aqui, o valor apropriado para essa opção depende em grande parte do tipo de carga de trabalho sendo executada e da capacidade dos outros subsistemas de hardware para lidar com a carga adicional associada à execução paralela no sistema.</p>
+
         <p>Finalmente, observe que no SQL Server 2008 e posterior, o resource governor pode ser usado para impor um <code>max degree of parallelism</code> para grupos de consultas, com base em várias propriedades de conexão. Portanto, seria possível limitar consultas de um aplicativo, um conjunto específico de logins ou nomes de host específicos a um determinado <code>max degree of parallelism</code> e permitir que outras consultas sejam ilimitadas.</p>
-        <h2>Hyper-threading e paralelismo</h2>
+
+        <h2 id="hyper">Hyper-threading e paralelismo</h2>
+
         <p>O Hyper-threading é uma tecnologia da Intel projetada para melhorar a execução paralela, apresentando ao sistema operacional dois núcleos lógicos para cada núcleo físico. Isso significa que, em vez de um agendador por núcleo do processador, você tem dois, e assim dois threads podem ser executados "simultaneamente".</p>
-        <p><strong><em>Processadores AMD e dois threads fortes</em></strong></p>
-        <em>Arquiteturas modernas de processadores AMD, como a Bulldozer, utilizam uma abordagem diferente para o encadeamento, chamada de <strong>dois threads fortes</strong>, com um design que oferece hardware dedicado para cada um dos dois threads. Não discutiremos mais esse tópico aqui, mas mais informações podem ser encontradas no site da AMD: </em><a href="http://www.anandtech.com/show/3863/amd-discloses-bobcat-bulldozer-architectures-at-hot-chips-2010" target="_blank" rel="external">http://www.anandtech.com/show/3863/amd-discloses-bobcat-bulldozer-architectures-at-hot-chips-2010</a>.
+
+        <div class="dica">
+            <p class="destaque"><em>Processadores AMD e dois threads fortes</em></p>
+            <p><em>Arquiteturas modernas de processadores AMD, como a Bulldozer, utilizam uma abordagem diferente para o encadeamento, chamada de <strong>dois threads fortes</strong>, com um design que oferece hardware dedicado para cada um dos dois threads. Não discutiremos mais esse tópico aqui, mas mais informações podem ser encontradas no site da AMD: </em><a href="http://www.anandtech.com/show/3863/amd-discloses-bobcat-bulldozer-architectures-at-hot-chips-2010" target="_blank" rel="external">http://www.anandtech.com/show/3863/amd-discloses-bobcat-bulldozer-architectures-at-hot-chips-2010</a>.</p>
+        </div>
+
         <p>Uma pergunta comumente feita nos fóruns online é se o hyper-threading deve ser ativado para o SQL Server e como essas decisões são afetadas pelo tipo de carga de trabalho.</p>
+
         <p>Como discutido anteriormente, para uma carga de trabalho OLAP ou DSS, o desempenho da execução da consulta se beneficiará ao permitir que o otimizador de consultas paralelize consultas individuais. Isso certamente é verdade quando existem um grande número de núcleos de CPU físicos, mas, nas implementações iniciais do hyper-threading, a experiência da maioria dos DBAs foi que as consultas complexas que compunham uma carga de trabalho típica de OLAP/DSS apresentavam um desempenho ruim ao serem paralelizadas em vários núcleos hiper-threaded. Uma consulta típica e curta de OLTP era menos afetada ao ser executada em um núcleo lógico, em oposição a um físico, portanto, ativar o hyper-threading para uma carga de trabalho OLTP poderia trazer benefícios da paralelização no sentido de que mais núcleos estariam disponíveis para processar mais consultas em um determinado período de tempo.</p>
+
         <p>No entanto, vários problemas arquiteturais com implementações antigas de hyper-threading, que se tornaram cada vez mais problemáticos à medida que a carga da CPU em um servidor aumentava, fizeram com que a maioria dos DBAs simplesmente desabilitasse o hyper-threading no BIOS, independentemente do tipo de carga de trabalho.</p>
+
         <p>Ainda há alguns anos, quando o SQL Server 2008 RTM foi lançado pela primeira vez, o conselho de desativar o hyper-threading para o SQL Server, especialmente para cargas de trabalho de DW/OLAP/DSS, era geralmente correto. O maior problema com processadores mais antigos e o hyper-threading estava relacionado ao tamanho dos caches internos, que são compartilhados quando o hyper-threading está habilitado. O tamanho menor do cache significava que ocorriam muitas falhas de cache para aplicativos dependentes de memória, como o SQL Server. Outra questão no início era que o Windows Server 2000 não tinha suporte para hyper-threading, então, quando você tinha um servidor com dois processadores com hyper-threading ativado, o Windows pensava que tinha quatro processadores físicos e agendava a execução simultânea em ambos os threads de um processador quando sob carga.</p>
+
         <p>No entanto, avanços e melhorias recentes em hardware, no Windows e na implementação do hyper-threading significam que é simplesmente incorreto desativar o hyper-threading como regra geral. Muitos dos problemas iniciais não existem mais. Por exemplo, o Windows Server 2003 e versões posteriores têm suporte para hyper-threading e, portanto, reconhecem dois processadores físicos e dois processadores lógicos, e tratam o agendamento de forma diferente para acomodar o fato de dois dos processadores lógicos serem provenientes do hyper-threading. Além disso, os processadores mais recentes possuem caches muito maiores (MB em vez de KB); eles são menos propensos a problemas de falhas de cache e são mais adequados para usar o hyper-threading com implementações dependentes de memória, como o SQL Server, especialmente no Windows Server 2008.</p>
+
         <p>Na verdade, com arquiteturas recentes de processadores, especialmente Intel Nehalem e posteriores, meu conselho é habilitar o hyper-threading, a menos que você encontre um bom motivo para desativá-lo. Certamente é um erro desabilitar o hyper-threading sem primeiro testar completamente sua carga de trabalho do aplicativo com o hyper-threading habilitado e, em seguida, desabilitado, para realmente saber se há benefícios em ter o hyper-threading ativado ou desativado.</p>
+
         <p>É claro que, à medida que processadores com oito ou até doze núcleos físicos surgem no mercado, torna-se mais fácil alcançar altos níveis de paralelismo sem a necessidade do hyper-threading. No entanto, a tecnologia continua sendo fundamental para os processadores modernos da Intel (por exemplo, o processador Xeon E7-4870, para servidores de 4 soquetes, possui dez núcleos físicos <em>mais</em> hyper-threading), e com a maioria das arquiteturas de processadores recentes, há uma boa chance de você ver benefícios de desempenho e/ou throughput tanto para cargas de trabalho de DW/OLAP quanto de OLTP.</p>
-        <h2>Diagnosticando paralelismo inadequado</h2>
+
+        <h2 id="paralelind">Diagnosticando paralelismo inadequado</h2>
+
         <p>A melhor maneira de determinar se o processamento paralelo está causando um gargalo de recursos em um sistema específico é analisar as estatísticas de espera (wait statistics) e estatísticas de latch (latch statistics) de uma instância do SQL Server. Quando ocorre um gargalo durante a execução paralela de uma consulta, o tipo de espera <code>CXPACKET</code> é exibido como uma das principais esperas do SQL Server. Esse tipo de espera é definido sempre que um processo paralelo precisa aguardar no iterador de troca (exchange iterator) para que outro worker continue o processamento. Como discutido anteriormente, quando isso acontece, geralmente existe um tipo de espera subjacente, não relacionado ao <code>CXPACKET</code>, que está associado ao worker paralisado. No entanto, como vários workers são forçados a esperar quando isso ocorre, a quantidade de esperas <code>CXPACKET</code> geralmente excede o tipo de espera subjacente.</p>
+
         <p>Sempre que possível, é melhor isolar e solucionar o tipo de espera subjacente, pois isso levará a melhorias gerais no throughput do sistema. As esperas <code>CXPACKET</code> são apenas um sintoma do problema na maioria dos casos, e não o problema real. Existem cenários em que pode não ser possível eliminar o tipo de espera subjacente; por exemplo, quando o subsistema de E/S em disco não consegue acompanhar a demanda exigida pela execução paralela de uma consulta, o tipo de espera raiz pode ser <code>IO_COMPLETION</code>, <code>ASYNC_IO_COMPLETION</code> ou <code>PAGEIOLATCH_*</code>, e dimensionar o subsistema de E/S não é possível. Quando isso ocorre, reduzir o nível de paralelismo a um grau que ainda permita o processamento paralelo ocorrer sem gargalos no subsistema de E/S em disco pode melhorar o desempenho geral do sistema. É possível que as esperas <code>CXPACKET</code> em conjunto com outros tipos de espera, como <code>LATCH_*</code> e <code>SOS_SCHEDULER_YIELD</code>, indiquem que o paralelismo é o problema real, e uma investigação adicional das estatísticas de latch no sistema validará se esse é realmente o caso. A visão de gerenciamento dinâmico <code>sys.dm_os_latch_stats</code> contém informações sobre as esperas de latch específicas que ocorreram na instância, e se uma das principais esperas de latch for <code>ACCESS_METHODS_DATASET_PARENT</code>, em conjunto com <code>CXPACKET</code>, <code>LATCH_*</code> e <code>SOS_SCHEDULER_YIELD</code> como as principais esperas, o nível de paralelismo no sistema é a causa do gargalo durante a execução da consulta, e pode ser necessário reduzir a opção <code>max degree of parallelism</code> no sp_configure para resolver os problemas.</p>
-        <h2>Resolvendo problemas de paralelismo</h2>
+
+        <h2 id="resolvendo">Resolvendo problemas de paralelismo</h2>
+
         <p>Conforme discutido anteriormente, consultas maiores e de longa duração geralmente se beneficiarão da execução paralela, uma vez que o custo de executar a consulta de forma serial é maior do que o custo associado à inicialização, sincronização e término dos trabalhadores paralelos na execução paralela da consulta. O paralelismo inadequado ocorre mais comumente em casos em que a natureza da carga de trabalho é "mista", ou seja, temos uma carga de trabalho essencialmente de OLTP, caracterizada por um grande número de transações curtas, mas onde algumas dessas transações são complexas o suficiente para exceder o <code>cost threshold for parallelism</code>, e o SQL Server paraleliza sua execução em todos os núcleos disponíveis, consumindo recursos de CPU.</p>
         <p>Quando são diagnosticados problemas relacionados ao paralelismo, o primeiro remédio a ser investigado é otimizar as consultas que estão sendo paralelizadas de forma inadequada, caso ainda não estejam ajustadas. O paralelismo inadequado pode facilmente ser resultado de índices ausentes ou inadequados, estatísticas desatualizadas ou consultas mal escritas. Em outras palavras, ao ajustar essas consultas, elas deixarão de exceder o <code>cost threshold for parallelism</code> e, assim, serão executadas naturalmente em um único núcleo de CPU.</p>
         <p>Se a carga de trabalho estiver ajustada da melhor forma possível e os problemas de paralelismo persistirem, então a opção <code>cost threshold for parallelism</code> deve ser usada em conjunto com a opção <code>max degree of parallelism</code> para gerenciar a execução paralela no sistema como um todo.</p>
