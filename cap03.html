@@ -911,55 +911,98 @@ dtrSalesOrders = cmd.ExecuteReader();
         <h2 id="resolvendo">Resolvendo problemas de paralelismo</h2>
 
         <p>Conforme discutido anteriormente, consultas maiores e de longa duração geralmente se beneficiarão da execução paralela, uma vez que o custo de executar a consulta de forma serial é maior do que o custo associado à inicialização, sincronização e término dos trabalhadores paralelos na execução paralela da consulta. O paralelismo inadequado ocorre mais comumente em casos em que a natureza da carga de trabalho é "mista", ou seja, temos uma carga de trabalho essencialmente de OLTP, caracterizada por um grande número de transações curtas, mas onde algumas dessas transações são complexas o suficiente para exceder o <code>cost threshold for parallelism</code>, e o SQL Server paraleliza sua execução em todos os núcleos disponíveis, consumindo recursos de CPU.</p>
+
         <p>Quando são diagnosticados problemas relacionados ao paralelismo, o primeiro remédio a ser investigado é otimizar as consultas que estão sendo paralelizadas de forma inadequada, caso ainda não estejam ajustadas. O paralelismo inadequado pode facilmente ser resultado de índices ausentes ou inadequados, estatísticas desatualizadas ou consultas mal escritas. Em outras palavras, ao ajustar essas consultas, elas deixarão de exceder o <code>cost threshold for parallelism</code> e, assim, serão executadas naturalmente em um único núcleo de CPU.</p>
+
         <p>Se a carga de trabalho estiver ajustada da melhor forma possível e os problemas de paralelismo persistirem, então a opção <code>cost threshold for parallelism</code> deve ser usada em conjunto com a opção <code>max degree of parallelism</code> para gerenciar a execução paralela no sistema como um todo.</p>
-        <h3>TokenAndPermUserStore</h3>
+
+        <h2 id="token">TokenAndPermUserStore</h2>
+
         <p>O cache <code>TokenAndPermUserStore</code> foi introduzido no SQL Server 2005 como uma otimização que permitiria o armazenamento em cache dos resultados das verificações de permissões pelos usuários em relação aos objetos do banco de dados. No entanto, esse cache poderia ser a causa de problemas de desempenho, especialmente nas versões anteriores do SQL Server 2005, devido aos limites de tamanho do cache serem muito altos. Os problemas de desempenho geralmente se manifestavam como uso excessivamente alto da CPU e threads com altos tempos de espera <code>CMEMTHREAD</code>. Esta seção abordará como identificar problemas associados ao cache <code>TokenAndPermUserStore</code>, soluções temporárias, hotfixes da Microsoft para o problema, bem como a solução a longo prazo.</p>
+
         <p>O problema é discutido no artigo da Base de Conhecimento 927396 (<a href="http://support.microsoft.com/kb/927396" target="_blank" rel="external">http://support.microsoft.com/kb/927396</a>) e tende a se manifestar nas seguintes circunstâncias:</p>
+
         <ul>
             <li>grandes quantidades de memória não-AWE alocadas para o SQL Server (isso significa que o problema é específico para o SQL de 64 bits)</li>
             <li>muitas consultas SQL dinâmicas ou ad hoc</li>
             <li>muitos usuários de banco de dados diferentes.</li>
         </ul>
+
         <p>Para investigar possíveis problemas relacionados ao cache <code>TokenAndPermUserStore</code>, acompanhe o tamanho do cache ao longo de um período de tempo, usando a consulta mostrada na Listagem 3.23.</p>
-        <pre>
-            <code>
-        SELECT SUM(single_pages_kb + multi_pages_kb) / 1024.0 AS CacheSizeMB
-        FROM   sys.dm_os_memory_clerks
-        WHERE  [name] = 'TokenAndPermUserStore'
-            </code>
-        </pre>
-        <p><strong>Listagem 3.23</strong>: Encontrando o tamanho do cache TokenAndPermUserStore.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls> <func>SUM</func>(single_pages_kb + multi_pages_kb) / 1024.0 <cls>AS</cls> CacheSizeMB
+<cls>FROM</cls>   <com>sys.dm_os_memory_clerks</com>
+<cls>WHERE</cls>  [name] = <string>'TokenAndPermUserStore'</string>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 3.23</strong>: Encontrando o tamanho do cache TokenAndPermUserStore.</p>
+
         <p>Se o cache crescer constantemente em tamanho e esse crescimento for acompanhado por consultas em espera com o tipo de espera CMEMTHREAD, então o tamanho do cache pode ser a causa do alto uso da CPU.</p>
+
         <p>Se você estiver usando o SQL Server 2005 e o nível de patch estiver abaixo do SP2, a primeira coisa a fazer é aplicar pelo menos o SP2 e, de preferência, o SP4, pois foram feitas melhorias no gerenciamento desse cache no SP2.</p>
+
         <p>No entanto, a melhor solução a longo prazo é uma mudança arquitetural para reduzir o uso de consultas ad hoc ou SQL dinâmicas e mover o máximo possível de lógica para stored procedures. Dependendo da arquitetura da aplicação, isso pode variar de trivial a impossível, mas deve ser considerado, pois isso quase elimina a chance de encontrar esse problema.</p>
-        <h2>Soluções temporárias no SQL Server 2005</h2>
+
+        <h2 id="solucoes">Soluções temporárias no SQL Server 2005</h2>
+
         <p>Se essas medidas não forem imediatamente possíveis, existem algumas soluções temporárias para esse problema no SQL Server 2005.</p>
-        <h3>Use a função de servidor sysadmin</h3>
+
+        <h3 id="sysadmin">Use a função de servidor sysadmin</h3>
+
         <p>Tornando a conta de serviço da aplicação um membro da função de servidor <code>sysadmin</code>, qualquer verificação de permissões é contornada e o problema é resolvido. A suposição é que a conta pode executar qualquer operação dentro do SQL Server e, portanto, não requer verificações de permissões adicionais.</p>
+
         <p>Essa solução está longe de ser ideal, pois fornece permissões elevadas à conta de serviço. Em uma situação urgente, ela proporcionará alívio temporário para os problemas associados ao alto uso da CPU. No entanto, se funcionar e provar que o cache <code>TokenAndPermUserStore</code> é a causa raiz, você deve imediatamente determinar se outra solução pode ser utilizada em vez disso para resolver o problema.</p>
-        <h3>Limpe regularmente o cache</h3>
+
+        <h3 id="cache">Limpe regularmente o cache</h3>
+
         <p>Usando um trabalho do SQL Agent e o comando mostrado na Listagem 3.24, você pode regularmente liberar espaço no cache <code>TokenAndPermUserStore</code>.</p>
-        <pre><code>DBCC FREESYSTEMCACHE ('TokenAndPermUserStore')</code></pre>
-        <p><strong>Listagem 3.24</strong>: Liberando espaço no cache <code>TokenAndPermUserStore</code>.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>DBCC</cls> FREESYSTEMCACHE (<string>'TokenAndPermUserStore'</string>)
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 3.24</strong>: Liberando espaço no cache <code>TokenAndPermUserStore</code>.</p>
+
         <p>Novamente, isso deve ser feito apenas em casos extremos e como uma solução temporária. No entanto, isso irá controlar o tamanho do cache até que uma solução de longo prazo possa ser aplicada.</p>
-        <h3>Trace Flags</h3>
+
+        <h3 id="flags">Trace Flags</h3>
+
         <p>No SQL 2005 SP2 ou posterior, a Flag de Trace 4618 e/ou a Flag de Trace 4610 podem ser habilitadas. A Flag de Trace 4618 restringe o número de entradas que o cache irá armazenar para 1024 e, se ambas as flags estiverem habilitadas, o número de entradas no cache é limitado a 8192. Restringir o número de entradas que o cache irá armazenar deve ser usado temporariamente, enquanto outras soluções são consideradas.</p>
+
         <p>Uma última opção de alteração de configuração no SQL 2005, se estiver no SP3 ou posterior, é habilitar a Flag de Trace 4621. Isso permite definir uma cota personalizada. Para obter detalhes sobre como configurar isso, consulte o artigo da Base de Conhecimento 959823 (<a href="http://support.microsoft.com/kb/959823" target="_blank" rel="external">http://support.microsoft.com/kb/959823</a>).</p>
-        <h2>Opções de configuração no SQL Server 2008</h2>
+
+        <h2 id="config">Opções de configuração no SQL Server 2008</h2>
+
         <p>Com o SQL Server 2008, foram introduzidas as opções de configuração <code>access check cache bucket count</code> e <code>access check cache quota</code>. Essas opções controlam o número de entradas e o número de buckets de hash usados pelo cache <code>TokenAndPermUserStore</code>. O cache não deve causar os mesmos problemas no SQL 2008 como ocorria no SQL 2005, mas se os problemas surgirem, a cota pode ser definida para um número menor e/ou o número de buckets de hash pode ser aumentado. Alterar essas configurações pode reduzir o tempo necessário para localizar as entradas do cache. No entanto, essa alteração de configuração não é recomendada, a menos que seja orientada pelo Suporte ao Cliente da Microsoft, mas deve ser observada como uma área para solução de problemas.</p>
-        <h3>Opções de economia de energia do Windows Server e BIOS</h3>
+
+        <h3 id="economia">Opções de economia de energia do Windows Server e BIOS</h3>
+
         <p>Como parte das iniciativas de computação sustentável, muitos fabricantes de hardware enviam novos desktops, laptops e até mesmo servidores destinados ao uso em datacenters com a configuração avançada de controle de energia definida de modo que o sistema operacional, ou o próprio hardware, possa reduzir automaticamente o consumo de energia e os requisitos de resfriamento do sistema, desligando dispositivos que não estão sendo usados e reduzindo a velocidade dos processadores instalados no servidor. Infelizmente, isso pode ter um impacto bastante negativo no desempenho do processador.</p>
+
         <p>Essas configurações de economia de energia baseadas em hardware podem ser configuradas no BIOS do sistema principal para permitir que o hardware controle o consumo de energia (<code>Hardware</code>), permitir que o sistema operacional Windows controle o gerenciamento de energia (<code>Controle do SO</code>) ou desativar completamente os recursos de gerenciamento de energia (<code>Nenhum</code>). Em geral, a opção padrão no BIOS é permitir que o sistema operacional controle os recursos de gerenciamento de energia do sistema com base em suas opções configuradas.</p>
+
         <p>O Windows Server 2008 e o 2008 R2 têm como configuração padrão a opção de gerenciamento de energia <code>Equilibrado</code> (Windows Power Plan), que permite que o sistema mude para um estado de baixo desempenho para reduzir o consumo de energia. Uma das surpresas que muitas pessoas tiveram ao atualizar seus sistemas em hardware de servidor mais recente com o Windows Server 2008 ou 2008 R2 instalado é que o desempenho geral diminui após um certo período de tempo e acaba sendo significativamente menor do que quando o servidor foi inicializado pela primeira vez. Isso é resultado direto das características de gerenciamento de energia que causam a redução da velocidade dos processadores no servidor.</p>
+
         <p>Para identificar se esse é um problema em seu sistema, você pode usar uma ferramenta gratuita chamada CPU-Z, disponível em <a href="http://www.cpuid.com/softwares/cpu-z/versions-history.html" target="_blank" rel="external">http://www.cpuid.com/softwares/cpu-z/versions-history.html</a>, para coletar informações sobre o estado atual dos processadores instalados em um servidor. Não discutiremos em detalhes essa ferramenta aqui, mas os valores importantes a serem observados em relação aos problemas de gerenciamento de energia são a <strong>Especificação da CPU</strong>, que mostra o tipo de processador e sua velocidade de clock nominal, e a <strong>Velocidade do Núcleo</strong>, que mostra a velocidade de clock atual dos processadores no sistema. Se a Velocidade do Núcleo for menor que a especificação nominal, significa que o gerenciamento de energia está reduzindo o desempenho do sistema.</p>
+
         <p>O primeiro passo é verificar o esquema atual de gerenciamento de energia do Windows. Se estiver definido como <strong>Equilibrado</strong>, altere-o para <strong>Alto Desempenho</strong>, o que impede que o sistema mude para um estado de baixo desempenho e garante que as características de desempenho do sistema sejam consistentes (consulte <a href="http://support.microsoft.com/kb/2207548" target="_blank" rel="external">http://support.microsoft.com/kb/2207548</a>). Se o <strong>Alto Desempenho</strong> estiver sendo usado pelo Windows, a configuração do BIOS também deve ser verificada. Se estiver definido como <strong>Hardware</strong>, altere para <strong>Controle do SO</strong>.</p>
+
         <p>O que é insidioso aqui é o impacto que a economia de energia tem no contador de desempenho <code>% Processor Usage</code>. O valor desse contador é calculado com base na frequência atual da CPU dividida pela frequência disponível da CPU. Assim, uma CPU com velocidade reduzida faz com que o Windows relate valores de uso da CPU mais altos, levando as pessoas a acreditar que o servidor está sob uma carga mais pesada do que realmente está.</p>
-        <h2>Resumo</h2>
+
+        <h2 id="resumo">Resumo</h2>
+
         <p>Uma má gestão da utilização da CPU pode ter um impacto dramático no desempenho do SQL Server. Em geral, o uso sustentado da CPU em uma máquina do SQL Server não deve exceder 60-70%. Picos ocasionais para valores mais altos não devem ser um problema, mas um uso mais intenso e sustentado indica que o servidor está sob uma carga severa de CPU.</p>
         <p>Quando surgem problemas de CPU e após confirmar que o alto uso da CPU se deve ao processo do SQL Server, o primeiro passo é isolar a origem do problema, utilizando informações de ferramentas como o Monitor de Desempenho (PerfMon), SQLTrace e as Visualizações de Gerenciamento Dinâmico do SQL Server, muitas das quais foram significativamente aprimoradas nas versões do SQL Server 2005 e 2008.</p>
+
         <p>Com o problema localizado, podem ser tomadas as medidas apropriadas para aliviar a pressão da CPU, que vão desde adicionar índices úteis e ajustar consultas que consomem muita CPU até alterar as configurações de configuração. Se todas essas medidas falharem, pode ser simplesmente necessário ter mais ou CPUs mais rápidas, juntamente com um melhor balanceamento da carga entre as CPUs e um agendamento mais eficiente das consultas intensivas em CPU.</p>
-        <h2>Recursos adicionais</h2>
+
+        <h2 id="recursos">Recursos adicionais</h2>
+        
         <ul>
             <li>Conversas de dados implícitos</li>
             <ul><li><a href="http://sqlblog.com/blogs/jonathan_kehayias/archive/2010/01/08/findingimplicit-column-conversions-in-the-plan-cache.aspx" target="_blank" rel="external">http://sqlblog.com/blogs/jonathan_kehayias/archive/2010/01/08/findingimplicit-column-conversions-in-the-plan-cache.aspx</a></li></ul>
