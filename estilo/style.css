@@ -108,6 +108,22 @@ main h3 {
     margin-top: 40px;
 }
 
+main h4 {
+    color: var(--cor4);
+    font-family: var(--fonte-titulo);
+    font-size: 1.5em;
+    border-bottom-style: ridge;
+    margin-top: 40px;
+}
+
+main h5 {
+    color: var(--cor5);
+    font-family: var(--fonte-titulo);
+    font-size: 1.25em;
+    border-bottom-style: ridge;
+    margin-top: 40px;
+}
+
 main p {
     margin: 15px 0px;
     text-align: justify;
