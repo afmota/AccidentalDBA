@@ -118,7 +118,7 @@ main p {
 
 main a {
     text-decoration: none;
-    font-weight: bold;
+    /*font-weight: bold;*/
     color: var(--cor5);
     background-color: var(--cor0);
     padding: 2px 6px;
