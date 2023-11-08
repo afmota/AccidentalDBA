@@ -97,13 +97,13 @@
             <li>Observar o uso de recursos das consultas em execução atualmente com <code>sys.dm_exec_requests</code>.</li>
         </ul>
         
-        <h2 id="investigando2">Investigando estatísticas de espera relacionadas à CPU</h2>
+        <h4>Investigando estatísticas de espera relacionadas à CPU</h4>
 
         <p>Sempre que uma sessão precisa esperar antes que o trabalho solicitado possa continuar, o SQL Server registra o motivo da espera (o recurso pelo qual está esperando) e o tempo de espera. A DMV <code>sys.dm_os_wait_stats</code> expõe essas estatísticas de espera, agregadas em todas as sessões desde a última reinicialização do servidor ou desde a última vez em que as estatísticas de espera foram apagadas com o comando <code>DBCC SQLPERF('sys.dm_os_wait_stats', CLEAR)</code>. Essa DMV pode ser usada, entre outras coisas, para confirmar a pressão da CPU e estabelecer os tipos de espera mais comuns que um sistema com restrição de CPU está enfrentando.</p>
         
         <p>Vale ressaltar que algumas ferramentas de monitoramento de terceiros dependem das estatísticas nesta DMV não serem apagadas entre reinicializações do servidor, pois, se forem apagadas, isso pode afetar a precisão das informações exibidas por essas ferramentas de monitoramento.</p>
 
-        <h3 id="waittime">Tempo de espera do sinal</h3>
+        <h5>Tempo de espera do sinal</h5>
         
         <p>Junto com uma coluna <code>wait_type</code>, que indica o tipo de espera, o DMV <code>sys.dm_os_wait_stats</code> retorna vários tempos de espera úteis, incluindo:</p>
         
@@ -167,7 +167,7 @@
 
         <p>Três tipos de espera interessantes para se observar, em relação à pressão da CPU, são <code>SOS_SCHEDULER_YIELD</code>, <code>CXPACKET</code> e <code>CMEMTHREAD</code>.</p>
 
-        <h3 id="esperas">Esperas <code>SOS_SCHEDULER_YIELD</code></h3>
+        <h5>Esperas <code>SOS_SCHEDULER_YIELD</code></h5>
 
         <p>O agendador SQL é um agendador cooperativo de multitarefa. Isso significa que ele depende das consultas em execução para voluntariamente ceder a CPU após um determinado tempo de execução. Em contraste, o agendador do Windows é um agendador de multitarefa preemptivo, o que significa que ele remove as tarefas da CPU após um determinado tempo.</p>
         
@@ -177,17 +177,17 @@
         
         <p>Se as consultas mostrarem tempos de espera elevados em <code>sys.dm_exec_requests</code> ou <code>sys.dm_os_waiting_tasks</code> para o tipo de espera <code>SOS_SCHEDULER_YIELD</code>, isso indica que a consulta é extremamente intensiva em CPU. Se houver tempos de espera elevados para esse tipo de espera em geral no servidor, pode indicar que há muitas consultas intensivas em CPU, que podem precisar de otimização, ou que o servidor precisa de mais CPU. A atividade do agendador pode ser investigada ainda mais usando a DMV <code>sys.dm_os_schedulers</code> (discutida em breve).</p>
         
-        <h3 id="esperas2">Esperas <code>CXPACKET</code></h3>
+        <h5>Esperas <code>CXPACKET</code></h5>
         
         <p>As esperas <code>CXPACKET</code> ocorrem durante a sincronização do iterador de troca do processador de consulta entre os workers, para uma consulta em execução em paralelo em vários processadores. Se o servidor hospeda um data warehouse ou um banco de dados de relatórios que recebe um baixo volume de consultas, mas processa grandes quantidades de dados, o paralelismo pode reduzir substancialmente o tempo necessário para executar essas consultas. No entanto, em contraste, se o servidor hospeda um banco de dados OLTP que possui muitas consultas e transações pequenas, o paralelismo pode afetar negativamente o throughput e o desempenho. Para mais discussão sobre esperas <code>CXPACKET</code> elevadas e como lidar com esse problema, consulte a seção <em>Paralelismo inadequado</em>, posteriormente.</p>
         
-        <h3 id="esperas3">Esperas <code>CMEMTHREAD</code></h3>
+        <h5>Esperas <code>CMEMTHREAD</code></h5>
         
         <p>As esperas <code>CMEMTHREAD</code> são esperas por objetos de memória sincronizados. Alguns objetos de memória podem ser acessados por vários threads simultaneamente, enquanto outros não podem. Quando vários threads tentam acessar um objeto de memória, normalmente um cache, que deve ser acessado por um thread de cada vez, os threads em espera recebem uma espera <code>CMEMTHREAD</code>.</p>
         
         <p>Em geral, as esperas <code>CMEMTHREAD</code> não são comuns ou duradouras. No entanto, há um problema de memória conhecido no SQL Server 2005, em que, sob certas circunstâncias, um servidor pode mostrar alto uso de CPU, esperas <code>CMEMTHREAD</code> muito altas e consultas com desempenho muito ruim. Os detalhes disso serão discutidos posteriormente, na seção <em>TokenAndPermUser-Store</em>.</p>
         
-        <h2 id="investigando3">Investigando as filas do agendador</h2>
+        <h4 id="investigando3">Investigando as filas do agendador</h4>
         
         <p>A DMV <code>sys.dm_os_schedulers</code> pode identificar se uma instância do SQL está com restrição de CPU ou não. Esta DMV retorna uma linha para cada um dos agendadores do SQL Server e lista o número total de tarefas atribuídas a cada agendador, bem como o número que está pronto para execução.</p>
         
@@ -209,7 +209,7 @@
         
         <p>O filtro para agendadores abaixo de 255 remove, do conjunto de resultados, os numerosos agendadores ocultos no SQL Server, que são usados para backups, a Conexão Administrativa Dedicada (DAC) e assim por diante, e não são de interesse ao investigar a carga geral da CPU.</p>
         
-        <h2 id="identificando">Identificando consultas intensivas em CPU</h2>
+        <h4>Identificando consultas intensivas em CPU</h4>
         
         <p>Para determinar as consultas de pior desempenho no cache de plano do SQL Server, podem ser utilizadas as DMVs <code>sys.dm_exec_query_stats</code> e <code>sys.dm_exec_sql_text</code>. A DMV <code>sys.dm_exec_query_stats</code> fornece estatísticas agregadas e retorna uma linha para cada instrução de consulta no plano em cache. Muitas das colunas são contadores incrementais e fornecem informações sobre quantas vezes uma consulta foi executada e os recursos que foram utilizados. Por exemplo, as colunas <code>*_worker_time</code> representam o tempo gasto na CPU e as colunas <code>*_elapsed_time</code> mostram o tempo total de execução.</p>
         
@@ -585,7 +585,7 @@ CPU time = 47 ms, elapsed time = 182 ms.100
         
         <p>Existem várias maneiras diferentes de lidar com problemas de parameter sniffing, dependendo da situação e da versão do SQL Server que você está usando.</p>
         
-        <h2 id="4136">Trace Flag 4136</h2>
+        <h4>Trace Flag 4136</h4>
         
         <p>O SQL Server 2008 introduziu uma opção para desativar completamente o parameter sniffing para uma instância do SQL Server, simplesmente ativando o Trace Flag 4136. Essa opção foi adicionada no SQL Server 2008 SP1 CU7 e no SQL Server 2008 R2 CU2, e também foi retroportada para o SQL Server 2005 no SP3 CU9.</p>
         
@@ -595,7 +595,7 @@ CPU time = 47 ms, elapsed time = 182 ms.100
         
         <p>Em resumo, embora essa opção esteja disponível, o parameter sniffing é benéfico para a maioria dos procedimentos que são escritos para usar valores típicos. Desativar o parameter sniffing pode afetar inadvertidamente esses planos de maneira negativa. Como tal, esse Trace Flag deve ser considerado como último recurso absoluto se nada mais resolver o problema.</p>
         
-        <h2 id="optimize">Usando o hint OPTIMIZE FOR</h2>
+        <h4>Usando o hint OPTIMIZE FOR</h4>
         
         <p>No SQL Server 2005 e posterior, podemos usar a dica <code>OPTIMIZE FOR</code> para especificar um valor de parâmetro para o otimizador usar ao compilar um plano, conforme mostrado no Listing 3.14.</p>
         
@@ -623,7 +623,7 @@ CPU time = 47 ms, elapsed time = 182 ms.100
 
         <p>No SQL Server 2008, isso foi "estendido" para fornecer a dica <code>OPTIMIZE FOR UNKNOWN</code>, que instrui o SQL Server a não usar o "parameter sniffing" de forma alguma. Isso permite um controle de "parameter sniffing" consulta por consulta, enquanto o Trace Flag mencionado anteriormente controla a configuração para toda a instância. Na maioria dos casos, a dica é uma solução mais desejável, pois, em geral, o "parameter sniffing" é algo positivo.</p>
 
-        <h2 id="recomp">Opções de recompilação</h2>
+        <h4>Opções de recompilação</h4>
 
         <p>Podemos usar a opção <code>WITH RECOMPILE</code> ao criar uma stored procedure como outra possível solução para problemas de "parameter sniffing". Isso significa que um plano nunca será armazenado em cache para a procedure, pois força uma recompilação e geração de um novo plano a cada execução. Isso significa que as estimativas de linhas serão sempre baseadas no valor atual do parâmetro, mas ao custo de aumentar o tempo de execução da procedure.</p>
 
@@ -724,7 +724,7 @@ CPU time = 47 ms, elapsed time = 182 ms.100
 
         <p>Se as consultas ad hoc não parametrizadas estiverem causando um problema, há algumas opções para resolvê-lo. A primeira e melhor opção é corrigir o problema na origem, no aplicativo que realiza as chamadas. Se isso não for possível, existem configurações no SQL Server que podem ser alteradas para amenizar o problema.</p>
 
-        <h2 id="corrigir">Corrigindo o aplicativo</h2>
+        <h4>Corrigindo o aplicativo</h4>
 
         <p>Se for possível alterar o aplicativo que está enviando essas consultas ad hoc não parametrizadas para o SQL Server, essa opção deve ser escolhida. Isso pode envolver a migração do acesso aos dados de consultas ad hoc incorporadas no código da interface para procedimentos armazenados, ou pode envolver apenas a alteração das consultas ad hoc incorporadas no código da interface para suas versões parametrizadas. A Listagem 3.18 mostra uma consulta não parametrizada sendo enviada ao SQL Server.</p>
 
@@ -767,7 +767,7 @@ dtrSalesOrders = cmd.ExecuteReader();
 
         <p>Se não for possível alterar o aplicativo, como muitas vezes ocorre com aplicativos de fornecedores, ou quando o código-fonte do aplicativo não está disponível, existem duas opções no SQL Server que podem ajudar a aliviar o problema: <strong>parametrização forçada</strong> e <strong>otimização para cargas de trabalho ad hoc</strong>.</p>
 
-        <h2 id="parametro">Parametrização forçada no SQL Server</h2>
+        <h4>Parametrização forçada no SQL Server</h4>
 
         <p>O SQL Server 2005 e versões posteriores oferecem a capacidade de definir a opção <code>PARAMETERIZATION</code> em nível de banco de dados como <code>FORCED</code>, usando a instrução <code>ALTER DATABASE</code>, conforme mostrado na Listagem 3.20. Isso forçará todas as consultas ad hoc nesse banco de dados a serem parametrizadas antes do processo de compilação iniciar.</p>
 
@@ -783,7 +783,7 @@ dtrSalesOrders = cmd.ExecuteReader();
 
         <p>Existem possíveis desvantagens no uso da parametrização forçada, pois essa configuração obriga o SQL a usar um plano para todas as consultas correspondentes, independentemente dos valores literais, o que significa que há uma possibilidade dos mesmos problemas de parameter sniffing aos quais as stored procedures estão suscetíveis. Se ocorrer um problema desse tipo, ele poderá ser investigado e resolvido de maneira semelhante ao discutido anteriormente neste capítulo para as stored procedures.</p>
 
-        <h2 id="otimizacao">Otimização para cargas de trabalho ad hoc</h2>
+        <h4>Otimização para cargas de trabalho ad hoc</h4>
 
         <p>No SQL Server 2008 e versões posteriores, podemos usar a opção "<code>optimize for ad hoc workloads</code>", que é uma configuração em nível de servidor, ou seja, afetará todos os bancos de dados no servidor (ao contrário da parametrização forçada, que é específica do banco de dados).</p>
 
@@ -820,7 +820,7 @@ dtrSalesOrders = cmd.ExecuteReader();
 
         <p>Com muita frequência, quando surgem problemas de CPU relacionados a "paralelismo inadequado", a solução sugerida parece se concentrar apenas em alterar o valor para <code>max degree of parallelism</code>. Por exemplo, uma rápida pesquisa online do problema, especialmente do tipo de espera <code>CXPACKET</code> (um indicador clássico de problemas relacionados a paralelismo, como discutido um pouco mais adiante), resultará em numerosas postagens que recomendam reduzir o <code>max degree of parallelism</code> para metade ou um quarto do número de processadores lógicos ou núcleos do processador no servidor, ou até mesmo desabilitar completamente o paralelismo definindo-o como 1. Embora isso possa resolver o problema, pode não ser a solução ideal. A melhor solução é considerar, em conjunto, o valor apropriado para cada uma dessas opções.</p>
 
-        <h2 id="limite">Custo limite para paralelismo</h2>
+        <h4>Custo limite para paralelismo</h4>
 
         <p>Como discutido, a opção de configuração <code>cost threshold for parallelism</code> determina um limiar de "custo" que, quando excedido, faz com que um plano de execução paralela seja gerado para executar a solicitação do usuário. A execução paralela é possível apenas em sistemas de vários processadores, portanto, a opção de <code>cost threshold for parallelism</code> só é utilizada pelo mecanismo de banco de dados quando existem vários processadores, o servidor não está afetado a um único processador e o <code>max degree of parallelism</code> é definido como um valor diferente de 1.</p>
 
@@ -855,7 +855,7 @@ dtrSalesOrders = cmd.ExecuteReader();
 
         <p>A análise das declarações mais frequentemente executadas que resultam em consultas paralelas pode orientar a configuração apropriada da opção de <code>cost threshold for parallelism</code>, a fim de minimizar o impacto de várias solicitações paralelas executadas simultaneamente, que geram contenção de CPU e E/S no sistema.</p>
 
-        <h2 id="maximo">Grau máximo de paralelismo</h2>
+        <h4>Grau máximo de paralelismo</h4>
 
         <p>Sempre que o custo estimado de executar uma consulta serialmente exceder nosso valor cuidadosamente avaliado para o <code>cost threshold for parallelism</code>, o mecanismo do banco de dados pode distribuir a carga de execução dessa consulta entre vários processadores disponíveis, de acordo com o grau de paralelismo ditado pela opção <code>max degree of parallelism</code>. O número de processadores utilizados será determinado pelo valor mais baixo dos três seguintes:</p>
 
@@ -879,7 +879,7 @@ dtrSalesOrders = cmd.ExecuteReader();
 
         <p>Finalmente, observe que no SQL Server 2008 e posterior, o resource governor pode ser usado para impor um <code>max degree of parallelism</code> para grupos de consultas, com base em várias propriedades de conexão. Portanto, seria possível limitar consultas de um aplicativo, um conjunto específico de logins ou nomes de host específicos a um determinado <code>max degree of parallelism</code> e permitir que outras consultas sejam ilimitadas.</p>
 
-        <h2 id="hyper">Hyper-threading e paralelismo</h2>
+        <h4>Hyper-threading e paralelismo</h4>
 
         <p>O Hyper-threading é uma tecnologia da Intel projetada para melhorar a execução paralela, apresentando ao sistema operacional dois núcleos lógicos para cada núcleo físico. Isso significa que, em vez de um agendador por núcleo do processador, você tem dois, e assim dois threads podem ser executados "simultaneamente".</p>
 
@@ -902,13 +902,13 @@ dtrSalesOrders = cmd.ExecuteReader();
 
         <p>É claro que, à medida que processadores com oito ou até doze núcleos físicos surgem no mercado, torna-se mais fácil alcançar altos níveis de paralelismo sem a necessidade do hyper-threading. No entanto, a tecnologia continua sendo fundamental para os processadores modernos da Intel (por exemplo, o processador Xeon E7-4870, para servidores de 4 soquetes, possui dez núcleos físicos <em>mais</em> hyper-threading), e com a maioria das arquiteturas de processadores recentes, há uma boa chance de você ver benefícios de desempenho e/ou throughput tanto para cargas de trabalho de DW/OLAP quanto de OLTP.</p>
 
-        <h2 id="paralelind">Diagnosticando paralelismo inadequado</h2>
+        <h4>Diagnosticando paralelismo inadequado</h4>
 
         <p>A melhor maneira de determinar se o processamento paralelo está causando um gargalo de recursos em um sistema específico é analisar as estatísticas de espera (wait statistics) e estatísticas de latch (latch statistics) de uma instância do SQL Server. Quando ocorre um gargalo durante a execução paralela de uma consulta, o tipo de espera <code>CXPACKET</code> é exibido como uma das principais esperas do SQL Server. Esse tipo de espera é definido sempre que um processo paralelo precisa aguardar no iterador de troca (exchange iterator) para que outro worker continue o processamento. Como discutido anteriormente, quando isso acontece, geralmente existe um tipo de espera subjacente, não relacionado ao <code>CXPACKET</code>, que está associado ao worker paralisado. No entanto, como vários workers são forçados a esperar quando isso ocorre, a quantidade de esperas <code>CXPACKET</code> geralmente excede o tipo de espera subjacente.</p>
 
         <p>Sempre que possível, é melhor isolar e solucionar o tipo de espera subjacente, pois isso levará a melhorias gerais no throughput do sistema. As esperas <code>CXPACKET</code> são apenas um sintoma do problema na maioria dos casos, e não o problema real. Existem cenários em que pode não ser possível eliminar o tipo de espera subjacente; por exemplo, quando o subsistema de E/S em disco não consegue acompanhar a demanda exigida pela execução paralela de uma consulta, o tipo de espera raiz pode ser <code>IO_COMPLETION</code>, <code>ASYNC_IO_COMPLETION</code> ou <code>PAGEIOLATCH_*</code>, e dimensionar o subsistema de E/S não é possível. Quando isso ocorre, reduzir o nível de paralelismo a um grau que ainda permita o processamento paralelo ocorrer sem gargalos no subsistema de E/S em disco pode melhorar o desempenho geral do sistema. É possível que as esperas <code>CXPACKET</code> em conjunto com outros tipos de espera, como <code>LATCH_*</code> e <code>SOS_SCHEDULER_YIELD</code>, indiquem que o paralelismo é o problema real, e uma investigação adicional das estatísticas de latch no sistema validará se esse é realmente o caso. A visão de gerenciamento dinâmico <code>sys.dm_os_latch_stats</code> contém informações sobre as esperas de latch específicas que ocorreram na instância, e se uma das principais esperas de latch for <code>ACCESS_METHODS_DATASET_PARENT</code>, em conjunto com <code>CXPACKET</code>, <code>LATCH_*</code> e <code>SOS_SCHEDULER_YIELD</code> como as principais esperas, o nível de paralelismo no sistema é a causa do gargalo durante a execução da consulta, e pode ser necessário reduzir a opção <code>max degree of parallelism</code> no sp_configure para resolver os problemas.</p>
 
-        <h2 id="resolvendo">Resolvendo problemas de paralelismo</h2>
+        <h4>Resolvendo problemas de paralelismo</h2>
 
         <p>Conforme discutido anteriormente, consultas maiores e de longa duração geralmente se beneficiarão da execução paralela, uma vez que o custo de executar a consulta de forma serial é maior do que o custo associado à inicialização, sincronização e término dos trabalhadores paralelos na execução paralela da consulta. O paralelismo inadequado ocorre mais comumente em casos em que a natureza da carga de trabalho é "mista", ou seja, temos uma carga de trabalho essencialmente de OLTP, caracterizada por um grande número de transações curtas, mas onde algumas dessas transações são complexas o suficiente para exceder o <code>cost threshold for parallelism</code>, e o SQL Server paraleliza sua execução em todos os núcleos disponíveis, consumindo recursos de CPU.</p>
 
@@ -916,7 +916,7 @@ dtrSalesOrders = cmd.ExecuteReader();
 
         <p>Se a carga de trabalho estiver ajustada da melhor forma possível e os problemas de paralelismo persistirem, então a opção <code>cost threshold for parallelism</code> deve ser usada em conjunto com a opção <code>max degree of parallelism</code> para gerenciar a execução paralela no sistema como um todo.</p>
 
-        <h2 id="token">TokenAndPermUserStore</h2>
+        <h3 id="token">TokenAndPermUserStore</h3>
 
         <p>O cache <code>TokenAndPermUserStore</code> foi introduzido no SQL Server 2005 como uma otimização que permitiria o armazenamento em cache dos resultados das verificações de permissões pelos usuários em relação aos objetos do banco de dados. No entanto, esse cache poderia ser a causa de problemas de desempenho, especialmente nas versões anteriores do SQL Server 2005, devido aos limites de tamanho do cache serem muito altos. Os problemas de desempenho geralmente se manifestavam como uso excessivamente alto da CPU e threads com altos tempos de espera <code>CMEMTHREAD</code>. Esta seção abordará como identificar problemas associados ao cache <code>TokenAndPermUserStore</code>, soluções temporárias, hotfixes da Microsoft para o problema, bem como a solução a longo prazo.</p>
 
@@ -946,17 +946,17 @@ dtrSalesOrders = cmd.ExecuteReader();
 
         <p>No entanto, a melhor solução a longo prazo é uma mudança arquitetural para reduzir o uso de consultas ad hoc ou SQL dinâmicas e mover o máximo possível de lógica para stored procedures. Dependendo da arquitetura da aplicação, isso pode variar de trivial a impossível, mas deve ser considerado, pois isso quase elimina a chance de encontrar esse problema.</p>
 
-        <h2 id="solucoes">Soluções temporárias no SQL Server 2005</h2>
+        <h4>Soluções temporárias no SQL Server 2005</h4>
 
         <p>Se essas medidas não forem imediatamente possíveis, existem algumas soluções temporárias para esse problema no SQL Server 2005.</p>
 
-        <h3 id="sysadmin">Use a função de servidor sysadmin</h3>
+        <h5>Use a função de servidor sysadmin</h5>
 
         <p>Tornando a conta de serviço da aplicação um membro da função de servidor <code>sysadmin</code>, qualquer verificação de permissões é contornada e o problema é resolvido. A suposição é que a conta pode executar qualquer operação dentro do SQL Server e, portanto, não requer verificações de permissões adicionais.</p>
 
         <p>Essa solução está longe de ser ideal, pois fornece permissões elevadas à conta de serviço. Em uma situação urgente, ela proporcionará alívio temporário para os problemas associados ao alto uso da CPU. No entanto, se funcionar e provar que o cache <code>TokenAndPermUserStore</code> é a causa raiz, você deve imediatamente determinar se outra solução pode ser utilizada em vez disso para resolver o problema.</p>
 
-        <h3 id="cache">Limpe regularmente o cache</h3>
+        <h5>Limpe regularmente o cache</h5>
 
         <p>Usando um trabalho do SQL Agent e o comando mostrado na Listagem 3.24, você pode regularmente liberar espaço no cache <code>TokenAndPermUserStore</code>.</p>
 
@@ -970,13 +970,13 @@ dtrSalesOrders = cmd.ExecuteReader();
 
         <p>Novamente, isso deve ser feito apenas em casos extremos e como uma solução temporária. No entanto, isso irá controlar o tamanho do cache até que uma solução de longo prazo possa ser aplicada.</p>
 
-        <h3 id="flags">Trace Flags</h3>
+        <h5>Trace Flags</h5>
 
         <p>No SQL 2005 SP2 ou posterior, a Flag de Trace 4618 e/ou a Flag de Trace 4610 podem ser habilitadas. A Flag de Trace 4618 restringe o número de entradas que o cache irá armazenar para 1024 e, se ambas as flags estiverem habilitadas, o número de entradas no cache é limitado a 8192. Restringir o número de entradas que o cache irá armazenar deve ser usado temporariamente, enquanto outras soluções são consideradas.</p>
 
         <p>Uma última opção de alteração de configuração no SQL 2005, se estiver no SP3 ou posterior, é habilitar a Flag de Trace 4621. Isso permite definir uma cota personalizada. Para obter detalhes sobre como configurar isso, consulte o artigo da Base de Conhecimento 959823 (<a href="http://support.microsoft.com/kb/959823" target="_blank" rel="external">http://support.microsoft.com/kb/959823</a>).</p>
 
-        <h2 id="config">Opções de configuração no SQL Server 2008</h2>
+        <h4>Opções de configuração no SQL Server 2008</h4>
 
         <p>Com o SQL Server 2008, foram introduzidas as opções de configuração <code>access check cache bucket count</code> e <code>access check cache quota</code>. Essas opções controlam o número de entradas e o número de buckets de hash usados pelo cache <code>TokenAndPermUserStore</code>. O cache não deve causar os mesmos problemas no SQL 2008 como ocorria no SQL 2005, mas se os problemas surgirem, a cota pode ser definida para um número menor e/ou o número de buckets de hash pode ser aumentado. Alterar essas configurações pode reduzir o tempo necessário para localizar as entradas do cache. No entanto, essa alteração de configuração não é recomendada, a menos que seja orientada pelo Suporte ao Cliente da Microsoft, mas deve ser observada como uma área para solução de problemas.</p>
 
