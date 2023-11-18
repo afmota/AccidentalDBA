@@ -8,11 +8,12 @@
         <link rel="stylesheet" href="estilo/media-queries.css">
         <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     </head>
-<body>
+<body onresize="mudouTamanho()">
     <header>
 		<h1>Troubleshooting SQL Server</h1>
 		<h2>Um Guia para o DBA Acidental</h2>	
     </header>
+
     <nav>
         <i id="burger" class="material-icons" onclick="clickMenu()">menu</i>
         <menu id="itens">
@@ -27,6 +28,7 @@
 			</ul>
 		</menu>
     </nav>
+    
     <main>
         <h1>Introdução</h1>
 
@@ -63,5 +65,22 @@
     <footer>
         <P>Criado por Agnaldo Mota</P>
     </footer>
+	<script>
+        function clickMenu() {
+            if (itens.style.display == 'block') {
+                itens.style.display = 'none'
+            } else {
+                itens.style.display = 'block'
+            }
+        }
+
+        function mudouTamanho() {
+            if (window.innerWidth >= 768) {
+                itens.style.display = 'block'
+            } else {
+                itens.style.display = 'none'
+            }
+        }
+	</script>
 </body>
 </html>

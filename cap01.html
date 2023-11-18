@@ -1,28 +1,35 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DBA Acidental</title>
-  <link rel="stylesheet" href="estilo/style.css">
-</head>
-<body>
-  <header>
-    <h1>Troubleshooting SQL Server</h1>
-    <h2>Um Guia para o DBA Acidental</h2>
-  </header>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>DBA Acidental</title>
+        <link rel="stylesheet" href="estilo/style.css">
+        <link rel="stylesheet" href="estilo/media-queries.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+    </head>
+<body onresize="mudouTamanho()">
+    <header>
+        <h1>Troubleshooting SQL Server</h1>
+        <h2>Um Guia para o DBA Acidental</h2>
+    </header>
   
-  <nav>
-    <a href="index.html" target="_self">Índice</a>
-    <a href="abertura.html" target="_self">Abertura</a>
-    <a href="introducao.html" target="_self">Introdução</a>
-    <a href="cap02.html" target="_self">Cap.2</a>
-    <a href="cap03.html" target="_self">Cap.3</a>
-    <a href="cap04.html" target="_self">Cap.4</a>
-    <a href="cap05.html" target="_self">Cap.5</a>
-  </nav>
+    <nav>
+        <i id="burger" class="material-icons" onclick="clickMenu()">menu</i>
+        <menu id="itens">
+            <ul>
+                <li><a href="index.html" target="_self">Índice</a></li>
+                <li><a href="abertura.html" target="_self">Abertura</a></li>
+                <li><a href="introducao.html" target="_self">Introdução</a></li>
+                <li><a href="cap02.html" target="_self">Cap. 2</a></li>
+                <li><a href="cap03.html" target="_self">Cap. 3</a></li>
+                <li><a href="cap04.html" target="_self">Cap. 4</a></li>
+                <li><a href="cap05.html" target="_self">Cap. 5</a></li>
+            </ul>
+        </menu>
+    </nav>
   
-  <main>
+    <main>
     <h1>Capítulo 1: Uma metodologia de solução de problemas de desempenho</h1>
 
     <p>Saber por onde começar é a parte mais difícil de resolver um problema. Como Administrador de Banco de Dados Sênior, eu me orgulhava de ser capaz de identificar a causa raiz dos problemas em meus servidores e rapidamente restaurar os serviços ao funcionamento normal. A capacidade de fazer isso se deve em parte a um conhecimento sólido do ambiente do seu SQL Server, em parte ao uso das ferramentas e scripts corretos e em parte ao aprendizado de observar o que deve ser observado, com base em lições bem aprendidas no passado.</p>
@@ -441,8 +448,27 @@
     
     <p>O ponto mais importante que quero enfatizar neste capítulo introdutório é que nenhuma única informação no SQL Server deve ser usada para identificar um problema específico. A arte de controlar um SQL Server problemático é a arte de reunir as várias peças do quebra-cabeça para que você tenha uma compreensão completa do que está acontecendo dentro de um servidor. Se você se concentrar apenas no que está imediatamente à sua frente, na maioria dos casos, perderá o item mais importante, que é a verdadeira causa raiz de um problema específico no SQL Server. </p>
   </main>
+  
   <footer>
     <p>Criado por Agnaldo Mota</p>
   </footer>
+
+  <script>
+        function clickMenu() {
+            if (itens.style.display == 'block') {
+                itens.style.display = 'none'
+            } else {
+                itens.style.display = 'block'
+            }
+        }
+
+        function mudouTamanho() {
+            if (window.innerWidth >= 768) {
+                itens.style.display = 'block'
+            } else {
+                itens.style.display = 'none'
+            }
+        }
+  </script>
 </body>
 </html>
