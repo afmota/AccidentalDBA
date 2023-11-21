@@ -5,21 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DBA Acidental</title>
     <link rel="stylesheet" href="estilo/style.css">
+	<link rel="stylesheet" href="estilo/media-queries.css">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 </head>
-<body>
+<body onresize="mudouTamanho()">
     <header>
-		<h1>Troubleshooting SQL Server</h1>
-		<h2>Um Guia para o DBA Acidental</h2>	
-	</header>
+        <h1>Troubleshooting SQL Server</h1>
+        <h2>Um Guia para o DBA Acidental</h2>	
+    </header>
     <nav>
-		<a href="index.html" target="_self">Índice</a>
-		<a href="introducao.html" target="_self">Introdução</a>
-		<a href="cap01.html" target="_self">Cap.1</a>
-		<a href="cap02.html" target="_self">Cap.2</a>
-		<a href="cap03.html" target="_self">Cap.3</a>
-		<a href="cap04.html" target="_self">Cap.4</a>
-        <a href="cap05.html" target="_self">Cap.5</a>
-	</nav>
+        <i id="burger" class="material-icons" onclick="clickMenu()">menu</i>
+        <menu id="itens">
+			<ul>
+				<li><a href="index.html" target="_self">Índice</a></li>
+				<li><a href="introducao.html" target="_self">Introdução</a></li>
+				<li><a href="cap01.html" target="_self">Cap. 1</a></li>
+				<li><a href="cap02.html" target="_self">Cap. 2</a></li>
+				<li><a href="cap03.html" target="_self">Cap. 3</a></li>
+				<li><a href="cap04.html" target="_self">Cap. 4</a></li>
+				<li><a href="cap05.html" target="_self">Cap. 5</a></li>
+			</ul>
+		</menu>
+    </nav>
     <main>
         <h1>Prefácio de Paul Randal</h1>
         <p>Para a maioria das pessoas, solucionar problemas de desempenho, corrupção ou outros problemas com o SQL Server é uma necessidade, não uma preferência. A menos que você seja um DBA avançado ou consultor com muitos anos de experiência em solução de problemas, a primeira pergunta que você costuma fazer a si mesmo é: por onde começo? Existem muitos livros sobre os aspectos internos do SQL Server, solução de problemas do SQL Server ou ambos - mas todos são organizados a partir da perspectiva da arquitetura ou dos aspectos internos do SQL Server.</p>
@@ -65,5 +72,22 @@
     <footer>
         <p>Criado por Agnaldo Mota</p>
     </footer>
+	<script>
+        function clickMenu() {
+            if (itens.style.display == 'block') {
+                itens.style.display = 'none'
+            } else {
+                itens.style.display = 'block'
+            }
+        }
+
+        function mudouTamanho() {
+            if (window.innerWidth >= 768) {
+                itens.style.display = 'block'
+            } else {
+                itens.style.display = 'none'
+            }
+        }
+	</script>
 </body>
 </html>
