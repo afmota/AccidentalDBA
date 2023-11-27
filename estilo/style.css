@@ -149,7 +149,7 @@ main > ol {
     list-style-position: inside;
 }
 
-main > li {
+main > ul > li {
     font-size: 1em;
     line-height: 1.5em;
     list-style-position: outside;

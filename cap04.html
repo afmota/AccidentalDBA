@@ -185,105 +185,201 @@
         <p>Para sistemas com menos de 16 GB de RAM, é possível usar os métodos 4GT discutidos na seção anterior em conjunto com o AWE, mas geralmente não é recomendado. Um dos efeitos colaterais de incluir o parâmetro <code>/3GB</code> no arquivo de inicialização para o ajuste do 4GT é que a quantidade total de memória que o Windows pode gerenciar é reduzida de 64 GB para 16 GB devido à redução no número de PTEs causada pela redução do espaço de endereço do modo kernel. Em sistemas com mais de 16 GB de RAM, o uso do ajuste do 4GT em conjunto com o AWE não é suportado pela Microsoft (consulte <a href="http://support.microsoft.com/kb/274750" target="_blank" rel="external">http://support.microsoft.com/kb/274750</a>).</p>
 
         <h4>O parâmetro de inicialização -g</h4>
+
         <p>Anteriormente neste capítulo, foi observado que durante a inicialização de servidores SQL de 32 bits, uma porção do espaço de endereço virtual (VAS) do modo usuário é reservada (em um processo chamado <strong>Reserva de VAS</strong>) para alocações de memória fora do buffer pool. O tamanho dessa reserva <code>MemToLeave</code> geralmente é muito pequeno em comparação com a quantidade de memória que um servidor SQL pode ter instalada e em relação ao tamanho do buffer pool.</p>
+
         <p>Para a maioria dos sistemas, isso não é um problema, já que a maioria da memória consumida pelo SQL Server não é proveniente dessa região de espaço de endereço reservado, mas do buffer pool. No entanto, à medida que as aplicações se tornaram mais complexas, também aumentaram os bancos de dados que as suportam, e é possível que a reserva de VAS padrão para uma instância do SQL Server não seja grande o suficiente para atender aos requisitos de alocação de memória fora do buffer pool.</p>
+
         <p>Agravando o problema do tamanho insuficiente do VAS fora do buffer pool está a fragmentação da reserva de VAS que existe. As alocações de memória do VAS devem ser feitas de forma contígua, e é possível que haja VAS suficiente, mas ele esteja fragmentado e o tamanho contíguo apropriado necessário para uma alocação de memória não esteja disponível.</p>
+
         <p>Determinar qual desses dois problemas existe pode ser feito consultando a visão de gerenciamento dinâmico <code>sys.dm_os_virtual_address_dump</code> para encontrar o tamanho do VAS disponível no sistema e o tamanho do maior espaço contíguo disponível.</p>
-        <p><strong><em>Determinando o VAS disponível</em></strong></p>
-        <p><em>O MVP do SQL Server, Christian Bolton, fornece um script para determinar a quantidade de VAS disponível para o SQL Server e o tamanho do maior bloco contíguo de VAS em sua postagem no blog "SQL Server</em> <code>memtoleave</code><em>, VAS and 64-bit" (</em><a href="http://sqlblogcasts.com/blogs/christian/archive/2008/01/07/sql-servermemtoleave-vas-and-64-bit.aspx" target="_blank" rel="external">http://sqlblogcasts.com/blogs/christian/archive/2008/01/07/sql-servermemtoleave-vas-and-64-bit.aspx</a><em>).</em></p>
+
+        <div class="dica">
+            <p class="destaque"><em>Determinando o VAS disponível</em></p>
+            <p><em>O MVP do SQL Server, Christian Bolton, fornece um script para determinar a quantidade de VAS disponível para o SQL Server e o tamanho do maior bloco contíguo de VAS em sua postagem no blog "SQL Server</em> <code>memtoleave</code><em>, VAS and 64-bit" (</em><a href="http://sqlblogcasts.com/blogs/christian/archive/2008/01/07/sql-servermemtoleave-vas-and-64-bit.aspx" target="_blank" rel="external">http://sqlblogcasts.com/blogs/christian/archive/2008/01/07/sql-servermemtoleave-vas-and-64-bit.aspx</a><em>).</em></p>
+        </div>
+
         <p>O parâmetro de inicialização -g para o serviço do SQL Server pode ser usado para aumentar a quantidade de VAS reservada pela reserva <code>MemToLeave</code> durante a inicialização. Este parâmetro pode ser usado com um valor inteiro maior que 256 para especificar o tamanho em megabytes a ser usado para a variável de reserva base do cálculo de dimensionamento do <code>MemToLeave</code>. Por padrão, a reserva base tem um tamanho de 256 MB, ao qual o tamanho calculado da pilha de threads (como mostrado anteriormente) para a instância é adicionado para obter o tamanho total da reserva <code>MemToLeave</code> VAS. Quando essa opção é usada, reduz-se o VAS do modo usuário disponível para o buffer pool e, portanto, reduz-se o tamanho máximo do buffer pool para a instância do SQL.</p>
+
         <p>A fragmentação do <code>MemToLeave</code> é um problema mais difícil de lidar; se você entrar em contato com o suporte da Microsoft com esse problema, provavelmente será informado de que a única solução é fazer upgrade para o SQL Server de 64 bits. A razão dessa recomendação é que o tamanho do VAS em um servidor de 64 bits é de 8 TB, o que excede a quantidade de RAM física atualmente possível em um servidor, o que significa que sempre haverá VAS disponível para alocações de memória fora do buffer pool pelo SQL Server. Se você não puder fazer upgrade imediato para o SQL Server de 64 bits, suas únicas opções atualmente são agendar reinicializações frequentes da instância ou usar o parâmetro de inicialização -g para atribuir mais memória ao <code>MemToLeave</code> com a ideia de que a fragmentação terá menos efeito.</p>
+
         <h3 id="64bit">Usando o SQL Server de 64 bits</h3>
+
         <p>A primeira versão de 64 bits do SQL Server 2000 foi lançada em 2003 e trouxe mudanças significativas na gerência de memória para o SQL Server. Nas próximas seções, discutiremos algumas das alterações mais importantes, algumas das quais pegaram alguns DBAs de surpresa.</p>
-        <h2>Limites de memória VAS mais altos</h2>
+
+        <h4>Limites de memória VAS mais altos</h4>
+
         <p>Uma das vantagens dos sistemas de 64 bits é que os limites de VAS são substancialmente maiores. Enquanto os sistemas de 32 bits têm apenas 4 GB de Espaço de Endereço Virtual, os sistemas de 64 bits possuem 16 exabytes (264) de VAS, tornando-o praticamente ilimitado em comparação com as quantidades de RAM física que podem ser instaladas em um servidor atualmente. Na realidade, gerenciar tanto VAS apresenta desafios significativos, e os tamanhos dos espaços de endereço em modo kernel e modo usuário são atualmente limitados a 8 TB cada em sistemas x64, e 7 TB cada em sistemas IA64 (Itanium).</p>
+
         <p>Esse VAS muito maior significa que as instâncias do SQL Server de 64 bits não exigem nenhuma configuração adicional para alocar memória acima de 4 GB; a opção <code>AWE habilitada</code> não tem aplicação para essas instâncias. No entanto, a opção <code>Lock Pages in Memory</code> (Bloquear Páginas na Memória) ainda pode ser relevante (discutida em breve).</p>
-        <h2>Grandes quantidades de memória paginável sob configuração padrão</h2>
+
+        <h4>Grandes quantidades de memória paginável sob configuração padrão</h4>
+
         <p>Assim como no SQL Server de 32 bits, o comportamento padrão do SQL Server de 64 bits é alocar memória VAS usando a função <code>VirtualAlloc</code> do Windows. Isso significa que toda essa memória não está bloqueada e é paginável. Isso pegou muitos administradores de surpresa; no SQL Server de 32 bits, eles tinham até 2 GB de memória alocada em modo usuário VAS e, em seguida, uma quantidade adicional maior que era habilitada usando AWE e, portanto, estava bloqueada. Agora, no SQL Server de 64 bits, toda a memória pode ser comprometida usando apenas VAS, tornando-a toda paginável, o que pode criar problemas significativos para o SQL Server se o sistema operacional estiver sob pressão de memória e decidir paginar o conjunto de trabalho do SQL Server.</p>
-        <p>Esse foi um dos problemas que se tornaram aparentes no início dos servidores SQL de 64 bits que foram instalados usando a configuração padrão e deixados em execução. Discutiremos esse problema com mais profundidade em breve, na seção <em>Bloquear páginas na memória</em>.</p>
-        <h2>Nenhun cálculo de MemToLeave para alocações fora do buffer pool</h2>
+
+        <p>Esse foi um dos problemas que se tornaram aparentes no início dos servidores SQL de 64 bits que foram instalados usando a configuração padrão e deixados em execução. Discutiremos esse problema com mais profundidade em breve, na seção <em><a href="#bloquear">Bloquear páginas na memória</a></em>.</p>
+
+        <h4>Nenhun cálculo de MemToLeave para alocações fora do buffer pool</h4>
+
         <p>O tamanho do Espaço de Endereço Virtual em um servidor de 64 bits garante que, mesmo depois que a memória do buffer pool foi alocada pelo SQL Server, ainda haverá VAS suficiente em modo usuário disponível para lidar com solicitações de memória fora do buffer pool. Isso significa que o conceito de Reserva de VAS (<code>MemToLeave</code>) para alocações fora do buffer pool não se aplica aos servidores SQL de 64 bits (e, portanto, o parâmetro de inicialização -g  não tem significado). Esse problema é discutido com mais detalhes em breve, em relação à definição do valor <code>max server memory</code> no SQL Server de 64 bits, mas basicamente a falta de Reserva de VAS significa que é importante considerar alocações de memória fora do buffer pool e fora do SQL Server, monitorando o contador <code>Memory/Available MBytes</code> para garantir que ele permaneça acima de 150-300 MB ao aumentar gradualmente o valor <code>max server memory</code>.</p>
-        <h2>Cache de procedimentos significativamente maior</h2>
+
+        <h4>Cache de procedimentos significativamente maior</h4>
+
         <p>Como o VAS em modo usuário é significativamente maior, o cache de procedimentos do SQL Server, onde os planos de execução são armazenados, pode alocar significativamente mais memória em sistemas de 64 bits, o que surpreendeu muitos DBAs que fizeram upgrade de seu hardware enquanto usavam o SQL Server 2005 RTM ou Service Pack 1. Se o banco de dados deles tivesse uma carga de trabalho ad hoc que gerasse um grande número de planos de uso único, eles descobririam que esses planos começavam a consumir até metade da memória disponível em seu servidor.</p>
-        <p><strong><em>Compreendendo as alterações no dimensionamento do cache de procedimentos no SQL Server</em></strong></p>
-        <p><em>A equipe de Programabilidade do SQL Server blogou sobre os desafios associados ao dimensionamento do cache de procedimentos em servidores SQL de 64 bits devido ao tamanho do VAS em modo usuário e como os algoritmos de dimensionamento do cache foram alterados no SQL Server 2005 Service Pack 2 para reduzir os problemas associados ao crescimento excessivo do cache para cargas de trabalho ad hoc em sua postagem no blog: "Mudanças no Comportamento de Armazenamento em Cache entre o SQL Server 2000, SQL Server 2005 RTM e SQL Server 2005 SP2" (</em><a href="http://blogs.msdn.com/b/sqlprogrammability/archive/2007/01/22/3-0-changes-in-caching-behavior-between-sql-server-2000-sql-server-2005-rtm-and-sql-server-2005-sp2.aspx" target="_blank" rel="external">http://blogs.msdn.com/b/sqlprogrammability/archive/2007/01/22/3-0-changes-in-caching-behavior-between-sql-server-2000-sql-server-2005-rtm-and-sql-server-2005-sp2.aspx</a><em>).</em></p>
-        <h3>Opções de configuração de memória com o SQL Server de 64 bits</h3>
+
+        <div class="dica">
+            <p class="destaque"><em>Compreendendo as alterações no dimensionamento do cache de procedimentos no SQL Server</em></p>
+
+            <p><em>A equipe de Programabilidade do SQL Server blogou sobre os desafios associados ao dimensionamento do cache de procedimentos em servidores SQL de 64 bits devido ao tamanho do VAS em modo usuário e como os algoritmos de dimensionamento do cache foram alterados no SQL Server 2005 Service Pack 2 para reduzir os problemas associados ao crescimento excessivo do cache para cargas de trabalho ad hoc em sua postagem no blog: "Mudanças no Comportamento de Armazenamento em Cache entre o SQL Server 2000, SQL Server 2005 RTM e SQL Server 2005 SP2" (</em><a href="http://blogs.msdn.com/b/sqlprogrammability/archive/2007/01/22/3-0-changes-in-caching-behavior-between-sql-server-2000-sql-server-2005-rtm-and-sql-server-2005-sp2.aspx" target="_blank" rel="external">http://blogs.msdn.com/b/sqlprogrammability/archive/2007/01/22/3-0-changes-in-caching-behavior-between-sql-server-2000-sql-server-2005-rtm-and-sql-server-2005-sp2.aspx</a><em>).</em></p>
+        </div>
+
+        <h3 id="opcoes">Opções de configuração de memória com o SQL Server de 64 bits</h3>
+
         <p>As seções a seguir abordam considerações especiais para definir opções de configuração de memória importantes ao usar o SQL Server de 64 bits, ou seja, <code>max</code> (e <code>min</code>) <code>server memory</code> e <code>Lock Pages in Memory</code>. Também discute brevemente uma Flag de Trace especial (834) que, quando habilitada em servidores de 64 bits, faz com que o SQL Server use Alocações de Páginas Grandes do Windows para alocações do buffer pool.</p>
-        <h2>Memória mínima e máxima do servidor</h2>
+
+        <h4>Memória mínima e máxima do servidor</h4>
+
         <p>O SQL Server oferece duas configurações em nível de instância que podem ser usadas para controlar como a memória é alocada e removida do buffer pool: as opções de configuração do <code>sp_configure</code>: <code>min server memory</code> e <code>max server memory</code>. Observe que no SQL Server 2000, 2005, 2008 e 2008 R2, essas configurações se aplicam <em>apenas</em> ao tamanho do buffer pool e não incluem a memória que pode ser alocada pelo SQL Server fora do buffer pool.</p>
+
         <p>A opção <code>min server memory</code> especifica o tamanho mínimo para o qual o SQL Server pode reduzir o buffer pool quando sob pressão de memória; ela não especifica a quantidade mínima de memória que o SQL Server alocará inicialmente. Durante o aumento de memória, o uso de memória de uma instância aumenta lentamente e o buffer pool é expandido para atender às necessidades das solicitações em execução. A opção <code>max server memory</code> especifica a quantidade máxima de memória que o SQL Server pode usar para o buffer pool, que é usada principalmente para armazenar em cache páginas de dados na memória.</p>
+
         <p>A configuração apropriada para cada uma dessas opções de configuração depende da implementação do SQL Server. É comum encontrar recomendações online que afirmam algo como:</p>
+
         <p><em>"Se um SQL Server é dedicado apenas à execução do mecanismo de banco de dados do SQL Server, geralmente cada uma dessas opções pode ser configurada com o mesmo valor, para que o SQL Server aloque memória para o buffer pool e depois não reduza o uso de memória uma vez que esse nível tenha sido alcançado."</em></p>
+
         <p>Embora essa informação seja tecnicamente correta, não é a configuração recomendada que eu faria para um SQL Server dedicado. O problema que tenho com essa configuração é que, quando o <code>Lock Pages in Memory</code> está sendo usado, essa configuração limita até onde o SQL Server pode responder a notificações de baixa memória do sistema operacional, esvaziando suas caches e reduzindo o uso de memória para liberar memória de volta para o sistema operacional para uso. Isso pode resultar em problemas de instabilidade do sistema e, por esse motivo, eu recomendaria que a configuração de <code>min server memory</code> seja definida em um valor inferior à configuração de <code>max server memory</code> por alguns gigabytes de memória, permitindo que o SQL Server redimensione o buffer pool conforme necessário para responder às notificações de baixa memória do sistema operacional.</p>
+
         <p>Se o SQL Server também executar o Reporting Services, Integration Services ou outros aplicativos que requerem memória do Windows, essas opções devem ser configuradas com um intervalo para que a <code>min server memory</code> seja configurada com um limite inferior aceitável para a memória alocada ao buffer pool e a <code>max server memory</code> seja definida em um limite superior, permitindo que o SQL Server aumente ou diminua o uso de memória dentro do intervalo estabelecido, conforme necessário, enquanto outros processos estão em execução.</p>
+
         <p>Uma das perguntas populares em fóruns online do SQL Server é: <em>"Qual é a configuração adequada de memória máxima do servidor para um SQL Server com N gigabytes de RAM instalada?"</em> Infelizmente, não há uma única configuração que se aplique a todos os ambientes para essa opção; diferentes servidores têm processos diferentes em execução e o que é melhor para um servidor não será o mesmo para outro servidor. A melhor resposta é definir o valor inicial como sendo suficientemente baixo para garantir que o sistema operacional não tenha problemas de pressão de memória e, em seguida, monitorar o contador de desempenho <code>Memory\Available Mbytes</code> no servidor (juntamente com possivelmente contadores como <code>Total Server Memory</code> e <code>Target Server Memory</code>, abordados posteriormente) para determinar o valor para a <code>max server memory</code> que deixe pelo menos 150-300 MB de memória disponível o tempo todo para os requisitos de memória de alocações fora do buffer pool e fora do SQL Server, para o Windows e outros aplicativos.</p>
+
         <p>Como configuração básica geral para uma máquina dedicada ao SQL Server, reserve 1 GB de RAM para o sistema operacional, 1 GB para cada 4 GB de RAM instalados de 4 a 16 GB e, em seguida, 1 GB para cada 8 GB de RAM instalados acima de 16 GB de RAM. Isso significa que, para um servidor com 64 GB de RAM, o ponto de partida para a <code>max server memory</code> deve estar na faixa de 54 GB e, em seguida, ajustado para cima com base no monitoramento do contador de desempenho <code>Memory\Available Mbytes</code>.</p>
-        <h2>Bloquear páginas na memória</h2>
+
+        <h4 id="bloquear">Bloquear páginas na memória</h4>
+
         <p>Embora o processo do SQL Server seja projetado para ser autoajustável em relação às suas próprias necessidades de alocação de memória, ele não pode levar em consideração as demandas de memória feitas por outros processos em execução no servidor, ou por operações como cópias de arquivos. Sua natureza autoajustável significa que ele responderá à pressão de memória quando sinalizado pelo sistema operacional.</p>
+
         <p>Isso significa que, em última análise, o sistema operacional está no controle da resposta à pressão de memória, e uma das formas de resposta do SO é reduzindo e possivelmente paginando o conjunto de trabalho de processos que estão consumindo memória, incluindo, é claro, o processo do SQL Server. Quando isso ocorre, alocações de memória que são suportadas por memória física são gravadas na memória virtual no arquivo de página do sistema no disco. Se o conjunto de trabalho do processo for relativamente pequeno, isso geralmente não é um grande problema, mas em servidores SQL de 64 bits com grandes quantidades de RAM instalada, em que toda a memória é comprometida apenas usando VAS (espaço de endereço virtual), isso pode afetar significativamente o desempenho.</p>
+
         <p>Se o SQL Server sofrer uma redução no conjunto de trabalho ou a memória for paginada, o SQL gravará uma mensagem no log de erros da seguinte forma:</p>
+
         <p><em>Uma parte significativa da memória do processo do SQL Server foi paginada. Isso pode resultar em uma degradação de desempenho. Duração: 0 segundos. Conjunto de trabalho (KB): 16484, comprometido (KB): 6239692, utilização de memória: 0%.</em></p>
+
         <p>Se essa mensagem for vista com frequência, indica que há um problema com o SQL sendo paginado.</p>
+
         <p>Em servidores SQL de 32 bits, isso geralmente não era um grande problema, pois a memória paginável que poderia ser alocada pelo SQL Server era limitada a 2 GB de VAS em modo usuário. No entanto, em sistemas de 64 bits, o SQLOS pode, por padrão, alocar toda a memória no servidor usando chamadas para VirtualAlloc, que são não bloqueadas e pagináveis. Em um servidor com 16 GB de RAM, isso pode resultar em um conjunto de trabalho de tamanho significativo e paginável para o processo do SQL Server. Isso era especialmente problemático no Windows Server 2003, onde o sistema operacional respondia agressivamente à pressão de memória reduzindo conjuntos de trabalho. Primeiro, o Windows solicitaria ao SQL Server que reduzisse seu conjunto de trabalho, o que levaria à desalocação de memória até o valor definido como <code>min server memory</code>. Se o SQL Server não reduzisse memória suficiente ou não reduzisse rápido o suficiente, o SO poderia forçar parte da alocação de memória do SQL Server a sair da memória física e ir para o arquivo de paginação. Nesse ponto, o cache de buffer ainda está alocado, mas não é suportado pela memória física, é suportado pelo arquivo de página no disco, o que é muito lento e causa problemas de desempenho.</p>
-        Para evitar que isso aconteça em servidores SQL de 64 bits, o privilégio "<code>Lock Pages in Memory</code>" pode ser atribuído à conta de serviço do SQL Server, nesse caso, a memória é alocada para o pool de buffers usando a função Win32 "<code>AllocateUserPhysicalPages</code>", que é fornecida pela API AWE (Address Windowing Extensions). Essa é a mesma função usada em servidores SQL de 32 bits que têm o AWE habilitado para alocar memória acima de 4 GB. Apesar de usar a mesma função para realizar as alocações de memória, é importante observar que o AWE não está sendo usado pelo SQL Server de 64 bits e a opção '<code>awe enabled</code>' do <code>sp_configure</code> não precisa ser ativada. A função está sendo usada simplesmente para que as páginas alocadas estejam bloqueadas e não possam ser paginadas para o disco.
-        <p><strong><em>NÃO habilite o AWE no SQL Server de 64 bits</em></strong></p>
-        <p><em>A capacidade de bloquear páginas no SQL Server de 64 bits requer apenas o privilégio </em><code>Lock Pages in Memory</code><em> para a conta de serviço; não requer a configuração </em><code>'awe enabled'</code><em> em </em><code>sp_configure</code><em>, que não tem efeito no código do SQL Server para sistemas de 64 bits.</em></p>
+
+        <p>Para evitar que isso aconteça em servidores SQL de 64 bits, o privilégio "<code>Lock Pages in Memory</code>" pode ser atribuído à conta de serviço do SQL Server, nesse caso, a memória é alocada para o pool de buffers usando a função Win32 "<code>AllocateUserPhysicalPages</code>", que é fornecida pela API AWE (Address Windowing Extensions). Essa é a mesma função usada em servidores SQL de 32 bits que têm o AWE habilitado para alocar memória acima de 4 GB. Apesar de usar a mesma função para realizar as alocações de memória, é importante observar que o AWE não está sendo usado pelo SQL Server de 64 bits e a opção '<code>awe enabled</code>' do <code>sp_configure</code> não precisa ser ativada. A função está sendo usada simplesmente para que as páginas alocadas estejam bloqueadas e não possam ser paginadas para o disco.</p>
+
+        <div class="dica">
+            <p class="destaque"><em>NÃO habilite o AWE no SQL Server de 64 bits</em></p>
+            <p><em>A capacidade de bloquear páginas no SQL Server de 64 bits requer apenas o privilégio </em><code>Lock Pages in Memory</code><em> para a conta de serviço; não requer a configuração </em><code>'awe enabled'</code><em> em </em><code>sp_configure</code><em>, que não tem efeito no código do SQL Server para sistemas de 64 bits.</em></p>
+        </div>
+
         <p>Um dos problemas comuns que as pessoas encontram ao executar o SQL Server usando <code>Lock Pages in Memory</code> é que as informações exibidas pelo Gerenciador de Tarefas não refletem mais o uso total de memória pelo processo <code>sqlservr.exe</code>. As informações mostradas no Gerenciador de Tarefas são apenas para o uso de memória não relacionado ao buffer pool pelo processo <code>sqlservr.exe</code> e não incluem a memória alocada para o buffer pool usando páginas bloqueadas, conforme mostrado na Figura 4.3.</p>
+
         <img src="imagens/fig43.png" alt="Lock Pages in Memory">
-        <p><strong>Figura 4.3</strong>: Uso de memória do processo SQL Server (páginas bloqueadas).</p>
+
+        <p class="legenda"><strong>Figura 4.3</strong>: Uso de memória do processo SQL Server (páginas bloqueadas).</p>
+
         <p>O servidor mostrado na Figura 4.3 possui 64 GB de RAM instalada, dos quais 97% estão atualmente alocados, principalmente pelo SQL Server. Para determinar a quantidade total de memória sendo usada pelo SQL Server, deve-se usar o contador de desempenho <code>SQL Server: Memory Manager \ Total Server Memory</code>.</p>
+
         <p>Inicialmente, no SQL Server 2005 e 2008, o <code>Lock Pages in Memory</code> era um recurso exclusivo da edição Enterprise. No entanto, ele foi adicionado à edição Standard do SQL Server no SQL Server 2008 R2 e pode ser usado no SQL Server 2008 SP1 com o Cumulative Update 2 ou posterior, e no SQL Server 2005 SP3 com o Cumulative Update 4 ou posterior. Após aplicar a atualização apropriada no servidor, a sinalização de rastreamento de inicialização -T845 deve ser adicionada aos parâmetros de inicialização do serviço do SQL Server para a instância, a fim de começar a usar o recurso. Como a memória alocada usando <code>Lock Pages in Memory</code> está bloqueada e não pode ser paginada, é recomendável que a opção de configuração do <code>sp_configure 'max server memory'</code> seja definida para limitar a quantidade de memória que o SQL Server pode usar e evitar que o sistema operacional fique sem memória.</p>
-        <p><strong><em>Referências adicionais sobre</em></strong> <code>Lock Pages in Memory</code> <strong><em>e como reduzir a paginação:</em></strong></p>
-        <p>
-            <em>Como reduzir a paginação da memória do buffer pool na versão de 64 bits do SQL Server: </em><a href="http://support.microsoft.com/kb/918483" target="_blank" rel="external">http://support.microsoft.com/kb/918483</a>.<br>
-            <em>Suporte para páginas bloqueadas em sistemas SQL Server 2005 Standard Edition de 64 bits e em sistemas SQL Server 2008 Standard Edition de 64 bits: </em><a href="http://support.microsoft.com/kb/970070" target="_blank" rel="external">http://support.microsoft.com/kb/970070</a>.
-        </p>
-        <h2>Usando Large Pages (parâmetro de inicialização -T834)</h2>
+
+        <div class="dica">
+            <p class="destaque"><em>Referências adicionais sobre</em> <code>Lock Pages in Memory</code> <em>e como reduzir a paginação:</em></p>
+
+            <p><em>Como reduzir a paginação da memória do buffer pool na versão de 64 bits do SQL Server: </em><a href="http://support.microsoft.com/kb/918483" target="_blank" rel="external">http://support.microsoft.com/kb/918483</a>.<br>
+                <em>Suporte para páginas bloqueadas em sistemas SQL Server 2005 Standard Edition de 64 bits e em sistemas SQL Server 2008 Standard Edition de 64 bits: </em><a href="http://support.microsoft.com/kb/970070" target="_blank" rel="external">http://support.microsoft.com/kb/970070</a>.</p>
+        </div>
+
+        <h4>Usando Large Pages (parâmetro de inicialização -T834)</h4>
+
         <p>Se esse tópico específico não tivesse sido abordado em um artigo publicado na Base de Conhecimento da Microsoft (<a href="http://support.microsoft.com/kb/920093" target="_blank" rel="external">http://support.microsoft.com/kb/920093</a>) e posteriormente referenciado pela VMware como uma prática recomendada para servidores SQL virtualizados (<a href="http://www.vmware.com/files/pdf/sql_server_virt_bp.pdf" target="_blank" rel="external">http://www.vmware.com/files/pdf/sql_server_virt_bp.pdf</a>), provavelmente não teria sido incluído neste livro, e não vou discutir esse problema complexo em detalhes.</p>
+
         <p>Há muita discussão sobre se o uso de Alocações de Páginas Grandes (LPA) com o SQL Server é benéfico para uma determinada carga de trabalho, mas vou recorrer a Bob Ward, um Engenheiro Sênior de Serviços de Suporte ao Cliente da Microsoft, que fornece mais informações sobre esse recurso em seu blog (<a href="http://blogs.msdn.com/b/psssql/archive/2009/06/05/sql-server-and-large-pages-explained.aspx" target="_blank" rel="external">http://blogs.msdn.com/b/psssql/archive/2009/06/05/sql-server-and-large-pages-explained.aspx</a>) e conclui que você deve "usar com cautela".</p>
+
         <p>Embora a opção LPA seja usada durante benchmarks relacionados ao TPC pela Microsoft, a verdade real é que qualquer opção de configuração utilizada durante um desses benchmarks deve ser documentada pelo fabricante do software e, se isso não tivesse sido usado para obter os resultados publicados no benchmark, provavelmente não teria sido documentado.</p>
+
         <p>O problema com isso é que a documentação gera confusão sobre se essa opção de configuração é realmente benéfica para o SQL Server ou não. Uma das restrições associadas ao uso de Páginas Grandes com o SQL Server é que o buffer pool não pode ter seu tamanho ajustado dinamicamente quando as Páginas Grandes estão em uso e, se uma alocação contígua suficiente de memória física não existir para respaldar a configuração da opção de <code>sp_configure 'max server memory'</code>, a quantidade de memória alocada para o buffer pool pode ser significativamente menor do que o esperado. O uso desse recurso do SQL Server deve ser avaliado minuciosamente para garantir que um benefício real seja obtido para sua carga de trabalho específica antes de habilitar essa opção em um SQL Server de produção, mesmo quando em execução em uma virtualização VMware.</p>
-        <h2>Diagnosticando Pressão de Memória</h2>
+
+        <h2 id="pressao">Diagnosticando Pressão de Memória</h2>
+
         <p>Se o SQL Server for forçado a operar com uma quantidade insuficiente de memória, ele será capaz de armazenar menos páginas de dados no buffer pool. Como resultado, será necessário um maior volume de E/S física para trazer as páginas de dados do disco para o buffer pool conforme são solicitadas, o que degradará o desempenho. Essas páginas de dados podem logo ser removidas do buffer pool para dar lugar a outras páginas, apenas para serem lidas novamente no buffer pool, em um ciclo repetitivo conhecido como <strong>churn do buffer pool</strong>. O aumento na E/S de disco observado durante o churn do buffer pool frequentemente leva a confusão, fazendo com que seja facilmente confundido com um problema no subsistema de E/S de disco, em vez de um problema de pressão de memória.</p>
+
         <p>Se um sistema realizar consistentemente operações de leitura que exigem mais memória do que a disponível para o SQL Server, cada leitura dos dados resultará na limpeza do cache de buffer e causará E/S física no subsistema de disco. Além disso, se a carga de trabalho exigir quantidades significativas de dados em operações de classificação ou agregação durante o processamento de consultas, os dados poderão transbordar para tabelas de trabalho do <code>tempdb</code> devido à falta de memória disponível para acomodar esse processamento, aumentando ainda mais a demanda de E/S no sistema.</p>
+
         <p>A melhor maneira de verificar se o SQL Server está sob pressão de memória e precisa de mais memória é analisar vários contadores de desempenho críticos relacionados à integridade do buffer pool da instância do SQL Server.</p>
-        <h3>Contadores relacionados à memória</h3>
+
+        <h3 id="crm">Contadores relacionados à memória</h3>
+
         <p>Nesta seção, revisaremos alguns dos contadores de desempenho críticos relacionados ao uso de memória. É importante perceber que não há um único contador de desempenho que possa ser usado isoladamente para determinar se o SQL Server está sob pressão de memória, e não há uma única captura instantânea dos contadores que permitirá diagnosticar a "saúde" do servidor em relação ao uso de memória. Diagnosticar a pressão de memória requer o rastreamento de vários valores de contador ao longo de um período de tempo (um dia, semana ou até mesmo um mês) que represente as operações normais do banco de dados.</p>
-        <h2>SQL Server:Buffer Manager</h2>
+
+        <h4>SQL Server:Buffer Manager</h4>
+
         <p>Existem vários contadores úteis pertencentes ao objeto <code>SQL Server:Buffer Manager</code> que, quando monitorados coletivamente, podem ajudar a descobrir problemas relacionados ao churn do buffer pool.</p>
-        <h3>Taxa de Acertos do Cache de Buffer</h3>
+
+        <h5>Taxa de Acertos do Cache de Buffer</h5>
+
         <p>O contador <code>SQL Server:Buffer Manager\Buffer Cache Hit Ratio</code> fornece uma medida em todo o banco de dados de quantas vezes o SQL Server obtém dados da memória (cache de buffer) em comparação com o disco. Existem várias referências na internet sugerindo que esse contador deve ser superior a 95% para sistemas OLTP e superior a 90% para sistemas OLAP. Infelizmente, nenhuma dessas referências explica o significado desse contador e como o valor é afetado pelas operações de pré-busca (read ahead) executadas pelo mecanismo de banco de dados para ler páginas no buffer pool antes de serem realmente utilizadas por uma instrução em execução. O fato de esse contador mostrar uma taxa de acerto de 95% para o cache de buffer não indica nada além do fato de que o SQL Server está funcionando conforme projetado para ler páginas na memória antes de serem necessárias. Para observar uma queda significativa no valor desse contador, você teria que ter problemas graves de memória com o SQL Server, e é mais fácil e rápido identificar esse problema usando outros contadores.</p>
+
         <p>Por si só, esse contador de desempenho não informa nada sobre a saúde do seu SQL Server ou se ele está sob pressão de memória.</p>
-        <h3>Expectativa de Vida da Página</h3>
+
+        <h5>Expectativa de Vida da Página</h5>
+
         <p>O contador de Expectativa de Vida da Página fornece o tempo em segundos que uma página existe em cache antes de ser removida para permitir a reutilização do espaço de cache. Novamente, existem inúmeras referências na internet sugerindo que o valor desse contador geralmente deve ser superior a 300 (ou seja, cinco minutos).</p>
+
         <p>No entanto, a maioria dessas referências se baseia em uma recomendação feita pela Microsoft há mais de uma década, para o SQL Server 2000, em uma época em que 4 GB de RAM eram considerados muita memória, e o SQL Server alocava apenas 1,6 GB de memória para o buffer pool. Se o SQL Server tiver que ler 1,6 GB de dados do disco a cada cinco minutos, o impacto é mínimo.</p>
+
         <p>No entanto, avance dez anos e os servidores de hoje comumente possuem 64 GB de RAM ou mais, e o SQL Server é frequentemente configurado para usar a maioria dessa memória para o buffer pool. Se o SQL Server tiver que ler 50 GB ou mais de dados do disco a cada cinco minutos, o impacto no subsistema de E/S será substancialmente maior do que era quando a Microsoft fez a recomendação original.</p>
+
         <p>O valor desse contador reflete a Expectativa de Vida da Página (PLE) naquele exato momento, e não é incomum ver quedas periódicas no valor retornado por esse contador de desempenho, especialmente quando uma consulta grande está executando uma leitura completa da tabela, lendo novas páginas no buffer pool do disco. Esse contador deve ser monitorado ao longo de períodos longos para identificar corretamente as tendências normais.</p>
-        <h3>Free Pages</h3>
+
+        <h5>Free Pages</h5>
+
         <p>O contador de <code>Free Pages</code> reflete o número total de páginas livres que existem para o buffer pool do SQL Server, permitindo alocações imediatas por uma solicitação em execução sem ter que liberar páginas adicionais do cache para atender à solicitação. O número de páginas livres no sistema nunca deve chegar a zero. Esse contador deve ser monitorado em conjunto com o contador de <code>Page Life Expectancy</code> e o contador de <code>Free List Stall</code> para avaliar se o sistema está realmente sob pressão de memória. Se a <code>Page Life Expectancy</code> sofrer quedas que se correlacionem com valores baixos ou zero para <code>Free Pages</code>, e o sistema também estiver sofrendo <code>Free List Stall</code> ao mesmo tempo, isso é um sinal claro de que a instância está enfrentando pressão de memória e poderia se beneficiar de uma alocação adicional de memória para o buffer pool.</p>
-        <h3>Free List Stall/seg</h3>
+
+        <h5>Free List Stall/seg</h5>
+
         <p>Os <code>Free List Stall</code> ocorrem sempre que uma solicitação precisa aguardar uma página livre no buffer pool. Se o número de stalls frequentemente ou consistentemente ultrapassar zero ao longo de um período de tempo, isso é um sinal de pressão de memória.</p>
-        <h3>Lazy Writes/seg</h3>
+
+        <h5>Lazy Writes/seg</h5>
+
         <p>O contador de <code>Lazy Writes/seg</code> reflete o número de páginas do buffer que foram gravadas pelo processo de Lazy Writer, fora de uma operação de checkpoint normal, permitindo que o buffer seja reutilizado por outras páginas. Se você observar Lazy Writes ocorrendo em conjunto com uma Expectativa de Vida da Página baixa, um número baixo de páginas livres e a ocorrência de Stalls da Lista Livre, isso é um sinal de que a carga de trabalho está excedendo a quantidade de memória disponível para o buffer pool, e memória adicional precisa ser adicionada ao servidor.</p>
-        <h2>SQL Server: Memory Manager</h2>
+
+        <h4>SQL Server: Memory Manager</h4>
+
         <p>Os contadores relacionados ao objeto <code>SQL Server: Memory Manager</code> fornecem informações úteis sobre o consumo geral de memória e problemas de gerenciamento de memória no servidor.</p>
-        <h3>Total Server Memory (KB) e Target Server Memory (KB)</h3>
+
+        <h5>Total Server Memory (KB) e Target Server Memory (KB)</h5>
+
         <p>Respectivamente, esses contadores representam a quantidade total de memória alocada pelo SQL Server e a quantidade de memória que o SQL Server deseja alocar. Quando o contador <code>Target Server Memory (KB)</code> excede o contador <code>Total Server Memory (KB)</code>, o processo do SQL Server deseja alocar mais memória do que está disponível no servidor, o que pode ser um sinal de pressão de memória.</p>
+
         <p>Geralmente, o SQL Server reduz suas demandas de memória para corresponder à memória disponível no servidor ou ao que é especificado pela opção '<code>max server memory</code>' do <code>sp_configure</code>, portanto, esses dois contadores não são os primeiros lugares para começar quando se procura confirmar um problema de pressão de memória no SQL Server.</p>
-        <h3>Memory Grants Outstanding</h3>
+
+        <h5>Memory Grants Outstanding</h5>
+
         <p>Este contador mede o número total de processos que adquiriram com sucesso um grant de memória do espaço de trabalho. Valores baixos para este contador, em períodos de alta atividade do usuário ou carga de trabalho intensa, podem ser um sinal de pressão de memória, especialmente se houver um alto número de memory grants pendentes.</p>
-        <h3>Memory Grants Pending</h3>
+
+        <h5>Memory Grants Pending</h5>
+
         <p>Este contador mede o número total de processos que estão aguardando um grant de memória do espaço de trabalho. Se este valor for diferente de zero, é um sinal de que ajustes ou otimizações da carga de trabalho devem ser realizados, se possível, ou que memória adicional precisa ser adicionada ao servidor.</p>
-        <h3>DMVs relacionadas à memória</h3>
+
+        <h3 id="dmvs">DMVs relacionadas à memória</h3>
+
         <p>Também existem informações relacionadas a esperas de memória, alocações de memória fora do buffer pool, etc., que podem ser extraídas das DMVs, como os objetos <code>sys.dm_os_memory_*</code> nas DMVs relacionadas ao sistema operacional, ou a DMV <code>sys.dm_exec_query_memory_grants</code>. Por exemplo:</p>
+
         <ul>
             <li>A <strong><code>sys.dm_exec_query_memory_grants</code></strong> pode ser usada para encontrar consultas que estão aguardando (ou que recentemente tiveram que aguardar) um memory grant, especialmente aquelas que solicitam grants de memória relativamente grandes.</li>
             <li>A <strong><code>sys.dm_os_memory_cache_counters</code></strong> fornece uma instantâneo do uso atual do cache de memória. Inclui a coluna multi_pages_kb que mostra a quantidade de memória alocada pelo alocador de várias páginas.</li>
             <li>A <strong><code>sys.dm_os_sys_memory</code></strong> resume a condição geral de memória do sistema, incluindo os níveis atuais de memória no sistema, no cache, etc.</li>
             <li>A <strong><code>sys.dm_os_memory_clerks</code></strong> fornece informações relacionadas aos processos de memória do SQL Server. Por exemplo, uma alocação significativa de memória no buffer pool associada ao MEMORYCLERK_SQLQERESERVATIONS pode indicar falta de memória no buffer pool para a execução de determinadas consultas.</li>
         </ul>
+
         <p>Não discutiremos mais esses objetos aqui, pois geralmente descobri que as informações nesses objetos são mais difíceis de analisar e interpretar do que as informações facilmente disponíveis nos contadores de memória. Como resultado, sempre uso os contadores de memória do PerfMon, em preferência a essas DMVs, para determinar se uma instância do SQL Server tem problemas de memória.</p>
-        <h2>Problemas comuns relacionados à memória</h2>
+
+        <h2 id="pcrm">Problemas comuns relacionados à memória</h2>
+
         <p>Um dos maiores desafios ao selecionar uma lista de problemas comuns foi categorizar a lista como equívocos, configurações incorretas ou problemas reais no SQL Server. No final, apenas alguns problemas se destacaram na infinidade de problemas relatados pelas pessoas relacionados ao gerenciamento de memória e ao SQL Server.</p>
         <h3>O mito do vazamento de memória no SQL Server</h3>
         <p>Embora esse tópico já tenha sido abordado neste capítulo, a prevalência da ideia de que o SQL Server tem um vazamento de memória com base em seu consumo de memória em um servidor tornou-o um dos principais problemas comuns de gerenciamento de memória com o SQL Server. Para simplificar demais esse assunto, o SQL Server não tem um vazamento de memória. No entanto, é possível que uma stored procedure estendida ou um driver de linked server in-process tenham um vazamento de memória que geralmente leva à instabilidade do sistema e à falha dos serviços. Não é incomum ou anormal o SQL Server alocar o máximo possível de memória, incluindo o limite de memória física instalada no servidor em que o SQL Server está sendo executado. Mais detalhes sobre isso foram fornecidos anteriormente neste capítulo.</p>

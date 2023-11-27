@@ -64,7 +64,7 @@
       <p><em>Apenas um lembrete suave: antes de se empolgar coletando dados diagnósticos, certifique-se de ter verificado os problemas óbvios. Se um usuário relatar que sua aplicação "não está funcionando corretamente", a primeira coisa que você provavelmente deve fazer é garantir que os serviços do SQL Server estejam realmente em execução em seu servidor. Se você abrir o <strong>SQL Server Configuration Manager (SSCM)</strong> e descobrir que o status do serviço de <strong>mecanismo de banco de dados</strong>, que tem um <strong>tipo de serviço</strong> SQL Server, está <strong>parado</strong>, então esta é muito provavelmente a causa do problema, a menos que a instância esteja sendo executada em um cluster de failover, momento em que você precisa olhar para o <strong>Failover Cluster Manager</strong> para identificar se o serviço e seus recursos dependentes estão online e começar a solucionar por que o serviço falha em iniciar com base no que você encontrar!</em></p>
     </div>
     
-    <h2 id="wait">Wait Statistics: a Base para Resolução de Problemas</h2>
+    <h2 id="wait">Estatísticas de Espera: a Base para Resolução de Problemas</h2>
     
     <p>Um dos primeiros itens que verifico ao resolver problemas de desempenho em um SQL Server são as estatísticas de espera, que são registradas pelo SQLOS durante as operações normais de qualquer SQL Server.</p>
     
@@ -224,7 +224,7 @@
     
     <p>Se um determinado arquivo está sujeito a uma atividade de leitura muito intensa (por exemplo, uma proporção de 10:1 ou mais para a relação leitura/escrita) e apresenta alta latência média, então eu posso recomendar uma mudança no RAID para a matriz de discos, por exemplo, de RAID 10 para RAID 5, oferecendo mais fusos para compartilhar a E/S de leitura.</p>
     
-    <p>Esperançosamente, esta discussão destacou o elemento chave da resolução efetiva de problemas, que é examinar muitos "pontos de dados" juntos, para chegar a um diagnóstico verdadeiro. A descoberta de pressão de I/O, revelada por esperas relacionadas a I/O, pode ser causada por capacidade inadequada ou configuração do subsistema de disco, mas sua causa raiz é mais provável de estar em outro lugar, como um gargalo de memória no buffer pool, ou varreduras excessivas de índice e / ou tabela devido a consultas mal escritas (consulte a seção Uso do Cache de Plano deste capítulo) e falta de indexação.</p>
+    <p>Esperançosamente, esta discussão destacou o elemento chave da resolução efetiva de problemas, que é examinar muitos "pontos de dados" juntos, para chegar a um diagnóstico verdadeiro. A descoberta de pressão de I/O, revelada por esperas relacionadas a I/O, pode ser causada por capacidade inadequada ou configuração do subsistema de disco, mas sua causa raiz é mais provável de estar em outro lugar, como um gargalo de memória no buffer pool, ou varreduras excessivas de índice e / ou tabela devido a consultas mal escritas (consulte a seção <a href="#cache">Uso do Cache de Plano</a> deste capítulo) e falta de indexação.</p>
     
     <h2 id="contadores">Contadores de desempenho</h2>
     
