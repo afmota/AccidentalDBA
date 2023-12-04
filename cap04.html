@@ -381,41 +381,73 @@
         <h2 id="pcrm">Problemas comuns relacionados à memória</h2>
 
         <p>Um dos maiores desafios ao selecionar uma lista de problemas comuns foi categorizar a lista como equívocos, configurações incorretas ou problemas reais no SQL Server. No final, apenas alguns problemas se destacaram na infinidade de problemas relatados pelas pessoas relacionados ao gerenciamento de memória e ao SQL Server.</p>
-        <h3>O mito do vazamento de memória no SQL Server</h3>
+
+        <h3 id="mito">O mito do vazamento de memória no SQL Server</h3>
+
         <p>Embora esse tópico já tenha sido abordado neste capítulo, a prevalência da ideia de que o SQL Server tem um vazamento de memória com base em seu consumo de memória em um servidor tornou-o um dos principais problemas comuns de gerenciamento de memória com o SQL Server. Para simplificar demais esse assunto, o SQL Server não tem um vazamento de memória. No entanto, é possível que uma stored procedure estendida ou um driver de linked server in-process tenham um vazamento de memória que geralmente leva à instabilidade do sistema e à falha dos serviços. Não é incomum ou anormal o SQL Server alocar o máximo possível de memória, incluindo o limite de memória física instalada no servidor em que o SQL Server está sendo executado. Mais detalhes sobre isso foram fornecidos anteriormente neste capítulo.</p>
-        <h3>Problemas de paginação</h3>
+
+        <h3 id="paginacao">Problemas de paginação</h3>
+
         <p>A partir do SQL Server 2005 Service Pack 2, se ocorrer um ajuste do conjunto de trabalho (working set trim), o SQL Server gravará uma mensagem no log de erros informando que "uma parte significativa da memória do processo do SQL Server foi paginada". Sempre que essas mensagens aparecem no log de erros, ocorreu uma degradação de desempenho devido ao conjunto de trabalho do SQL sendo paginado para o disco. Existem várias causas para ajustes do conjunto de trabalho do processo do SQL Server, mas as mais comuns são:</p>
+
         <ul>
             <li>Configurações incorretas para a opção de configuração <code>sp_configure "max server memory"</code> quando "<code>Lock Pages in Memory</code>" não está sendo usado.</li>
             <li>Um cache do sistema grande no Windows causado pelo armazenamento em cache de operações de E/S não armazenadas em buffer, como operações de cópia de arquivo.</li>
             <li>Problemas de driver de hardware que resultam em vazamentos de memória ou alocações excessivas de memória pelo driver.</li>
         </ul>
+
         <p>A maneira mais rápida de resolver problemas relacionados ao sistema operacional que ajusta o conjunto de trabalho do processo do SQL Server é usar a abordagem direta e habilitar o "<code>Lock Pages in Memory</code>" para o serviço do SQL Server.</p>
+
         <p>No entanto, conforme recomendado no documento de preferências anterior sobre a redução de paginação da memória do buffer pool na versão de 64 bits do SQL Server (<a href="http://support.microsoft.com/kb/918483" target="_blank" rel="external">http://support.microsoft.com/kb/918483</a>), é melhor identificar a causa raiz real dos problemas de ajuste do conjunto de trabalho e resolvê-los, em vez de recorrer ao "<code>Lock Pages in Memory</code>". No entanto, a experiência prática do campo demonstrou que habilitar o "<code>Lock Pages in Memory</code>" pode ser a única maneira de resolver problemas de ajuste do conjunto de trabalho para o processo do SQL Server.</p>
-        <h3>Instabilidade do sistema operacional devido ao "Lock Pages in Memory" e "max server memory" ilimitado</h3>
+
+        <h3 id="instabilidade">Instabilidade do sistema operacional devido ao "Lock Pages in Memory" e "max server memory" ilimitado</h3>
+
         <p>Quando o "<code>Lock Pages in Memory</code>" é usado para uma instância do SQL Server, a configuração padrão para a opção <code>sp_configure "max server memory"</code>deve ser alterada para limitar a quantidade de memória que a instância do SQL Server pode alocar para o buffer pool. Se a opção de configuração "<code>max server memory</code>" não for definida para a instância, na configuração padrão, a instância alocará toda a memória disponível no servidor para uso pelo buffer pool do SQL Server. O problema com esse cenário é que quando o Windows OS entra em pressão de memória (e certamente irá, pois o SQL Server compromete toda a memória disponível no servidor), ele não pode paginar ou ajustar o conjunto de trabalho do SQL Server em resposta à pressão de memória. Isso deixa o sistema operacional à mercê do SQL Server para responder à pressão de memória rápido o suficiente para evitar a falha do sistema operacional do Windows. O mesmo cenário pode ocorrer se um valor inapropriadamente alto tiver sido definido para "<code>max server memory</code>" da instância. Por esse motivo, é fundamental que, quando o "<code>Lock Pages in Memory</code>" for configurado para uma instância do SQL Server, a opção de configuração "<code>max server memory</code>" seja definida com um valor suficientemente baixo para garantir que o sistema operacional do Windows nunca entre em pressão de memória.</p>
-        <h3>App Domain está marcado para descarregar devido à pressão de memória</h3>
+
+        <h3 id="appdomain">App Domain está marcado para descarregar devido à pressão de memória</h3>
+
         <p>Este erro está relacionado ao SQLCLR e pode ser acionado por vários fatores. Geralmente é observado em instalações de 32 bits do SQL Server, embora possa ocorrer em instalações de 64 bits onde a configuração "<code>max server memory</code>" do SQL Server limita a quantidade de memória física que pode ser alocada pelo SQLCLR. Na maioria das vezes, quando esse erro aparece, o problema pode ser atribuído a um dos dois problemas: utilização ineficiente de memória pela assembly do SQLCLR ou limitações do VAS disponível para alocação pela assembly do SQLCLR.</p>
+
         <p>Quando esse erro é encontrado em instalações de 32 bits do SQL Server, a recomendação predominante é atualizar o servidor para uma instalação de 64 bits para aproveitar os benefícios do aumento do tamanho do VAS do modo de usuário fornecido pela instalação de 64 bits. No entanto, se o código SQLCLR utilizar excessivamente a memória ao usar objetos como um <code>DataSet</code>, que usa quantidades excessivas de memória na pilha CLR para armazenar todos os resultados da execução de uma consulta, em comparação com um <code>SqlDataReader</code>, mesmo uma atualização de 32 bits para 64 bits provavelmente não resolverá o problema. Uma maneira de identificar se esse é o problema é utilizar o código da assembly do SQLCLR fora do processo do SQL Server, em um aplicativo Console ou WinForms, e analisar o uso de memória.</p>
+
         <p>Dependendo do propósito da assembly do SQLCLR afetada, essa mensagem de erro no log de erros pode ser benigna ou pode causar problemas significativos. Por exemplo, se um SQLCLR armazenar estado entre execuções e sua declaração de Code Access Security (CAS) for <code>UNSAFE</code>, descarregá-lo resultará na perda das informações de estado e causará problemas significativos.</p>
+
         <p>Em ambos os casos, descarregamentos e recarregamentos repetidos do App Domain afetam o desempenho e devem ser eliminados, se possível. Se uma migração de uma instalação de 32 bits para uma instalação de 64 bits não for imediatamente possível, uma possível solução é usar o parâmetro de inicialização -g, discutido anteriormente neste capítulo, para aumentar o tamanho da reserva <code>MemToLeave</code> VAS, fornecendo espaço de endereço virtual adicional ao SQLCLR para alocações de memória.</p>
-        <h3>Erro 701 e FAILED_VIRTUAL_RESERVE</h3>
+
+        <h3 id="701">Erro 701 e FAILED_VIRTUAL_RESERVE</h3>
+
         <p>Quando o SQL Server não consegue alocar uma região contígua de VAS para uma operação, ele gera um erro 701 e registra as informações sobre o tamanho da solicitação de alocação no log de erros do SQL Server. Esse problema geralmente ocorre apenas em servidores SQL de 32 bits, onde o VAS é limitado, e pode estar associado a vários fatores diferentes, incluindo backups que usam valores de configuração maiores que o padrão para maxtransfersize e buffer count, além de SQLCLR, XML, tipos de dados espaciais, linked servers ou planos de consulta grandes gerados pelo sistema. Esse erro não está relacionado ao buffer pool no SQL Server, é específico para solicitações de alocação fora do buffer pool que geralmente são maiores que 8 KB.</p>
+
         <p>Se uma migração de uma instalação de 32 bits para uma instalação de 64 bits não for imediatamente possível, uma solução é usar o parâmetro de inicialização -g, discutido anteriormente, para aumentar o tamanho da reserva <code>MemToLeave</code> VAS, fornecendo VAS adicional ao alocador de várias páginas para alocações de memória.</p>
-        <p>Máquinas virtuais superprovisionadas</p>
+
+        <h3 id="vmsuper">Máquinas virtuais superprovisionadas</h3>
+
         <p>No final de 2008, a Microsoft adicionou suporte de virtualização (Hyper-V) ao SQL Server 2005 e 2008 e, posteriormente, expandiu seu suporte para abranger configurações validadas usando outras tecnologias de virtualização, por meio do Programa de Validação de Virtualização de Servidor (SVVP). A partir daí, não demorou muito para que as implementações virtualizadas do SQL Server se tornassem comuns nos data centers empresariais.</p>
+
         <p>Dependendo do hipervisor utilizado, recursos avançados como "sobreposição de memória" podem levar a problemas para o SQL Server, quando a quantidade de memória alocada para as máquinas virtuais em execução no hipervisor excede a memória física real instalada no servidor host.</p>
+
         <p>Hipervisores que suportam opções como "sobreposição de memória" implementam funcionalidades adicionais que permitem ao servidor host responder à pressão de memória física e estabilizar o sistema. Em geral, existem duas formas pelas quais os hipervisores lidam com a pressão de memória física no servidor host: <strong>balonamento de memória</strong> e <strong>paginação de memória</strong>.</p>
+
         <p>O balonamento de memória das máquinas virtuais dos convidados é um processo em que um "driver de balão" especializado, instalado como parte das ferramentas de VM em cada convidado, começa a adquirir memória da VM. Isso gera pressão de memória dentro da VM, o que faz com que notificações de recurso de "memória baixa" sejam definidas pelo sistema operacional Windows, o que, por sua vez, força os processos em execução sob o SO convidado a liberar memória, que pode então ser devolvida ao servidor host.</p>
+
         <p>O balonamento de memória é a opção preferida, mas quando o balonamento das VMs convidadas não consegue liberar memória rápido o suficiente para lidar com a pressão de memória do nível do host, o método alternativo usado pelos hipervisores é paginar ativamente as alocações de memória dos convidados para o disco, o que resulta em uma degradação severa no desempenho dos convidados paginados no sistema.</p>
+
         <p>Servidores SQL em execução como VMs exigem considerações especiais em relação às suas configurações de memória no hipervisor, a fim de minimizar problemas associados ao balonamento e paginação quando o hipervisor host sofre pressão de memória.</p>
+
         <p>Quando uma VM do SQL Server reduz voluntariamente o uso de memória como resultado do balonamento, isso pode, em casos extremos, fazer com que o SQL Server reduza suas alocações de pool de buffer a ponto de ser usada pouca ou nenhuma memória pelo SQL Server para armazenar em cache os dados. Isso, por sua vez, resultará em operações excessivas de E/S de disco físico pela instância.</p>
+
         <p>Todos os hipervisores atualmente suportados pela Microsoft fornecem mecanismos para reservar uma quantidade mínima de memória para a VM que hospeda o SQL Server, o que impede o hipervisor de balonar ou paginar a VM caso o host sofra pressão de memória. Definir a reserva apropriada para o SQL Server é uma prática recomendada pelos fornecedores de hipervisor. Além disso, configurar corretamente a opção de <CODE>min server memory</CODE> dentro do SQL Server pode permitir que o balonamento parcial ocorra, garantindo que o SQL Server continue a alocar a memória do pool de buffer necessária para atender aos SLAs do ambiente.</p>
-        <h3>Configurações de memória para várias instâncias</h3>
+
+        <h3 id="vinst">Configurações de memória para várias instâncias</h3>
+
         <p>Um dos pontos de venda que a Microsoft usa para o SQL Server é a capacidade de instalar várias instâncias nomeadas do SQL Server em um único servidor grande. Consolidar várias instâncias do SQL Server em um único servidor físico ou em um cluster de failover pode levar a uma redução substancial nos custos de licenciamento do SQL Server.</p>
+
         <p>No entanto, ao executar várias instâncias no mesmo servidor físico, é muito importante que as opções de configuração <code>min server memory</code> e <code>max server memory</code> sejam definidas adequadamente para cada instância, com base na carga de trabalho, para evitar a competição por recursos de memória e evitar que uma instância fique sem memória. Cada uma das instâncias deve ser monitorada usando os contadores de desempenho discutidos na seção <em>Diagnóstico de Pressão de Memória</em>, para determinar onde o valor <code>max server memory</code> deve ser definido. O total agregado das opções de configuração <code>max server memory</code> para todas as instâncias no servidor deve ser baixo o suficiente para garantir que o sistema operacional Windows ainda tenha memória disponível suficiente, conforme rastreado pelo contador <code>Memory\Available Mbytes</code>, para evitar notificações de baixa memória do sistema operacional.</p>
+
         <p>Também é recomendado configurar <code>min server memory</code> para cada instância, a fim de garantir uma quantidade mínima de memória para o pool de buffers caso o sistema operacional Windows emita a notificação de baixa memória e as instâncias do SQL Server reduzam suas alocações de memória em resposta. Se a opção de configuração <code>min server memory</code> não estiver definida, uma única instância do SQL Server pode reduzir voluntariamente o uso de memória a ponto de experimentar degradação de desempenho. Definir <code>min server memory</code> para todas as instâncias impedirá que isso ocorra e fará com que as outras instâncias reduzam o uso de memória adequadamente, em resposta à notificação de baixa memória do sistema operacional.</p>
-        <h2>Resumo</h2>
+
+        <h2 id="resumo">Resumo</h2>
+
         <p>Sem dúvida, algumas das opções de configuração mais importantes para o SQL Server estão relacionadas ao gerenciamento de memória, e o surgimento do SQL Server de 64 bits mudou significativamente o gerenciamento de memória para o SQL Server.</p>
         <p>Quando o SQL Server é um processo de 32 bits, o uso de memória para o pool de buffers é limitado a 2 GB, o tamanho do Espaço de Endereçamento Virtual (VAS, na sigla em inglês), menos o tamanho da Reserva do Espaço de Endereçamento Virtual (também conhecido como <code>MemToLeave</code>) para alocações de memória fora do pool de buffers para o processo do SQL Server. Se a RAM instalada for menor que 2 GB, o uso de memória é limitado a RAM menos o <code>MemToLeave</code>. Este capítulo discutiu as duas opções que permitirão que o SQL Server de 32 bits utilize memória adicional para alocações de pool de buffers, seja diminuindo o VAS do modo kernel (ajuste de VAS) ou disponibilizando uma área separada e maior de memória PAE, usando Extensões de Janela de Endereçamento (AWE, na sigla em inglês).</p>
         <p>Quando o SQL Server é um processo de 64 bits, o VAS é essencialmente ilimitado, mas a limitação de memória física ainda se aplica ao ambiente. Cobrimos algumas das mudanças significativas no gerenciamento de memória e suas implicações específicas para configurações e opções de memória, como <code>max server memory</code>, <code>min server memory</code> e <code>Lock Pages in Memory</code>.</p>
