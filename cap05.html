@@ -249,160 +249,206 @@ INCLUDE (BusinessEntityID, FirstName, LastName)
 
         <h2 id="idxausentes">Identificando de índices ausentes</h2>
         <p>O SQL Server 2005 e versões posteriores oferecem várias ferramentas que podem ajudar a identificar índices que podem beneficiar o desempenho de uma carga de trabalho ou consulta específica.</p>
+
         <ul>
             <li><strong>Database Engine Tuning Advisor</strong> - uma versão significativamente aprimorada e expandida da antiga Index Tuning Wizard, o DTA analisa os planos de execução gerados para uma carga de trabalho fornecida, juntamente com as características físicas do banco de dados, e recomenda um conjunto de índices.</li>
+
             <li><strong>Recurso de Índice Ausente</strong> - durante a otimização de consulta, o Query Optimizer identifica índices que ele acredita que seriam benéficos para o desempenho da consulta específica em processo de otimização. Essas informações são armazenadas em dois locais:</li>
-            <ul>
+
+            <ul class="deslocamento">
                 <li><strong>As Visões de Gerenciamento Dinâmico de Índice Ausente</strong> - um grupo de quatro DMVs, identificados por <code>sys.dm_db_missing_index_*</code>, onde * representa detalhes, colunas, group_stats ou grupos.</li>
+
                 <li><strong>XML showplans</strong> - informações de índice ausente também podem ser extraídas do elemento <strong><code>MissingIndexGroup</code></strong> desses showplans.</li>
-                </ul>
             </ul>
-            <p>É importante ter em mente que, embora esses recursos possam ser muito úteis para determinar os índices que podem ser benéficos para seus bancos de dados, eles também podem ser uma faca de dois gumes e causar mais problemas do que soluções quando usados incorretamente. Implementar cegamente as recomendações de qualquer um desses recursos quase sempre resultará em índices duplicados ou sobrepostos no banco de dados, bem como em um excesso de índices, ao invés de poucos.</p>
-            <h3>Análise de carga de trabalho com o Database Engine Tuning Advisor</h3>
-            <p>Uma das maneiras mais fáceis de identificar os índices ausentes para um banco de dados SQL, se você não entender bem os conceitos por trás da seleção de índices para criar manualmente, é usar o Database Engine Tuning Advisor (DTA).</p>
-            <p>O DTA pode ser usado para analisar uma única consulta ou uma carga de trabalho inteira do banco de dados, na forma de um arquivo de rastreamento gerado pelo SQL Server Profiler. Obviamente, isso significa que a qualidade da análise de índice do DTA será tão alta quanto a qualidade da carga de trabalho fornecida para a ferramenta analisar. Se a carga de trabalho não representar de forma adequada a carga de trabalho típica para aquele banco de dados e estiver faltando consultas significativas, as sugestões de índices também serão incompletas, imprecisas ou simplesmente erradas.</p>
-            <h3>Coletando um rastreamento de carga de trabalho</h3>
-            <p>Para obter os melhores resultados e recomendações do DTA, o rastreamento de carga de trabalho deve conter uma parte significativa da carga de trabalho padrão do banco de dados sendo analisado. Como parte de sua análise, o DTA estima o impacto de quaisquer alterações de índice sugeridas no desempenho da carga de trabalho como um todo. Isso ajuda a evitar que ele recomende um índice que melhore o desempenho de uma consulta individual específica, mas tenha um impacto geral negativo na carga de trabalho. Portanto, se você fornecer apenas uma única consulta ao DTA para análise, as recomendações fornecidas pelo DTA podem ser muito diferentes do que seria recomendado se a mesma consulta fosse analisada como parte de uma carga de trabalho completa para o banco de dados.</p>
-            <p>O SQL Server Profiler fornece um modelo de rastreamento SQL embutido, o modelo Tuning, que foi projetado para capturar os eventos necessários para uma carga de trabalho para análise pelo DTA. Para usar esse modelo, abra o SQL Server Profiler e conecte-se à instância do SQL Server. Na janela <strong>Propriedades do Rastreamento</strong> (Figura 5.1), selecione o modelo <strong>Tuning</strong> no menu suspenso <strong>Use o modelo</strong>.</p>
-            <img src="imagens/fig51.png" alt="Trace Properties">
-            <p><strong>Figura 5.1</strong>: SQL Profiler - Janela Propriedades do Rastreamento.</p>
-            <p>É possível executar o rastreamento de ajuste diretamente no SQL Profiler e salvá-lo em um arquivo ou tabela de rastreamento. No entanto, a coleta de rastreamentos do lado do cliente pode causar uma deterioração do desempenho do servidor em análise, devido ao custo adicional de armazenar os eventos em buffer na memória e o tráfego de rede necessário para enviar os eventos para o SQL Server Profiler usando o provedor de conjuntos de linhas (rowset provider).</p>
-            <p><strong><em>Impacto do provedor de conjuntos de linhas no desempenho do Profiler</em></strong></p>
+        </ul>
+        
+        <p>É importante ter em mente que, embora esses recursos possam ser muito úteis para determinar os índices que podem ser benéficos para seus bancos de dados, eles também podem ser uma faca de dois gumes e causar mais problemas do que soluções quando usados incorretamente. Implementar cegamente as recomendações de qualquer um desses recursos quase sempre resultará em índices duplicados ou sobrepostos no banco de dados, bem como em um excesso de índices, ao invés de poucos.</p>
+
+        <h3 id="workload">Análise de carga de trabalho com o Database Engine Tuning Advisor</h3>
+
+        <p>Uma das maneiras mais fáceis de identificar os índices ausentes para um banco de dados SQL, se você não entender bem os conceitos por trás da seleção de índices para criar manualmente, é usar o Database Engine Tuning Advisor (DTA).</p>
+
+        <p>O DTA pode ser usado para analisar uma única consulta ou uma carga de trabalho inteira do banco de dados, na forma de um arquivo de rastreamento gerado pelo SQL Server Profiler. Obviamente, isso significa que a qualidade da análise de índice do DTA será tão alta quanto a qualidade da carga de trabalho fornecida para a ferramenta analisar. Se a carga de trabalho não representar de forma adequada a carga de trabalho típica para aquele banco de dados e estiver faltando consultas significativas, as sugestões de índices também serão incompletas, imprecisas ou simplesmente erradas.</p>
+
+        <h4>Coletando um rastreamento de carga de trabalho</h4>
+
+        <p>Para obter os melhores resultados e recomendações do DTA, o rastreamento de carga de trabalho deve conter uma parte significativa da carga de trabalho padrão do banco de dados sendo analisado. Como parte de sua análise, o DTA estima o impacto de quaisquer alterações de índice sugeridas no desempenho da carga de trabalho como um todo. Isso ajuda a evitar que ele recomende um índice que melhore o desempenho de uma consulta individual específica, mas tenha um impacto geral negativo na carga de trabalho. Portanto, se você fornecer apenas uma única consulta ao DTA para análise, as recomendações fornecidas pelo DTA podem ser muito diferentes do que seria recomendado se a mesma consulta fosse analisada como parte de uma carga de trabalho completa para o banco de dados.</p>
+
+        <p>O SQL Server Profiler fornece um modelo de rastreamento SQL embutido, o modelo Tuning, que foi projetado para capturar os eventos necessários para uma carga de trabalho para análise pelo DTA. Para usar esse modelo, abra o SQL Server Profiler e conecte-se à instância do SQL Server. Na janela <strong>Propriedades do Rastreamento</strong> (Figura 5.1), selecione o modelo <strong>Tuning</strong> no menu suspenso <strong>Use o modelo</strong>.</p>
+
+        <img src="imagens/fig51.png" alt="Trace Properties">
+
+        <p class="legenda"><strong>Figura 5.1</strong>: SQL Profiler - Janela Propriedades do Rastreamento.</p>
+
+        <p>É possível executar o rastreamento de ajuste diretamente no SQL Profiler e salvá-lo em um arquivo ou tabela de rastreamento. No entanto, a coleta de rastreamentos do lado do cliente pode causar uma deterioração do desempenho do servidor em análise, devido ao custo adicional de armazenar os eventos em buffer na memória e o tráfego de rede necessário para enviar os eventos para o SQL Server Profiler usando o provedor de conjuntos de linhas (rowset provider).</p>
+
+        <div class="dica">
+            <p class="destaque"><em>Impacto do provedor de conjuntos de linhas no desempenho do Profiler</em></p>
+                
             <p><em>Para obter mais informações e análises sobre esse tópico, consulte a postagem do SQL Server MVP Grant Fritchey, "Profiler Research", em (</em><a href="http://www.scarydba.com/2008/12/18/profiler-research/" target="_blank" rel="external">http://www.scarydba.com/2008/12/18/profiler-research/</a><em>).</em></p>
-            <p>Uma maneira muito melhor de capturar um arquivo de rastreamento de carga de trabalho para análise pelo Database Tuning Advisor é criar a definição de rastreamento no cliente, usando o Profiler, mas executar o rastreamento no servidor. Para criar a definição de rastreamento, inicie manualmente o rastreamento de ajuste no Profiler, mas pare-o imediatamente. Em seguida, no menu <strong>Exportar</strong> (<strong>File</strong> Menu), selecione <strong>Script Trace Definition</strong> | <strong>Para SQL Server 2005 - 2008</strong> (Figura 5.2).</p>
-            <img src="imagens/fig52.png" alt="Definição de rastreamento">
-            <p><strong>Figura 5.2: SQL Profiler</strong> - Definição de Script de Rastreamento.</p>
-            <p>Isso salva um arquivo de definição de rastreamento (.sql) contendo todo o código necessário para criar e iniciar um rastreamento do lado do servidor. Este arquivo de rastreamento gerado pode ser editado conforme necessário e, em seguida, executado manualmente ou agendado conforme necessário. Abra o arquivo no SSMS para editá-lo. Primeiramente, substitua a variável <code>@FileName</code> pelo caminho e nome de arquivo a ser criado no servidor e, em seguida, execute o script para iniciar o rastreamento (na Listagem 5.8, adicione o caminho e nome de arquivo onde o script diz '<code>InsertFileNameHere</code>'). Apenas o nome do arquivo é necessário, pois a extensão <code>.trc</code> será adicionada automaticamente.</p>
-            <p>Depois de salvar o arquivo, abra-o no SQL Server Management Studio e edite-o. Em seguida, altere a variável <code>@maxfilesize</code> para um tamanho que faça sentido, com base no nível de atividade do banco de dados sendo rastreado. Existem opções adicionais para a definição do rastreamento, que não estão incluídas na definição do script fornecida pelo SQL Profiler. O parâmetro <code>@stoptime</code> de <code>sp_trace_create</code> pode ser usado para especificar um horário de término automático para a coleta de rastreamento. O parâmetro <code>@filecount</code> pode ser usado para especificar o número de arquivos de rolagem a serem mantidos para o rastreamento, se o parâmetro <code>@options</code> tiver sido configurado para permitir a rolagem.</p>
-            <p>Quando essas opções adicionais forem especificadas, elas devem ser especificadas na ordem exata listada no tópico Books Online para <code>sp_trace_create</code> (<a href="http://msdn.microsoft.com/en-us/library/ms190362.aspx" target="_blank" rel="external">http://msdn.microsoft.com/en-us/library/ms190362.aspx</a>).</p>
-            <p>O script final, mostrado na Listagem 5.8, irá fornecer o traceid do rastreamento que está sendo criado, permitindo que ele seja interrompido e excluído usando <code>sp_trace_setstatus</code> após o período de coleta ser concluído.</p>
-            <pre>
-                <code>
-            DECLARE @rc INT
-            DECLARE @TraceID INT
-            DECLARE @maxfilesize BIGINT
-            SET @maxfilesize = 50
-            EXEC @rc = sp_trace_create @TraceID OUTPUT, 0, N'InsertFileNameHere',
-            @maxfilesize, NULL
-            IF ( @rc != 0 )
-            GOTO error
-            -- Client side File and Table cannot be scripted
-            -- Set the events
-            DECLARE @on BIT
-            SET @on = 1
-            EXEC sp_trace_setevent @TraceID, 137, 15, @on
-            EXEC sp_trace_setevent @TraceID, 137, 1, @on
-            EXEC sp_trace_setevent @TraceID, 137, 13, @on
+        </div>
+
+        <p>Uma maneira muito melhor de capturar um arquivo de rastreamento de carga de trabalho para análise pelo Database Tuning Advisor é criar a definição de rastreamento no cliente, usando o Profiler, mas executar o rastreamento no servidor. Para criar a definição de rastreamento, inicie manualmente o rastreamento de ajuste no Profiler, mas pare-o imediatamente. Em seguida, no menu <strong>Exportar</strong> (<strong>File</strong> Menu), selecione <strong>Script Trace Definition</strong> | <strong>Para SQL Server 2005 - 2008</strong> (Figura 5.2).</p>
+
+        <img src="imagens/fig52.png" alt="Definição de rastreamento">
+
+        <p class="legenda"><strong>Figura 5.2: SQL Profiler</strong> - Definição de Script de Rastreamento.</p>
+
+        <p>Isso salva um arquivo de definição de rastreamento (.sql) contendo todo o código necessário para criar e iniciar um rastreamento do lado do servidor. Este arquivo de rastreamento gerado pode ser editado conforme necessário e, em seguida, executado manualmente ou agendado conforme necessário. Abra o arquivo no SSMS para editá-lo. Primeiramente, substitua a variável <code>@FileName</code> pelo caminho e nome de arquivo a ser criado no servidor e, em seguida, execute o script para iniciar o rastreamento (na Listagem 5.8, adicione o caminho e nome de arquivo onde o script diz '<code>InsertFileNameHere</code>'). Apenas o nome do arquivo é necessário, pois a extensão <code>.trc</code> será adicionada automaticamente.</p>
+
+        <p>Depois de salvar o arquivo, abra-o no SQL Server Management Studio e edite-o. Em seguida, altere a variável <code>@maxfilesize</code> para um tamanho que faça sentido, com base no nível de atividade do banco de dados sendo rastreado. Existem opções adicionais para a definição do rastreamento, que não estão incluídas na definição do script fornecida pelo SQL Profiler. O parâmetro <code>@stoptime</code> de <code>sp_trace_create</code> pode ser usado para especificar um horário de término automático para a coleta de rastreamento. O parâmetro <code>@filecount</code> pode ser usado para especificar o número de arquivos de rolagem a serem mantidos para o rastreamento, se o parâmetro <code>@options</code> tiver sido configurado para permitir a rolagem.</p>
+
+        <p>Quando essas opções adicionais forem especificadas, elas devem ser especificadas na ordem exata listada no tópico Books Online para <code>sp_trace_create</code> (<a href="http://msdn.microsoft.com/en-us/library/ms190362.aspx" target="_blank" rel="external">http://msdn.microsoft.com/en-us/library/ms190362.aspx</a>).</p>
+
+        <p>O script final, mostrado na Listagem 5.8, irá fornecer o traceid do rastreamento que está sendo criado, permitindo que ele seja interrompido e excluído usando <code>sp_trace_setstatus</code> após o período de coleta ser concluído.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>DECLARE</cls> @rc <cls>INT</cls>
+<cls>DECLARE</cls> @TraceID <cls>INT</cls>
+<cls>DECLARE</cls> @maxfilesize <cls>BIGINT</cls>
+<cls>SET</cls> @maxfilesize = 50
+<cls>EXEC</cls> @rc = sp_trace_create @TraceID <cls>OUTPUT</cls> <string>N'InsertFileNameHere'</string>,
+    @maxfilesize, NULL
+<cls>IF</cls> ( @rc != 0 )
+    <cls>GOTO</cls> error
+
+<com>-- Client side File and Table cannot be scripted</com>
+<com>-- Set the events</com>
+<cls>DECLARE</cls> @on <cls>BIT</cls>
+<cls>SET</cls> @on = 1
+<cls>EXEC</cls> <proc>sp_trace_setevent</proc> @TraceID, 137, 15, @on
+<cls>EXEC</cls> <proc>sp_trace_setevent</proc> @TraceID, 137, 1, @on
+<cls>EXEC</cls> <proc>sp_trace_setevent</proc> @TraceID, 137, 13, @on
+
+<com>-- Set the Filters</com>
+<cls>DECLARE</cls> @intfilter <cls>INT</cls>
+<cls>DECLARE</cls> @bigintfilter <cls>BIGINT</cls>
+<com>-- Set the trace status to start</com>
+<cls>EXEC</cls> <proc>sp_trace_setstatus</proc> @TraceID, 1
+<com>-- display trace id for future references</com>
+<cls>SELECT</cls> TraceID = @TraceID
+<cls>GOTO</cls> finish
+<cls>error:</cls>
+<cls>SELECT</cls> ErrorCode = @rc
+<cls>finish:</cls>
+<cls>go</cls>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 5.8</strong>: O rastreamento de ajuste completo e editado do lado do servidor.</p>
+
+        <h4>Analisando uma carga de trabalho de rastreamento</h4>
+
+        <p>O Database Tuning Advisor (DTA) pode ser aberto no menu <strong>Ferramentas</strong> do SQL Server Management Studio; uma nova sessão de ajuste é iniciada automaticamente e o arquivo de carga de trabalho capturado pode ser carregado. A tela de configuração da sessão de ajuste possui duas abas: <strong>Geral</strong> e <strong>Opções de Ajuste</strong>. A aba <strong>Geral</strong> (Figura 5.3) contém o nome da sessão que está executando o DTA, o tipo de carga de trabalho a ser utilizada, a localização da fonte da carga de trabalho, um menu suspenso para selecionar o banco de dados a ser analisado e uma visualização em grade para permitir a seleção de bancos de dados e tabelas específicas para ajustar com base na carga de trabalho.</p>
+
             
-            -- Set the Filters
-            DECLARE @intfilter INT
-            DECLARE @bigintfilter BIGINT
-            -- Set the trace status to start
-            EXEC sp_trace_setstatus @TraceID, 1
-            -- display trace id for future references
-            SELECT TraceID = @TraceID
-            GOTO finish
-            error:
-            SELECT ErrorCode = @rc
-            finish:
-            go
-                </code>
-            </pre>
-            <p><strong>Listagem 5.8</strong>: O rastreamento de ajuste completo e editado do lado do servidor.</p>
-            <h2>Analisando uma carga de trabalho de rastreamento</h2>
-            <p>O Database Tuning Advisor (DTA) pode ser aberto no menu <strong>Ferramentas</strong> do SQL Server Management Studio; uma nova sessão de ajuste é iniciada automaticamente e o arquivo de carga de trabalho capturado pode ser carregado. A tela de configuração da sessão de ajuste possui duas abas: <strong>Geral</strong> e <strong>Opções de Ajuste</strong>. A aba <strong>Geral</strong> (Figura 5.3) contém o nome da sessão que está executando o DTA, o tipo de carga de trabalho a ser utilizada, a localização da fonte da carga de trabalho, um menu suspenso para selecionar o banco de dados a ser analisado e uma visualização em grade para permitir a seleção de bancos de dados e tabelas específicas para ajustar com base na carga de trabalho.</p>
-            <img src="imagens/fig53.PNG" alt="Tuning Advisor">
-            <p><strong>Figura 5.3</strong>: Database Tuning Advisor - Aba Geral.</p>
-            <p>A aba <strong>Opções de Ajuste</strong> (Figura 5.4) contém as opções que serão usadas durante a análise de ajuste da carga de trabalho. Dependendo do tamanho do arquivo de rastreamento de carga de trabalho, a análise de ajuste pode levar muito tempo. A caixa de seleção <strong>Limitar tempo de ajuste</strong> permite especificar um horário de término para a análise.</p>
-            <p>Nas seções seguintes, você pode especificar as Estruturas de Design Físico a serem usadas pelo DTA ao fazer recomendações (neste caso, índices), se a partição deve ou não ser usada e quais Estruturas de Design Físico existentes devem ser mantidas no banco de dados.</p>
-            <p>O botão <strong>Opções Avançadas</strong> permite definir o espaço em disco máximo, em megabytes, que pode ser usado para armazenar as várias recomendações, bem como se as recomendações de indexação são feitas para operações online ou offline.</p>
-
-            Figura 5.4: Database Tuning Advisor - Aba Opções de Ajuste.
-
-            Após configurar as opções apropriadas, você pode iniciar a análise de índices clicando em Iniciar Análise na barra de menu do DTA, e o DTA começará a analisar a carga de trabalho. Durante esta análise, ele criará e excluirá índices e estatísticas hipotéticos e realizará uma análise de impacto de cada um. O log de ajuste do DTA rastreará o progresso da sessão de ajuste, caso a opção tenha sido marcada na aba Geral do DTA, e exibirá mensagens conforme a sessão avança.
-
-            Revisando as recomendações de índices
-
-            Quando a sessão de ajuste é concluída, as recomendações do DTA relacionadas a índices e estatísticas associadas serão exibidas na aba Recomendações (Figura 5.5). Essas recomendações podem ser salvas em um arquivo para aplicação manual posteriormente ou aplicadas imediatamente ao banco de dados, selecionando a opção apropriada no menu Ações. Além disso, o DTA oferece a capacidade de realizar outra análise "what-if" de um subconjunto das recomendações, permitindo que você determine o impacto da melhoria estimada ao remover (desmarcar) algumas das recomendações do conjunto de análises. É altamente recomendável que quaisquer recomendações de índices feitas pelo DTA sejam testadas em um ambiente de teste isolado antes de implementá-las em produção. Você pode fazer isso manualmente ou usando a opção Ações | Avaliar Recomendações do DTA para aplicar as alterações e, em seguida, avaliar seu verdadeiro impacto executando novamente a análise de ajuste da carga de trabalho.
-
-            Figura 5.5: Database Tuning Advisor - Aba Recomendações.
-
-            Recurso de índices ausentes
-
-            No SQL Server 2005 e posterior, o mecanismo de banco de dados registra informações sobre índices que não existem, mas que o otimizador poderia ter usado durante a otimização do plano de consulta para melhorar o desempenho de uma determinada instrução SQL.
-
-            Essas informações são armazenadas nas Visualizações de Gerenciamento Dinâmico (DMVs) de índices ausentes e no elemento MissingIndexGroup do showplan XML para uma consulta, e teoricamente podem ser usadas para identificar e criar índices benéficos.
+        <img src="imagens/fig53.PNG" alt="Tuning Advisor">
             
-            Sem dúvida, é um recurso útil, mas vou afirmar desde o início que, se você criar cegamente todos os índices recomendados por esse recurso de índice ausente, provavelmente causará mais danos do que benefícios ao desempenho do seu banco de dados. O maior problema é que, ao contrário das recomendações provenientes do DTA, essas recomendações de índice ausente não são baseadas em carga de trabalho; elas são derivadas da execução de consultas individuais e não levam em conta outras recomendações de índices provenientes da execução de outras consultas. Como resultado, é muito comum que o recurso de índice ausente recomende índices sobrepostos e até mesmo duplicados.
+        <p class="legenda"><strong>Figura 5.3</strong>: Database Tuning Advisor - Aba Geral.</p>
 
-            No entanto, quando usado com o devido cuidado, o recurso de índice ausente pode ajudá-lo a descobrir os poucos índices que realmente podem fazer uma grande diferença no desempenho geral de sua carga de trabalho, ou aqueles índices que, com uma pequena modificação em sua definição, poderiam abranger muitas mais consultas.
-
-            Visualizações de Gerenciamento Dinâmico (DMVs) de índices ausentes
-
-            A maneira mais rápida de recuperar informações relacionadas aos índices ausentes, identificados pelo otimizador de consultas, é consultar as Visualizações de Gerenciamento Dinâmico (DMVs) de índices ausentes. Existem quatro DMVs associados ao recurso de índice ausente no SQL Server:
-
-            • sys.dm_db_missing_index_details - armazena informações detalhadas sobre índices que o otimizador teria usado se estivessem disponíveis, como colunas que poderiam ter sido usadas para resolver predicados de igualdade ou desigualdade, e colunas INCLUDE sugeridas para cobrir uma consulta.
-
-            • sys.dm_db_missing_index_columns - aceita um index_handle e retorna uma lista de colunas que comporiam o índice sugerido.
-
-            • sys.dm_db_missing_index_group_stats - fornece informações resumidas sobre o benefício potencial de um índice "ausente", com base, por exemplo, no número de pesquisas e varreduras que se beneficiariam.
-
-            • sys.dm_db_missing_index_groups - uma visualização de junção entre _group_stats e _index_details.
-
-            Essas visualizações, quando unidas, podem identificar índices ausentes e fornecer a redução de custos estimada pelo otimizador se o índice fosse criado. As visualizações sys.dm_db_missing_index_group_stats e sys.dm_db_missing_index_groups, apesar de seus nomes, na verdade não contêm grupos de índices; os grupos (a partir do SQL Server 2008 R2) se referem a apenas um índice ausente rastreado no sistema.
-
-            As informações armazenadas nessas DMVs são certamente úteis, mas existem várias limitações que você precisa considerar ao basear suas escolhas de índices nesses dados, incluindo o seguinte:
-
-            • as informações contidas nessas DMVs estão em armazenamento volátil; ou seja, elas existem apenas na memória e não persistem além de reinicializações do serviço SQL, ou alterações no estado de um banco de dados, como restaurar o banco de dados, desanexar o banco de dados, colocar o banco de dados offline ou fechar o banco de dados pela opção AutoClose.
-
-            • as estatísticas são armazenadas apenas para um máximo de 500 grupos de índices ausentes.
-
-            • as colunas-chave do índice, especificadas pelas saídas de colunas de igualdade e desigualdade das DMVs sys.dm_db_missing_index_details e sys.dm_db_missing_index_columns, não são ordenadas de acordo com a cardinalidade.
-
-            Como discutido anteriormente neste capítulo, muitas vezes (embora nem sempre) é melhor ordenar as colunas-chave do índice de forma que a coluna mais seletiva seja a primeira coluna no índice. Isso reduz o número de páginas do banco de dados que o mecanismo de banco de dados precisa ler ao percorrer o índice para atender à consulta.
-
-            No entanto, ao contrário das recomendações da DTA, as recomendações de índices ausentes armazenadas nas DMVs não consideram a cardinalidade das colunas-chave; em outras palavras, elas não são baseadas nos dados contidos nas colunas-chave que estão sendo recomendadas para criação. Portanto, é necessário realizar uma análise manual adicional da cardinalidade das colunas-chave para chegar à estrutura ideal do índice.
-
-            Essas limitações significam que essa ferramenta é melhor usada para identificar lacunas significativas em uma estratégia de indexação, em vez de ser usada como uma ferramenta de ajuste fino. A abordagem recomendada é identificar índices potencialmente úteis, listando primeiro aqueles que oferecem o maior benefício potencial de desempenho de acordo com as métricas armazenadas na DMV sys.dm_missing_index_group_stats.
-
-            Por exemplo, na DMV sys.dm_missing_index_group_stats, as colunas user_seeks e user_scans fornecem o número de operações de busca e varredura que se beneficiariam de uma determinada recomendação de índice. A coluna avg_total_user_cost fornece a redução média no custo da consulta como resultado da criação do índice, e a coluna avg_user_impact fornece a redução percentual no custo da consulta, caso o índice existisse.
-
-            Juntas, essas colunas podem ser usadas para gerar uma melhoria geral estimada no desempenho associada a um índice ausente específico no banco de dados. Existem várias maneiras de calcular essa melhoria estimada no desempenho, mas a fórmula geralmente aceita, mostrada na Listagem 5.9, foi fornecida com a permissão gentil de Bart Duncan, um dos membros da equipe de produtos do SQL Server da Microsoft, em seu post no blog MSDN, Você está usando as DMVs de índices ausentes do SQL? (http://blogs.msdn.com/b/bartd/archive/2007/07/19/are-you-using-sql-s-missing-index-dmvs.aspx).
-
-            SELECT  migs.avg_total_user_cost * ( migs.avg_user_impact / 100.0 )
-                    * ( migs.user_seeks + migs.user_scans ) AS improvement_measure ,
-                    'CREATE INDEX [missing_index_'
-                    + CONVERT (VARCHAR, mig.index_group_handle) + '_'
-                    + CONVERT (VARCHAR, mid.index_handle) + '_'
-                    + LEFT(PARSENAME(mid.statement, 1), 32) + ']' + ' ON '
-                    + mid.statement184
-                    Chapter 5: Missing Indexes
-                    + ' (' + ISNULL(mid.equality_columns, '')
-                    + CASE WHEN mid.equality_columns IS NOT NULL
-                                AND mid.inequality_columns IS NOT NULL THEN ','
-                           ELSE ''
-                      END + ISNULL(mid.inequality_columns, '') + ')'
-                                                           + ISNULL(' INCLUDE ('
-                                                              + mid.included_columns
-                                                              + ')', '')
-                                                          AS create_index_statement ,
-                    migs.* ,
-                    mid.database_id ,
-                    mid.[object_id]
-            FROM    sys.dm_db_missing_index_groups mig
-                    INNER JOIN sys.dm_db_missing_index_group_stats migs
-                           ON migs.group_handle = mig.index_group_handle
-                    INNER JOIN sys.dm_db_missing_index_details mid
-                           ON mig.index_handle = mid.index_handle
-            WHERE   migs.avg_total_user_cost * ( migs.avg_user_impact / 100.0 )
-                    * ( migs.user_seeks + migs.user_scans ) > 10
-            ORDER BY migs.avg_total_user_cost * migs.avg_user_impact
-                         * ( migs.user_seeks + migs.user_scans ) DESC
             
-                         Listagem 5.9: Identificando índices ausentes com base no benefício de custo da consulta.
-            A coluna improvement_measure calcula o valor estimado de melhoria para cada recomendação de índice, com base na redução média total do custo da consulta que seria obtida, no número de operações de busca e varredura que o índice poderia atender e no benefício percentual que o índice forneceria para as consultas em execução. Essa coluna facilita o foco nos índices que oferecem o maior benefício de custo.
+        <p>A aba <strong>Opções de Ajuste</strong> (Figura 5.4) contém as opções que serão usadas durante a análise de ajuste da carga de trabalho. Dependendo do tamanho do arquivo de rastreamento de carga de trabalho, a análise de ajuste pode levar muito tempo. A caixa de seleção <strong>Limitar tempo de ajuste</strong> permite especificar um horário de término para a análise.</p>
 
-            Ao analisar a saída dessa consulta, concentro-me nos índices com um valor de impacto maior que 50.000. Em seguida, analiso cuidadosamente as recomendações, pois é provável que haja algum grau de sobreposição entre os índices recomendados, com vários índices diferindo apenas sutilmente em termos de suas definições e ordens de colunas-chave do índice ou de suas definições e ordens de colunas incluídas. Também é provável que eu possa obter benefícios de desempenho semelhantes modificando um índice existente em vez de criar um novo. Conforme discutido anteriormente na seção Seleção e Projeto de Índices, cada índice deve ser testado para garantir que ele seja realmente útil antes de ser implantado em produção. O objetivo é criar o menor número possível de índices que satisfaçam o maior número possível das consultas mais significativas que compõem a carga de trabalho do SQL Server.
+            
+        <p>Nas seções seguintes, você pode especificar as Estruturas de Design Físico a serem usadas pelo DTA ao fazer recomendações (neste caso, índices), se a partição deve ou não ser usada e quais Estruturas de Design Físico existentes devem ser mantidas no banco de dados.</p>
+
+        <p>O botão <strong>Opções Avançadas</strong> permite definir o espaço em disco máximo, em megabytes, que pode ser usado para armazenar as várias recomendações, bem como se as recomendações de indexação são feitas para operações online ou offline.</p>
+
+        <img src="imagens/fig55.PNG" alt="Opções avançadas">
+
+        <p class="legenda"><strong>Figura 5.4</strong>: Database Tuning Advisor - Aba Opções de Ajuste.</p>
+
+        <p>Após configurar as opções apropriadas, você pode iniciar a análise de índices clicando em Iniciar Análise na barra de menu do DTA, e o DTA começará a analisar a carga de trabalho. Durante esta análise, ele criará e excluirá índices e estatísticas hipotéticos e realizará uma análise de impacto de cada um. O log de ajuste do DTA rastreará o progresso da sessão de ajuste, caso a opção tenha sido marcada na aba Geral do DTA, e exibirá mensagens conforme a sessão avança.</p>
+
+        <h4>Revisando as recomendações de índices</h4>
+
+        <p>Quando a sessão de ajuste é concluída, as recomendações do DTA relacionadas a índices e estatísticas associadas serão exibidas na aba <strong>Recomendações</strong> (Figura 5.5). Essas recomendações podem ser salvas em um arquivo para aplicação manual posteriormente ou aplicadas imediatamente ao banco de dados, selecionando a opção apropriada no menu <strong>Ações</strong>. Além disso, o DTA oferece a capacidade de realizar outra análise "what-if" de um subconjunto das recomendações, permitindo que você determine o impacto da melhoria estimada ao remover (desmarcar) algumas das recomendações do conjunto de análises. É altamente recomendável que quaisquer recomendações de índices feitas pelo DTA sejam testadas em um ambiente de teste isolado antes de implementá-las em produção. Você pode fazer isso manualmente ou usando a opção <strong>Ações | Avaliar Recomendações</strong> do DTA para aplicar as alterações e, em seguida, avaliar seu verdadeiro impacto executando novamente a análise de ajuste da carga de trabalho.</p>
+
+        <img src="imagens/fig55.PNG" alt="Aba Recomendações">
+
+        <p class="legenda"><strong>Figura 5.5</strong>: Database Tuning Advisor - Aba Recomendações.</p>
+
+        <h3 id="featidxausente">Recurso de índices ausentes</h3>
+
+        <p>No SQL Server 2005 e posterior, o mecanismo de banco de dados registra informações sobre índices que não existem, mas que o otimizador poderia ter usado durante a otimização do plano de consulta para melhorar o desempenho de uma determinada instrução SQL.</p>
+
+        <p>Essas informações são armazenadas nas Visualizações de Gerenciamento Dinâmico (DMVs) de índices ausentes e no elemento <code>MissingIndexGroup</code> do showplan XML para uma consulta, e teoricamente podem ser usadas para identificar e criar índices benéficos.</p>
+            
+        <p>Sem dúvida, é um recurso útil, mas vou afirmar desde o início que, se você criar cegamente todos os índices recomendados por esse recurso de índice ausente, provavelmente causará mais danos do que benefícios ao desempenho do seu banco de dados. O maior problema é que, ao contrário das recomendações provenientes do DTA, essas recomendações de índice ausente não são baseadas em carga de trabalho; elas são derivadas da execução de consultas individuais e não levam em conta outras recomendações de índices provenientes da execução de outras consultas. Como resultado, é muito comum que o recurso de índice ausente recomende índices sobrepostos e até mesmo duplicados.</p>
+
+        <p>No entanto, quando usado com o devido cuidado, o recurso de índice ausente <em>pode</em> ajudá-lo a descobrir os poucos índices que realmente podem fazer uma grande diferença no desempenho geral de sua carga de trabalho, ou aqueles índices que, com uma pequena modificação em sua definição, poderiam abranger muitas mais consultas.</p>
+
+        <h4>Visualizações de Gerenciamento Dinâmico (DMVs) de índices ausentes</h4>
+
+        <p>A maneira mais rápida de recuperar informações relacionadas aos índices ausentes, identificados pelo otimizador de consultas, é consultar as Visualizações de Gerenciamento Dinâmico (DMVs) de índices ausentes. Existem quatro DMVs associados ao recurso de índice ausente no SQL Server:</p>
+
+        <ul>
+            <li><strong><code>sys.dm_db_missing_index_details</code></strong> - armazena informações detalhadas sobre índices que o otimizador teria usado se estivessem disponíveis, como colunas que poderiam ter sido usadas para resolver predicados de igualdade ou desigualdade, e colunas INCLUDE sugeridas para cobrir uma consulta.</li>
+            <li><strong><code>sys.dm_db_missing_index_columns</code></strong> - aceita um index_handle e retorna uma lista de colunas que comporiam o índice sugerido.</li>
+            <li><strong><code>sys.dm_db_missing_index_group_stats</code></strong> - fornece informações resumidas sobre o benefício potencial de um índice "ausente", com base, por exemplo, no número de pesquisas e varreduras que se beneficiariam.</li>
+            <li><strong><code>sys.dm_db_missing_index_groups</code></strong> - uma visualização de junção entre <code>_group_stats</code> e <code>_index_details</code>.</li>
+        </ul>
+
+        <p>Essas visualizações, quando unidas, podem identificar índices ausentes e fornecer a redução de custos estimada pelo otimizador se o índice fosse criado. As visualizações <code>sys.dm_db_missing_index_group_stats</code> e <code>sys.dm_db_missing_index_groups</code>, apesar de seus nomes, na verdade não contêm grupos de índices; os grupos (a partir do SQL Server 2008 R2) se referem a apenas um índice ausente rastreado no sistema.</p>
+
+        <p>As informações armazenadas nessas DMVs são certamente úteis, mas existem várias limitações que você precisa considerar ao basear suas escolhas de índices nesses dados, incluindo o seguinte:</p>
+
+        <ul>
+            <li>as informações contidas nessas DMVs estão em armazenamento volátil; ou seja, elas existem apenas na memória e não persistem além de reinicializações do serviço SQL, ou alterações no estado de um banco de dados, como restaurar o banco de dados, desanexar o banco de dados, colocar o banco de dados offline ou fechar o banco de dados pela opção AutoClose.</li>
+            <li>as estatísticas são armazenadas apenas para um máximo de 500 grupos de índices ausentes.</li>
+            <li>as colunas-chave do índice, especificadas pelas saídas de colunas de igualdade e desigualdade das DMVs <code>sys.dm_db_missing_index_details</code> e <code>sys.dm_db_missing_index_columns</code>, não são ordenadas de acordo com a cardinalidade.</li>
+        </ul>
+
+        <p>Como discutido anteriormente neste capítulo, muitas vezes (embora nem sempre) é melhor ordenar as colunas-chave do índice de forma que a coluna mais seletiva seja a primeira coluna no índice. Isso reduz o número de páginas do banco de dados que o mecanismo de banco de dados precisa ler ao percorrer o índice para atender à consulta.</p>
+
+        <p>No entanto, ao contrário das recomendações da DTA, as recomendações de índices ausentes armazenadas nas DMVs não consideram a cardinalidade das colunas-chave; em outras palavras, elas não são baseadas nos dados contidos nas colunas-chave que estão sendo recomendadas para criação. Portanto, é necessário realizar uma análise manual adicional da cardinalidade das colunas-chave para chegar à estrutura ideal do índice.</p>
+
+        <p>Essas limitações significam que essa ferramenta é melhor usada para identificar lacunas significativas em uma estratégia de indexação, em vez de ser usada como uma ferramenta de ajuste fino. A abordagem recomendada é identificar índices potencialmente úteis, listando primeiro aqueles que oferecem o maior benefício potencial de desempenho de acordo com as métricas armazenadas na DMV <code>sys.dm_missing_index_group_stats</code>.</p>
+
+        <p>Por exemplo, na DMV <code>sys.dm_missing_index_group_stats</code>, as colunas <code>user_seeks</code> e <code>user_scans</code> fornecem o número de operações de busca e varredura que se beneficiariam de uma determinada recomendação de índice. A coluna <code>avg_total_user_cost</code> fornece a redução média no custo da consulta como resultado da criação do índice, e a coluna <code>avg_user_impact</code> fornece a redução percentual no custo da consulta, caso o índice existisse.</p>
+
+        <p>Juntas, essas colunas podem ser usadas para gerar uma melhoria geral estimada no desempenho associada a um índice ausente específico no banco de dados. Existem várias maneiras de calcular essa melhoria estimada no desempenho, mas a fórmula geralmente aceita, mostrada na Listagem 5.9, foi fornecida com a permissão gentil de Bart Duncan, um dos membros da equipe de produtos do SQL Server da Microsoft, em seu post no blog MSDN, Você está usando as DMVs de índices ausentes do SQL? (<a href="http://blogs.msdn.com/b/bartd/archive/2007/07/19/are-you-using-sql-s-missing-index-dmvs.aspx" target="_blank">http://blogs.msdn.com/b/bartd/archive/2007/07/19/are-you-using-sql-s-missing-index-dmvs.aspx</a>).</p>
+
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  migs.avg_total_user_cost * ( migs.avg_user_impact / 100.0 )
+        * ( migs.user_seeks + migs.user_scans ) <cls>AS</cls> improvement_measure ,
+        <string>'CREATE INDEX [missing_index_'</string>
+        + <func>CONVERT</func> (<cls>VARCHAR</cls>, mig.index_group_handle) + <string>'_'</string>
+        + <func>CONVERT</func> (<cls>VARCHAR</cls>, mid.index_handle) + <string>'_'</string>
+        + <join>LEFT</join>(<func>PARSENAME</func>(mid.<cls>statement</cls>, 1), 32) + <string>']'</string> + <string>' ON '</string>
+                                                      + mid.<cls>statement</cls>
+        + <string>' ('</string> + <func>ISNULL</func>(mid.equality_columns, <string>''</string>)
+        + <cls>CASE WHEN</cls> mid.equality_columns <join>IS NOT NULL</join>
+                    <join>AND</join> mid.inequality_columns <join>IS NOT NULL</join> <cls>THEN</cls> <string>','</string>
+               <cls>ELSE</cls> ''
+          <cls>END</cls> + <func>ISNULL</func>(mid.inequality_columns, <string>''</string>) + <string>')'</string>
+                                               + <func>ISNULL</func>(<string>' INCLUDE ('</string>
+                                                  + mid.included_columns
+                                                  + <string>')'</string>, <string>''</string>)
+                                              <cls>AS</cls> create_index_statement ,
+        migs.* ,
+        mid.database_id ,
+        mid.[object_id]
+<cls>FROM</cls>    <com>sys.dm_db_missing_index_groups</com> mig
+        <join>INNER JOIN</join> <com>sys.dm_db_missing_index_group_stats</com> migs
+               <cls>ON</cls> migs.group_handle = mig.index_group_handle
+        <join>INNER JOIN</join> <com>sys.dm_db_missing_index_details</com> mid
+               <cls>ON</cls> mig.index_handle = mid.index_handle
+<cls>WHERE</cls>   migs.avg_total_user_cost * ( migs.avg_user_impact / 100.0 )
+        * ( migs.user_seeks + migs.user_scans ) > 10
+<cls>ORDER BY</cls> migs.avg_total_user_cost * migs.avg_user_impact
+             * ( migs.user_seeks + migs.user_scans ) <cls>DESC</cls>
+            </code></pre>
+        </div>
+            
+        <p class="legenda"><strong>Listagem 5.9</strong>: Identificando índices ausentes com base no benefício de custo da consulta.</p>
+
+        <p>A coluna <code>improvement_measure</code> calcula o valor estimado de melhoria para cada recomendação de índice, com base na redução média total do custo da consulta que seria obtida, no número de operações de busca e varredura que o índice poderia atender e no benefício percentual que o índice forneceria para as consultas em execução. Essa coluna facilita o foco nos índices que oferecem o maior benefício de custo.</p>
+
+        <p>Ao analisar a saída dessa consulta, concentro-me nos índices com um valor de impacto maior que 50.000. Em seguida, analiso cuidadosamente as recomendações, pois é provável que haja algum grau de sobreposição entre os índices recomendados, com vários índices diferindo apenas sutilmente em termos de suas definições e ordens de colunas-chave do índice ou de suas definições e ordens de colunas incluídas. Também é provável que eu possa obter benefícios de desempenho semelhantes modificando um índice existente em vez de criar um novo. Conforme discutido anteriormente na seção Seleção e Projeto de Índices, cada índice deve ser testado para garantir que ele seja realmente útil antes de ser implantado em produção. O objetivo é criar o menor número possível de índices que satisfaçam o maior número possível das consultas mais significativas que compõem a carga de trabalho do SQL Server.</p>
+        
             Informações de índices ausentes em planos de execução XML
             Quando o otimizador de consultas identifica um índice ausente durante a geração do plano de execução, ele também armazena essas informações dentro dos dados do ShowPlan XML. Isso significa que podemos recuperar essas informações para qualquer plano de execução no cache de plano, com a vantagem adicional de que podemos vincular recomendações individuais de índices ausentes diretamente às declarações e planos de execução que os geraram. Se a consulta que gerou a recomendação de índice é uma que ocorre com frequência em nossa carga de trabalho normal, é muito mais provável que ela ofereça um benefício real de desempenho do que uma recomendação proveniente de uma consulta isolada.
             A única desvantagem é que geralmente há um custo substancial de CPU associado a consultas que pesquisam o cache de plano em busca das entradas que contêm informações de índices ausentes e, em seguida, analisam os dados do ShowPlan XML para recuperar as informações reais de índices ausentes.

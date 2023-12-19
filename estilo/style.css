@@ -12,7 +12,7 @@
 
     --fonte-padrao: 'Roboto', sans-serif;
     --fonte-titulo: 'Rajdhani', sans-serif;
-    --fonte-codigo: 'Courier New', Courier, monospace;
+    --fonte-codigo: 'Consolas', 'Courier New', Courier, monospace
 }
 
 * {
@@ -155,6 +155,12 @@ main > ul > li {
     list-style-position: outside;
     margin-left: 15px;
     text-align: justify;
+}
+
+.deslocamento {
+    margin-left: 15px;
+    text-align: justify;
+    line-height: 1.5em;
 }
 
 a:hover {
