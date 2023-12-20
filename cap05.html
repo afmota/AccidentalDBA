@@ -604,22 +604,6 @@ INCLUDE (BusinessEntityID, FirstName, LastName)
             Índices ausentes em um banco de dados SQL Server podem levar a diversos problemas relacionados ao desempenho, incluindo operações de E/S em disco superiores ao necessário, uso excessivo de CPU causado por operações de classificação desnecessárias e redução de desempenho.
             A análise periódica das informações de índices ausentes, utilizando as ferramentas disponíveis no SQL Server, ajudará a garantir que a estratégia de indexação atual atenda aos requisitos do banco de dados e da carga de trabalho em execução. No entanto, é preciso tomar cuidado ao implementar as recomendações de indexação feitas por essas ferramentas para garantir que o número de índices sobrepostos e duplicados seja minimizado e que cada índice criado realmente traga benefícios positivos de desempenho. Dessa forma, é possível maximizar o desempenho das consultas enquanto se minimiza o impacto de desempenho nas modificações de dados que podem surgir devido à superindexação das tabelas em um banco de dados do usuário.
     </main>
-    <script>
-        function clickMenu() {
-            if (itens.style.display == 'block') {
-                itens.style.display = 'none'
-            } else {
-                itens.style.display = 'block'
-            }
-        }
-
-        function mudouTamanho() {
-            if (window.innerWidth >= 768) {
-                itens.style.display = 'block'
-            } else {
-                itens.style.display = 'none'
-            }
-        }
-    </script>
+	<script src="scripts/script.js"></script>
 </body>
 </html>
