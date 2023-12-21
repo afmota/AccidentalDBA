@@ -187,7 +187,7 @@ pre {
     color: #2e0a08;
 }
 
-pre code {
+pre > code {
     font-size: 0.9em;
 }
 
