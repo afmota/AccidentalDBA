@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
         case 9:
         case 10:
         case 11:
-            root.style.setProperty('--cor0', '#000000');
+            root.style.setProperty('--cor0', '#fff3d2');
             root.style.setProperty('--cor1', '#e69e0a');
             root.style.setProperty('--cor2', '#d18c07');
             root.style.setProperty('--cor3', '#bc7b03');
