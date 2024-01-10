@@ -26,6 +26,7 @@
                 <li><a href="cap02.html" target="_self">Cap.2</a></li>
                 <li><a href="cap03.html" target="_self">Cap.3</a></li>
                 <li><a href="cap04.html" target="_self">Cap.4</a></li>
+                <li><a href="cap06.html" target="_self">Cap.6</a></li>
             </ul>
         </menu>
 	</nav>
@@ -449,160 +450,190 @@ INCLUDE (BusinessEntityID, FirstName, LastName)
 
         <p>Ao analisar a saída dessa consulta, concentro-me nos índices com um valor de impacto maior que 50.000. Em seguida, analiso cuidadosamente as recomendações, pois é provável que haja algum grau de sobreposição entre os índices recomendados, com vários índices diferindo apenas sutilmente em termos de suas definições e ordens de colunas-chave do índice ou de suas definições e ordens de colunas incluídas. Também é provável que eu possa obter benefícios de desempenho semelhantes modificando um índice existente em vez de criar um novo. Conforme discutido anteriormente na seção Seleção e Projeto de Índices, cada índice deve ser testado para garantir que ele seja realmente útil antes de ser implantado em produção. O objetivo é criar o menor número possível de índices que satisfaçam o maior número possível das consultas mais significativas que compõem a carga de trabalho do SQL Server.</p>
         
-            Informações de índices ausentes em planos de execução XML
-            Quando o otimizador de consultas identifica um índice ausente durante a geração do plano de execução, ele também armazena essas informações dentro dos dados do ShowPlan XML. Isso significa que podemos recuperar essas informações para qualquer plano de execução no cache de plano, com a vantagem adicional de que podemos vincular recomendações individuais de índices ausentes diretamente às declarações e planos de execução que os geraram. Se a consulta que gerou a recomendação de índice é uma que ocorre com frequência em nossa carga de trabalho normal, é muito mais provável que ela ofereça um benefício real de desempenho do que uma recomendação proveniente de uma consulta isolada.
-            A única desvantagem é que geralmente há um custo substancial de CPU associado a consultas que pesquisam o cache de plano em busca das entradas que contêm informações de índices ausentes e, em seguida, analisam os dados do ShowPlan XML para recuperar as informações reais de índices ausentes.
-            O ShowPlan XML no SQL Server é um documento XML vinculado ao esquema, com base no esquema publicado pela Microsoft (http://schemas.microsoft.com/sqlserver/2004/07/showplan). Uma análise do esquema XML do ShowPlan revela que as informações de índices ausentes são capturadas no documento XML como um tipo complexo, sob o elemento <MissingIndexGroup/>. Uma análise mais aprofundada mostra que esse tipo complexo só pode ocorrer sob o elemento <QueryPlan/> com um caminho relativo distinto e previsível. Usando esse caminho relativo previsível, as recomendações individuais de índices ausentes podem ser extraídas do cache de plano e depois analisadas usando XQuery dentro do SQL Server, como demonstrado na Listagem 5.10.
-            ;
-            WITH XMLNAMESPACES
-              (DEFAULT 'http://schemas.microsoft.com/sqlserver/2004/07/showplan')
-            SELECT MissingIndexNode.value('(MissingIndexGroup/@Impact)[1]', 'float')
-                                                                        AS impact ,
-                   OBJECT_NAME(sub.objectid, sub.dbid) AS calling_object_name ,
-                   MissingIndexNode.value
-                        ('(MissingIndexGroup/MissingIndex/@Database)[1]',
-                         'VARCHAR(128)') + '.'
-                   + MissingIndexNode.value
-                        ('(MissingIndexGroup/MissingIndex/@Schema)[1]',
-                         'VARCHAR(128)') + '.'
-                   + MissingIndexNode.value
-                        ('(MissingIndexGroup/MissingIndex/@Table)[1]',
-                         'VARCHAR(128)') AS table_name ,
-                   STUFF(( SELECT ',' + c.value('(@Name)[1]', 'VARCHAR(128)')
-                           FROM MissingIndexNode.nodes
-                                 ('MissingIndexGroup/MissingIndex/
-                                    ColumnGroup[@Usage="EQUALITY"]/Column')
-                                AS t ( c )
-                        FOR
-                          XML PATH('')
-                        ), 1, 1, '') AS equality_columns ,
-                   STUFF(( SELECT ',' + c.value('(@Name)[1]', 'VARCHAR(128)')
-                           FROM MissingIndexNode.nodes
-                                 ('MissingIndexGroup/MissingIndex/
-                                    ColumnGroup[@Usage="INEQUALITY"]/Column')
-                                AS t ( c )
-                        FOR
-                          XML PATH('')
-                        ), 1, 1, '') AS inequality_columns ,
-                   STUFF(( SELECT ',' + c.value('(@Name)[1]', 'VARCHAR(128)')
-                           FROM MissingIndexNode.nodes
-                                 ('MissingIndexGroup/MissingIndex/
-                                    ColumnGroup[@Usage="INCLUDE"]/Column')
-                                AS t ( c )
-                        FOR
-                          XML PATH('')
-                        ), 1, 1, '') AS include_columns ,
-                   sub.usecounts AS qp_usecounts ,
-                   sub.refcounts AS qp_refcounts ,
-                   qs.execution_count AS qs_execution_count ,
-                   qs.last_execution_time AS qs_last_exec_time ,
-                   qs.total_logical_reads AS qs_total_logical_reads ,
-                   qs.total_elapsed_time AS qs_total_elapsed_time ,
-                   qs.total_physical_reads AS qs_total_physical_reads ,
-                   qs.total_worker_time AS qs_total_worker_time ,
-                   StmtPlanStub.value('(StmtSimple/@StatementText)[1]', 'varchar(8000)') AS
-            statement_text
-            FROM   ( SELECT ROW_NUMBER() OVER
-                                         ( PARTITION BY qs.plan_handle
-                                           ORDER BY qs.statement_start_offset )
-                                           AS StatementID ,
-                              qs.*
-                   FROM       sys.dm_exec_query_stats qs
-                  ) AS qs
-                  JOIN ( SELECT   x.query('../../..') AS StmtPlanStub ,
-                                  x.query('.') AS MissingIndexNode ,
-                                  x.value('(../../../@StatementId)[1]', 'int')
-                                                                 AS StatementID ,
-                                  cp.* ,
-                                  qp.*
-                         FROM     sys.dm_exec_cached_plans AS cp
-                                  CROSS APPLY sys.dm_exec_query_plan
-                                                          (cp.plan_handle) qp
-                                  CROSS APPLY qp.query_plan.nodes
-                                               ('/ShowPlanXML/BatchSequence/
-                                                  Batch/Statements/StmtSimple/
-                                                  QueryPlan/MissingIndexes/
-                                                  MissingIndexGroup') mi ( x )
-                        ) AS sub ON qs.plan_handle = sub.plan_handle
-                                    AND qs.StatementID = sub.StatementID
-            Listagem 5.10: Analisando informações de índices ausentes dos planos de execução XML.
-            Este exemplo de código retornará uma saída semelhante às informações brutas fornecidas pelas DMVs de índices ausentes, com a exceção de que essa saída também incluirá o texto da declaração do cache de plano e as estatísticas de execução associadas, que são rastreadas pela DMV sys.dm_exec_query_stats.
+        <h4>Informações de índices ausentes em planos de execução XML</h4>
+
+        <p>Quando o otimizador de consultas identifica um índice ausente durante a geração do plano de execução, ele também armazena essas informações dentro dos dados do ShowPlan XML. Isso significa que podemos recuperar essas informações para qualquer plano de execução no cache de plano, com a vantagem adicional de que podemos vincular recomendações individuais de índices ausentes diretamente às declarações e planos de execução que os geraram. Se a consulta que gerou a recomendação de índice é uma que ocorre com frequência em nossa carga de trabalho normal, é muito mais provável que ela ofereça um benefício real de desempenho do que uma recomendação proveniente de uma consulta isolada.</p>
+
+        <p>A única desvantagem é que geralmente há um custo substancial de CPU associado a consultas que pesquisam o cache de plano em busca das entradas que contêm informações de índices ausentes e, em seguida, analisam os dados do ShowPlan XML para recuperar as informações reais de índices ausentes.</p>
+
+        <p>O ShowPlan XML no SQL Server é um documento XML vinculado ao esquema, com base no esquema publicado pela Microsoft (<a href="http://schemas.microsoft.com/sqlserver/2004/07/showplan" target="_blank">http://schemas.microsoft.com/sqlserver/2004/07/showplan</a>). Uma análise do esquema XML do ShowPlan revela que as informações de índices ausentes são capturadas no documento XML como um tipo complexo, sob o elemento <code>&lt;MissingIndexGroup/&gt;</code>. Uma análise mais aprofundada mostra que esse tipo complexo só pode ocorrer sob o elemento <code>&lt;QueryPlan/&gt;</code> com um caminho relativo distinto e previsível. Usando esse caminho relativo previsível, as recomendações individuais de índices ausentes podem ser extraídas do cache de plano e depois analisadas usando XQuery dentro do SQL Server, como demonstrado na Listagem 5.10.</p>
+        <div id="container">
+            <pre><code>
+;
+<cls>WITH</cls> XMLNAMESPACES
+    (<cls>DEFAULT</cls> <string>'http://schemas.microsoft.com/sqlserver/2004/07/showplan'</string>)
+SELECT MissingIndexNode.value(<string>'(MissingIndexGroup/@Impact)[1]'</string>, <string>'float'</string>)
+                                                            <cls>AS</cls> impact ,
+        <func>OBJECT_NAME</func>(sub.objectid, sub.<cls>dbid</cls>) <cls>AS</cls> calling_object_name ,
+        MissingIndexNode.value
+            (<string>'(MissingIndexGroup/MissingIndex/@Database)[1]'</string>,
+                <string>'VARCHAR(128)'</string>) + <string>'.'</string>
+        + MissingIndexNode.value
+            (<string>'(MissingIndexGroup/MissingIndex/@Schema)[1]'</string>,
+                'VARCHAR(128)') + <string>'.'</string>
+        + MissingIndexNode.value
+            (<string>'(MissingIndexGroup/MissingIndex/@Table)[1]'</string>,
+                <string>'VARCHAR(128)'</string>) AS table_name ,
+        <func>STUFF</func>(( <cls>SELECT</cls> <string>','</string> + c.value(<string>'(@Name)[1]'</string>, <string>'VARCHAR(128)'</string>)
+                FROM MissingIndexNode.nodes
+                        (<string>'MissingIndexGroup/MissingIndex/
+                            ColumnGroup[@Usage="EQUALITY"]/Column'</string>)
+                    <cls>AS</cls> t ( c )
+            <cls>FOR</cls>
+                <cls>XML PATH</cls>(<string>''</string>)
+            ), 1, 1, <string>''</string>) AS equality_columns ,
+        <func>STUFF</func>(( <cls>SELECT</cls> <string>','</string> + c.value(<string>'(@Name)[1]'</string>, <string>'VARCHAR(128)'</string>)
+                <cls>FROM</cls> MissingIndexNode.nodes
+                        (<string>'MissingIndexGroup/MissingIndex/
+                            ColumnGroup[@Usage="INEQUALITY"]/Column'</string>)
+                    <cls>AS</cls> t ( c )
+            <cls>FOR</cls>
+                <cls>XML PATH</cls>(<string>''</string>)
+            ), 1, 1, <string>''</string>) <cls>AS</cls> inequality_columns ,
+        <func>STUFF</func>(( <cls>SELECT</cls> <string>','</string> + c.value(<string>'(@Name)[1]', 'VARCHAR(128)'</string>)
+                <cls>FROM</cls> MissingIndexNode.nodes
+                        (<string>'MissingIndexGroup/MissingIndex/
+                            ColumnGroup[@Usage="INCLUDE"]/Column'</string>)
+                    <cls>AS</cls> t ( c )
+            <cls>FOR</cls>
+                <cls>XML PATH</cls>(<string>''</string>)
+            ), 1, 1, <string>''</string>) <cls>AS</cls> include_columns ,
+        sub.usecounts <cls>AS</cls> qp_usecounts ,
+        sub.refcounts <cls>AS</cls> qp_refcounts ,
+        qs.execution_count <cls>AS</cls> qs_execution_count ,
+        qs.last_execution_time <cls>AS</cls> qs_last_exec_time ,
+        qs.total_logical_reads <cls>AS</cls> qs_total_logical_reads ,
+        qs.total_elapsed_time <cls>AS</cls> qs_total_elapsed_time ,
+        qs.total_physical_reads <cls>AS</cls> qs_total_physical_reads ,
+        qs.total_worker_time <cls>AS</cls> qs_total_worker_time ,
+        StmtPlanStub.value(<string>'(StmtSimple/@StatementText)[1]'</string>, <string>'varchar(8000)'</string>) <cls>AS</cls>
+statement_text
+<cls>FROM</cls>   ( <cls>SELECT</cls> <func>ROW_NUMBER</func>() <cls>OVER</cls>
+                                ( <cls>PARTITION BY</cls> qs.plan_handle
+                                <cls>ORDER BY</cls> qs.statement_start_offset )
+                                <cls>AS</cls> StatementID ,
+                    qs.*
+        <cls>FROM</cls>       <com>sys.dm_exec_query_stats</com> qs
+        ) <cls>AS</cls> qs
+        <join>JOIN</join> ( <cls>SELECT</cls>   x.query(<string>'../../..'</string>) <cls>AS</cls> StmtPlanStub ,
+                        x.query(<string>'.'</string>) <cls>AS</cls> MissingIndexNode ,
+                        x.value(<string>'(../../../@StatementId)[1]'</string>, <string>'int'</string>)
+                                                        <cls>AS</cls> StatementID ,
+                        cp.* ,
+                        qp.*
+                <cls>FROM</cls>     <com>sys.dm_exec_cached_plans</com> <cls>AS</cls> cp
+                        <join>CROSS APPLY</join> <com>sys.dm_exec_query_plan</com>
+                                                (cp.plan_handle) qp
+                        <join>CROSS APPLY</join> qp.query_plan.nodes
+                                    (<string>'/ShowPlanXML/BatchSequence/
+                                            Batch/Statements/StmtSimple/
+                                            QueryPlan/MissingIndexes/
+                                            MissingIndexGroup'</string>) mi ( x )
+            ) <cls>AS</cls> sub <cls>ON</cls> qs.plan_handle = sub.plan_handle
+                        <join>AND</join> qs.StatementID = sub.StatementID
+            </code></pre>
+        </div>
+        
+        <p class="legenda"><strong>Listagem 5.10</strong>: Analisando informações de índices ausentes dos planos de execução XML.</p>
+
+        <p>Este exemplo de código retornará uma saída semelhante às informações brutas fornecidas pelas DMVs de índices ausentes, com a exceção de que essa saída também incluirá o texto da declaração do cache de plano e as estatísticas de execução associadas, que são rastreadas pela DMV <code>sys.dm_exec_query_stats</code>.</p>
             
-            Esse nível de detalhe permite uma implementação mais focada dos detalhes de índices ausentes do que está facilmente disponível por meio das DMVs de índices ausentes, com base no conhecimento da declaração SQL real que foi executada para gerar a recomendação de índice, bem como informações sobre as estatísticas de execução da consulta e o impacto no sistema.
+        <p>Esse nível de detalhe permite uma implementação mais focada dos detalhes de índices ausentes do que está facilmente disponível por meio das DMVs de índices ausentes, com base no conhecimento da declaração SQL real que foi executada para gerar a recomendação de índice, bem como informações sobre as estatísticas de execução da consulta e o impacto no sistema.</p>
             
-            Como discutido anteriormente, essa análise não é gratuita; analisar o XML do cache de plano pode ser uma operação cara, especialmente em servidores com grande quantidade de memória instalada, e pode aumentar significativamente o uso da CPU.
+        <p>Como discutido anteriormente, essa análise não é gratuita; analisar o XML do cache de plano pode ser uma operação cara, especialmente em servidores com grande quantidade de memória instalada, e pode aumentar significativamente o uso da CPU.</p>
             
-            Para minimizar o impacto em um servidor de produção, os planos de execução contendo os nós XML de índices ausentes podem ser gravados em uma tabela, que pode então ser transferida para um servidor de desenvolvimento ou teste para realizar a operação de análise do XML.
+        <p>Para minimizar o impacto em um servidor de produção, os planos de execução contendo os nós XML de índices ausentes podem ser gravados em uma tabela, que pode então ser transferida para um servidor de desenvolvimento ou teste para realizar a operação de análise do XML.</p>
             
-            Índices ausentes em chaves estrangeiras
+        <h3 id="iafk">Índices ausentes em chaves estrangeiras</h3>
             
-            Uma fonte muito comum de problemas de desempenho em um banco de dados do SQL Server é a falta de índices em colunas de CHAVE ESTRANGEIRA, que são comumente usadas para unir duas tabelas. Em geral, as colunas de CHAVE ESTRANGEIRA representam relacionamentos pai/filho entre duas tabelas como relacionamentos um-para-muitos.
+        <p>Uma fonte muito comum de problemas de desempenho em um banco de dados do SQL Server é a falta de índices em colunas <code>FOREIGN KEY</code>, que são comumente usadas para unir duas tabelas. Em geral, as colunas <code>FOREIGN KEY</code> representam relacionamentos pai/filho entre duas tabelas como relacionamentos um-para-muitos.</p>
             
-            Uma boa regra geral é que qualquer coluna de CHAVE ESTRANGEIRA que seja comumente usada em operações de JOIN tenha um índice associado, seja com a coluna de CHAVE ESTRANGEIRA como a coluna líder no índice ou como uma coluna mais adiante na chave do índice, dependendo das consultas.
+        <P>Uma boa regra geral é que qualquer coluna <code>FOREIGN KEY</code> que seja comumente usada em operações de <code>JOIN</code> tenha um índice associado, seja com a coluna de <code>FOREIGN KEY</code> como a coluna líder no índice ou como uma coluna mais adiante na chave do índice, dependendo das consultas.</P>
             
-            O código na Listagem 5.11 pode ser usado para identificar colunas de CHAVE ESTRANGEIRA não indexadas em um banco de dados. A consulta corresponderá a coluna de CHAVE ESTRANGEIRA a qualquer índice com a mesma coluna na mesma tabela e retornará colunas sem correspondências. Para um banco de dados que utiliza CHAVE PRIMÁRIA de uma única coluna, esse código pode ser muito eficaz para identificar qualquer CHAVE ESTRANGEIRA que seja potencialmente problemática para o desempenho, devido à falta de um índice de suporte no JOIN. No entanto, para um banco de dados com CHAVE PRIMÁRIA de várias colunas compostas, o script será apenas parcialmente útil, pois não verifica a existência de todas as colunas no mesmo índice. Para conjuntos de chaves mais complexos, esse código pode ser modificado para retornar informações sobre todas as colunas de CHAVE ESTRANGEIRA no banco de dados, permitindo a validação manual da indexação dessas chaves.
-            SELECT  fk.name AS CONSTRAINT_NAME ,
-                    s.name AS SCHEMA_NAME ,
-                    o.name AS TABLE_NAME ,
-                    fkc_c.name AS CONSTRAINT_COLUMN_NAME
-            FROM sys.foreign_keys AS fk
-                    JOIN sys.foreign_key_columns AS fkc
-                          ON fk.object_id = fkc.constraint_object_id
-                    JOIN sys.columns AS fkc_c
-                          ON fkc.parent_object_id = fkc_c.object_id
-                                          AND fkc.parent_column_id = fkc_c.column_id
-                    LEFT JOIN sys.index_columns ic
-                    JOIN sys.columns AS c ON ic.object_id = c.object_id
-                                             AND ic.column_id = c.column_id
-                                              ON fkc.parent_object_id = ic.object_id
-                                              AND fkc.parent_column_id = ic.column_id
-                    JOIN sys.objects AS o ON o.object_id = fk.parent_object_id
-                    JOIN sys.schemas AS s ON o.schema_id = s.schema_id
-            WHERE c.name IS NULL
-            Listagem 5.11: Identificando CHAVE ESTRANGEIRA de uma única coluna não indexada.
-            Identificando Índices Não Utilizados
-            Um dos efeitos colaterais de adicionar e modificar índices em um banco de dados de usuário é a possibilidade de os índices existentes deixarem de ser utilizados pelo SQL Server. Esses artefatos de banco de dados não utilizados não oferecem benefícios em termos de desempenho de consulta, mas continuam consumindo operações de E/S adicionais durante as operações de manipulação de dados, uma vez que qualquer alteração nos dados subjacentes também deve ser feita nos dados correspondentes armazenados no índice. A DMV sys.dm_db_index_usage_stats no SQL Server 2005 e 2008 fornece um mecanismo para determinar como os índices individuais em um banco de dados específico foram utilizados.
-            Essa DMV fornece informações sobre o número de user_seeks, user_scans, user_lookups e user_updates que foram executados em cada um dos índices dentro de um banco de dados específico. No entanto, as informações contidas na DMV não são persistidas e os dados da DMV são perdidos sempre que a instância é reiniciada ou o estado do banco de dados muda, por exemplo, sendo retirado do ar, restaurado, desanexado ou fechado. Por esse motivo, as estatísticas de uso do índice devem ser avaliadas somente quando o banco de dados estiver online e sob uma carga de trabalho padrão que faça uso dos índices que estão sendo avaliados.
-            O que estamos procurando, com a consulta mostrada na Listagem 5.12, são quaisquer índices não clusterizados que nunca foram utilizados para operações de seek, scan ou lookup pelo SQL Server, mas que estão associados a um número significativo de operações de atualização. Esses índices podem ser considerados não utilizados e devem ser removidos do banco de dados.
-            SELECT  OBJECT_SCHEMA_NAME(i.object_id) AS SchemaName ,
-                    OBJECT_NAME(i.object_id) AS TableName ,
-                    i.name ,
-                    ius.user_seeks ,
-                    ius.user_scans ,
-                    ius.user_lookups ,
-                    ius.user_updates
-            FROM sys.dm_db_index_usage_stats AS ius
-                    JOIN sys.indexes AS i ON i.index_id = ius.index_id
-                                        AND i.object_id = ius.object_id
-            WHERE   ius.database_id = DB_ID()
-                    AND i.is_unique_constraint = 0 -- no unique indexes
-                    AND i.is_primary_key = 0
-                    AND i.is_disabled = 0
-                    AND i.type > 1 -- don't consider heaps/clustered index
-                    AND ( ( ius.user_seeks + ius.user_scans +
-                             ius.user_lookups ) < ius.user_updates
-                          OR ( ius.user_seeks = 0
-                               AND ius.user_scans = 0
-                             )
-                       )
-            Listagem 5.12: Encontrando índices não utilizados não clusterizados.
-            Note novamente que este código só deve ser usado quando o banco de dados estiver online por um período significativo de tempo, a fim de garantir que a carga de trabalho apropriada tenha sido executada. Certos índices podem ser utilizados com pouca frequência, mas quando são necessários, como durante as operações de relatório semanal, mensal ou mesmo trimestral, eles são vitais!
+        <p>O código na Listagem 5.11 pode ser usado para identificar colunas <code>FOREIGN KEY</code> não indexadas em um banco de dados. A consulta corresponderá a coluna <code>FOREIGN KEY</code> a qualquer índice com a mesma coluna na mesma tabela e retornará colunas sem correspondências. Para um banco de dados que utiliza <code>PRIMARY KEYs</code> de uma única coluna, esse código pode ser muito eficaz para identificar qualquer <code>FOREIGN KEY</code> que seja potencialmente problemática para o desempenho, devido à falta de um índice de suporte no <code>JOIN</code>. No entanto, para um banco de dados com <code>PRIMARY KEYs</code> de várias colunas compostas, o script será apenas parcialmente útil, pois não verifica a existência de todas as colunas no mesmo índice. Para conjuntos de chaves mais complexos, esse código pode ser modificado para retornar informações sobre todas as colunas <code>FOREIGN KEY</code> no banco de dados, permitindo a validação manual da indexação dessas chaves.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  fk.name <cls>AS</cls> CONSTRAINT_NAME ,
+        s.name <cls>AS</cls> <func>SCHEMA_NAME</func> ,
+        o.name <cls>AS</cls> TABLE_NAME ,
+        fkc_c.name <cls>AS</cls> CONSTRAINT_COLUMN_NAME
+<cls>FROM</cls> <com>sys.foreign_keys</com> <cls>AS</cls> fk
+        <join>JOIN</join> <com>sys.foreign_key_columns</com> <cls>AS</cls> fkc
+                <cls>ON</cls> fk.<func>object_id</func> = fkc.constraint_object_id
+        <join>JOIN</join> <com>sys.columns</com> <cls>AS</cls> fkc_c
+                <cls>ON</cls> fkc.parent_object_id = fkc_c.<func>object_id</func>
+                                <join>AND</join> fkc.parent_column_id = fkc_c.column_id
+        <join>LEFT JOIN</join> <com>sys.index_columns</com> ic
+        <join>JOIN</join> <com>sys.columns</com> <cls>AS</cls> c <cls>ON</cls> ic.<func>object_id</func> = c.<func>object_id</func>
+                                    <join>AND</join> ic.column_id = c.column_id
+                                    <cls>ON</cls> fkc.parent_object_id = ic.<func>object_id</func>
+                                    <join>AND</join> fkc.parent_column_id = ic.column_id
+        <join>JOIN</join> <com>sys.objects</com> <cls>AS</cls> o <cls>ON</cls> o.<func>object_id</func> = fk.parent_object_id
+        <join>JOIN</join> <com>sys.schemas</com> <cls>AS</cls> s <cls>ON</cls> o.<func>schema_id</func> = s.<func>schema_id</func>
+<cls>WHERE</cls> c.name <join>IS NULL</join>
+            </code></pre>
+        </div>
+        
+        <p class="legenda"><strong>Listagem 5.11</strong>: Identificando <code>FOREIGN KEYs</code> de uma única coluna não indexada.</p>
+
+        <h2 id="unusedidx">Identificando Índices Não Utilizados</h2>
+
+        <p>Um dos efeitos colaterais de adicionar e modificar índices em um banco de dados de usuário é a possibilidade de os índices existentes deixarem de ser utilizados pelo SQL Server. Esses artefatos de banco de dados não utilizados não oferecem benefícios em termos de desempenho de consulta, mas continuam consumindo operações de E/S adicionais durante as operações de manipulação de dados, uma vez que qualquer alteração nos dados subjacentes também deve ser feita nos dados correspondentes armazenados no índice. A DMV <code>sys.dm_db_index_usage_stats</code> no SQL Server 2005 e 2008 fornece um mecanismo para determinar como os índices individuais em um banco de dados específico foram utilizados.</p>
+
+        <p>Essa DMV fornece informações sobre o número de <code>user_seeks</code>, <code>user_scans</code>, <code>user_lookups</code> e <code>user_updates</code> que foram executados em cada um dos índices dentro de um banco de dados específico. No entanto, as informações contidas na DMV não são persistidas e os dados da DMV são perdidos sempre que a instância é reiniciada ou o estado do banco de dados muda, por exemplo, sendo retirado do ar, restaurado, desanexado ou fechado. Por esse motivo, as estatísticas de uso do índice devem ser avaliadas somente quando o banco de dados estiver online e sob uma carga de trabalho padrão que faça uso dos índices que estão sendo avaliados.</p>
+
+        <p>O que estamos procurando, com a consulta mostrada na Listagem 5.12, são quaisquer índices não clusterizados que nunca foram utilizados para operações de seek, scan ou lookup pelo SQL Server, mas que estão associados a um número significativo de operações de atualização. Esses índices podem ser considerados não utilizados e devem ser removidos do banco de dados.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  <func>OBJECT_SCHEMA_NAME</func>(i.<func>object_id</func>) <cls>AS</cls> SchemaName ,
+        <func>OBJECT_NAME</func>(i.<func>object_id</func>) <cls>AS</cls> TableName ,
+        i.name ,
+        ius.user_seeks ,
+        ius.user_scans ,
+        ius.user_lookups ,
+        ius.user_updates
+<cls>FROM</cls> <com>sys.dm_db_index_usage_stats</com> <cls>AS</cls> ius
+        <join>JOIN</join> <com>sys.indexes</com> <cls>AS</cls> i <cls>ON</cls> i.index_id = ius.index_id
+                            <join>AND</join> i.<func>object_id</func> = ius.<func>object_id</func>
+<cls>WHERE</cls>   ius.database_id = <func>DB_ID</func>()
+        <join>AND</join> i.is_unique_constraint = 0 <com>-- no unique indexes</com>
+        <join>AND</join> i.is_primary_key = 0
+        <join>AND</join> i.is_disabled = 0
+        <join>AND</join> i.type > 1 <com>-- don't consider heaps/clustered index</com>
+        <join>AND</join> ( ( ius.user_seeks + ius.user_scans +
+                    ius.user_lookups ) < ius.user_updates
+                <join>OR</join> ( ius.user_seeks = 0
+                    <join>AND</join> ius.user_scans = 0
+                    )
+            )
+            </code></pre>
+        </div>
+        
+        <p class="legenda"><strong>Listagem 5.12</strong>: Encontrando índices não utilizados não clusterizados.</p>
+
+        <p>Note novamente que este código só deve ser usado quando o banco de dados estiver online por um período significativo de tempo, a fim de garantir que a carga de trabalho apropriada tenha sido executada. Certos índices podem ser utilizados com pouca frequência, mas quando são necessários, como durante as operações de relatório semanal, mensal ou mesmo trimestral, eles são vitais!</p>
             
-            Identificando Índices Duplicados
+        <h2 id="idxdup">Identificando Índices Duplicados</h2>
             
-            Índices duplicados em um banco de dados geram custos de manutenção que desperdiçam recursos valiosos em um servidor. O processo de identificação de índices verdadeiramente duplicados no SQL Server é, na melhor das hipóteses, não trivial e incrivelmente complexo quando se começa a considerar os diversos casos em que índices aparentemente duplicados na verdade não são duplicados, devido à largura e seletividade dos índices.
+        <p>Índices duplicados em um banco de dados geram custos de manutenção que desperdiçam recursos valiosos em um servidor. O processo de identificação de índices verdadeiramente duplicados no SQL Server é, na melhor das hipóteses, não trivial e incrivelmente complexo quando se começa a considerar os diversos casos em que índices aparentemente duplicados na verdade não são duplicados, devido à largura e seletividade dos índices.</p>
             
-            Índices duplicados são principalmente uma preocupação para sistemas OLTP onde o desempenho das operações de INSERT é primordial, enquanto para sistemas de data warehouse, o desempenho das operações de SELECT é fundamental, e o carregamento de dados ocorre com menos frequência, o que permite um nível mais alto de tolerância a índices duplicados.
+        <p>Índices duplicados são principalmente uma preocupação para sistemas OLTP onde o desempenho das operações de <code>INSERT</code> é primordial, enquanto para sistemas de data warehouse, o desempenho das operações de <code>SELECT</code> é fundamental, e o carregamento de dados ocorre com menos frequência, o que permite um nível mais alto de tolerância a índices duplicados.</p>
             
-            Muitos artigos online afirmam, incorretamente, que as colunas-chave são o ponto principal de análise ao identificar índices duplicados em um banco de dados. A verdade é que dois índices podem ter colunas-chave semelhantes, mas largura, seletividade e finalidade diferentes em um banco de dados, e, portanto, não serem índices duplicados. Para identificar completamente um índice como duplicado, o nível folha do índice deve ser investigado para identificar quais colunas são mantidas no nível folha, o que também inclui as colunas incluídas no índice. A ordem das colunas-chave no nível folha é importante, mas a ordem das colunas incluídas no índice não é.
+        <p>Muitos artigos online afirmam, incorretamente, que as colunas-chave são o ponto principal de análise ao identificar índices duplicados em um banco de dados. A verdade é que dois índices podem ter colunas-chave semelhantes, mas largura, seletividade e finalidade diferentes em um banco de dados, e, portanto, não serem índices duplicados. Para identificar completamente um índice como duplicado, o nível folha do índice deve ser investigado para identificar quais colunas são mantidas no nível folha, o que também inclui as colunas incluídas no índice. A ordem das colunas-chave no nível folha é importante, mas a ordem das colunas incluídas no índice não é.</p>
             
-            Complicações de identificar índices duplicados no SQL Server
+        <div class="dica">
+            <p class="destaque">Complicações de identificar índices duplicados no SQL Server</p>
             
-            Nos próximos dois posts de blog, Kimberly Tripp oferece uma visão mais aprofundada das complicações de identificar índices duplicados e fornece uma stored procedure para identificá-los e removê-los: "Como você pode dizer se um índice é REALMENTE um duplicado?" (http://sqlskills.com/BLOGS/KIMBERLY/post/UnderstandingDuplicateIndexes.aspx) e "Removendo índices duplicados" (http://sqlskills.com/BLOGS/KIMBERLY/post/RemovingDuplicateIndexes.aspx).
+            <p>Nos próximos dois posts de blog, Kimberly Tripp oferece uma visão mais aprofundada das complicações de identificar índices duplicados e fornece uma stored procedure para identificá-los e removê-los: "Como você pode dizer se um índice é REALMENTE um duplicado?" (<a href="http://sqlskills.com/BLOGS/KIMBERLY/post/UnderstandingDuplicateIndexes.aspx" target="_blank">http://sqlskills.com/BLOGS/KIMBERLY/post/UnderstandingDuplicateIndexes.aspx</a>) e "Removendo índices duplicados" (<a href="http://sqlskills.com/BLOGS/KIMBERLY/post/RemovingDuplicateIndexes.aspx" target="_blank">http://sqlskills.com/BLOGS/KIMBERLY/post/RemovingDuplicateIndexes.aspx</a>).</p>
+        </div>
             
-            Resumo
-            Índices ausentes em um banco de dados SQL Server podem levar a diversos problemas relacionados ao desempenho, incluindo operações de E/S em disco superiores ao necessário, uso excessivo de CPU causado por operações de classificação desnecessárias e redução de desempenho.
-            A análise periódica das informações de índices ausentes, utilizando as ferramentas disponíveis no SQL Server, ajudará a garantir que a estratégia de indexação atual atenda aos requisitos do banco de dados e da carga de trabalho em execução. No entanto, é preciso tomar cuidado ao implementar as recomendações de indexação feitas por essas ferramentas para garantir que o número de índices sobrepostos e duplicados seja minimizado e que cada índice criado realmente traga benefícios positivos de desempenho. Dessa forma, é possível maximizar o desempenho das consultas enquanto se minimiza o impacto de desempenho nas modificações de dados que podem surgir devido à superindexação das tabelas em um banco de dados do usuário.
+        <h2 id="resumo">Resumo</h2>
+        
+        <p>Índices ausentes em um banco de dados SQL Server podem levar a diversos problemas relacionados ao desempenho, incluindo operações de E/S em disco superiores ao necessário, uso excessivo de CPU causado por operações de classificação desnecessárias e redução de desempenho.</p>
+
+        <p>A análise periódica das informações de índices ausentes, utilizando as ferramentas disponíveis no SQL Server, ajudará a garantir que a estratégia de indexação atual atenda aos requisitos do banco de dados e da carga de trabalho em execução. No entanto, é preciso tomar cuidado ao implementar as recomendações de indexação feitas por essas ferramentas para garantir que o número de índices sobrepostos e duplicados seja minimizado e que cada índice criado realmente traga benefícios positivos de desempenho. Dessa forma, é possível maximizar o desempenho das consultas enquanto se minimiza o impacto de desempenho nas modificações de dados que podem surgir devido à superindexação das tabelas em um banco de dados do usuário.</p>
     </main>
 	<script src="scripts/script.js"></script>
 </body>
