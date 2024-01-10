@@ -32,76 +32,50 @@
     </nav>
     
     <main>
-        Chapter 6: Blocking
-        In a typical, busy database, many user transactions will be competing for simultaneous
-        access to various shared database resources (tables, indexes, and so on). By default,
-        SQL Server mediates access to these resources using various types of locks. These locks
-        prevent competing transactions from "destructively interfering" with each other, and so
-        ensure that each transaction can read and modify data in a consistent fashion.
-        This locking and blocking activity is a normal part the everyday operation of a database.
-        However, in conditions of highly concurrent user access, the number of locks being
-        taken will increase, and so will the potential for blocking. As the length of time for which
-        processes are blocked increases, so the overall performance of the database declines, and
-        users start to complain.
-        In systems with many concurrent transactions, some degree of blocking is probably
-        unavoidable, but the situation can be greatly exacerbated by queries that are longer or
-        more complex than they need to be, or read more data than they need to; or by poorly
-        designed databases that lack proper keys and indexing, or by transactions that need to
-        use more restrictive transaction isolation levels (such as REPEATABLE READ or SERIALIZABLE). All of these factors can increase the number and durations of locks being held,
-        and so will increase the incidence of blocking.
-        This chapter will describe how to look into SQL Server to verify if a problem is due to
-        blocking, what process is being blocked, and what process is doing the blocking, and then
-        how to resolve some common causes of blocking.194
-        Chapter 6: Blocking
-        Locks and Concurrency (a Brief Review)
-        By default, SQL Server uses pessimistic locking to enforce transactional concurrency,
-        whereby all operations in the database acquire locks. For example, when an operation
-        reads data, SQL Server acquires shared locks (S) on the rows or pages being accessed by
-        the SELECT statement. When an operation changes data, i.e. an INSERT, UPDATE, or
-        DELETE, then an exclusive (X) lock is acquired on the row or page in the clustered index
-        or table. An S lock will block another transaction from modifying the data while the
-        SELECT is running, but does not prevent other transactions reading the data. If a transaction holds an X lock on a resource, any other transaction that wishes to read or write
-        the same data will be blocked, until the X lock is released. This ensures that a transaction
-        doesn't read data that is in flux (i.e. "dirty reads" are prevented), and that two transactions
-        can't change the same row of data, or attempt to insert two rows of data into the same
-        location on a page.
-        A number of factors affect the type and mode of lock used by SQL Server during conditions of competing access for a given resource, and exactly when these locks are taken and
-        released. In this section, we'll just briefly review some of the core concepts behind SQL
-        Server locking and concurrency.
-        Lock modes
-        SQL Server employs a number of different lock modes, in order to control how
-        concurrent transactions can access a shared resource. Some of the more commonly seen
-        locks are shared, update, exclusive and the associated intent locks.
-        Note that several other modes exist, a full discussion of which is out of scope for
-        this chapter. A complete list and descriptions can be found on MSDN (http://msdn.
-        microsoft.com/en-us/library/ms175519.aspx and http://msdn.microsoft.com/en-us/
-        library/ms186396.aspx).195
-        Chapter 6: Blocking
-        Shared
-        A shared lock (shown as S) is a lock that is taken, by default, by queries that are reading
-        from a table or index. Shared locks are compatible with other shared locks and update
-        locks, but not with exclusive locks.
-        Update
-        An update lock (shown as U) is taken as part of an update operation. It is compatible with
-        shared locks but not with other update locks or exclusive locks.
-        Exclusive
-        An exclusive lock (shown as X) is taken for any data modification (insert, update, delete).
-        It is not compatible with any other lock.
-        For an update, SQL first takes an update lock and then converts it to an exclusive
-        lock to perform the actual update (the reasons for this are explained in Books Online,
-        http://msdn.microsoft.com/en-us/library/ms175519.aspx, and won't be discussed
-        further here).
-        Intent locks
-        Each lock mode has its associated Intent lock (shown as I). Hence you will see IS (Intent
-        Shared) locks, IU (Intent Update) locks and IX (Intent Exclusive) locks.
-        An intent lock is used to reduce the work SQL must do to tell if a lock can be granted. If
-        a row lock is needed by a query, SQL first takes the appropriate intent lock at the table
-        level, then an appropriate intent lock at the page level and then it will take the necessary
-        row lock.196
-        Chapter 6: Blocking
-        IS locks are compatible with shared and update locks and all other intent locks. IU locks
-        are compatible with shared locks and other intent locks. IX locks are only compatible
-        with other intent locks.
+        <h1>Capítulo 6: Bloqueio</h1>
+
+        <p>Em um banco de dados típico e movimentado, muitas transações de usuários competirão por acesso simultâneo a vários recursos compartilhados do banco de dados (tabelas, índices, etc.). Por padrão, o SQL Server media o acesso a esses recursos usando vários tipos de bloqueios. Esses bloqueios impedem que transações concorrentes interfiram "destrutivamente" umas nas outras, garantindo assim que cada transação possa ler e modificar dados de maneira consistente.</p>
+
+        <p>Essa atividade de bloqueio e interrupção faz parte normal do funcionamento diário de um banco de dados. No entanto, em condições de acesso de usuários altamente concorrentes, o número de bloqueios aumentará, aumentando também o potencial para bloqueios. À medida que a duração do bloqueio de processos aumenta, o desempenho geral do banco de dados diminui, e os usuários começam a se queixar.</p>
+
+        <p>Em sistemas com muitas transações simultâneas, algum grau de bloqueio é provavelmente inevitável, mas a situação pode ser significativamente exacerbada por consultas que são mais longas ou mais complexas do que precisam ser, ou que leem mais dados do que necessário; ou por bancos de dados mal projetados que carecem de chaves e indexação adequadas, ou por transações que precisam usar níveis mais restritivos de isolamento transacional (como REPEATABLE READ ou SERIALIZABLE). Todos esses fatores podem aumentar o número e a duração dos bloqueios sendo mantidos, e, assim, aumentar a incidência de bloqueios.</p>
+
+        <p>Este capítulo descreverá como analisar o SQL Server para verificar se um problema está relacionado a bloqueio, identificar qual processo está sendo bloqueado e qual processo está causando o bloqueio, e em seguida, como resolver algumas causas comuns de bloqueio.</p>
+
+        <h2 id="blockconcor">Bloqueios e Concorrência (uma Breve Revisão)</h2>
+
+        <p>Por padrão, o SQL Server utiliza bloqueio pessimista para garantir a concorrência transacional, onde todas as operações no banco de dados adquirem bloqueios. Por exemplo, quando uma operação lê dados, o SQL Server adquire bloqueios <strong>compartilhados</strong> (S)  - shared - nas linhas ou páginas acessadas pela instrução <code><code>SELECT</code></code>. Quando uma operação altera dados, ou seja, um <code>INSERT</code>, <code>UPDATE</code> ou <code>DELETE</code>, um bloqueio <strong>exclusivo</strong> (X) é adquirido na linha ou página no índice agrupado ou tabela. Um bloqueio S <strong>impedirá</strong> que outra transação modifique os dados enquanto o <code>SELECT</code> estiver em execução, mas não impede que outras transações leiam os dados. Se uma transação mantiver um bloqueio X em um recurso, qualquer outra transação que deseje ler ou gravar os mesmos dados será <strong>bloqueada</strong> até que o bloqueio X seja liberado. Isso garante que uma transação não leia dados que estão em fluxo (ou seja, evita "leituras sujas") e que duas transações não possam alterar a mesma linha de dados ou tentar inserir duas linhas de dados no mesmo local em uma página.</p>
+
+        <p>Vários fatores afetam o tipo e o modo de bloqueio usado pelo SQL Server durante condições de acesso concorrente a um determinado recurso, bem como o momento exato em que esses bloqueios são adquiridos e liberados. Nesta seção, vamos apenas revisar brevemente alguns dos conceitos fundamentais por trás do bloqueio e da concorrência no SQL Server.</p>
+
+        <h3 id="lockmode">Modos de Bloqueio</h3>
+
+        <p>O SQL Server utiliza diversos <strong>modos de bloqueio</strong> para controlar como transações concorrentes podem acessar um recurso compartilhado. Alguns dos bloqueios mais comumente encontrados são <strong>compartilhados</strong> (shared), de <strong>atualização</strong> (update), <strong>exclusivos</strong> (exclusive) e os bloqueios de <strong>intenção</strong> associados.</p>
+
+        <p>Observe que existem vários outros modos, uma discussão completa dos quais está fora do escopo deste capítulo. Uma lista completa e descrições podem ser encontradas no MSDN (<a href="http://msdn.microsoft.com/en-us/library/ms175519.aspx" target="_blank">http://msdn.microsoft.com/en-us/library/ms175519.aspx</a> e <a href="http://msdn.microsoft.com/en-us/library/ms186396.aspx" target="_blank">http://msdn.microsoft.com/en-us/library/ms186396.aspx</a>).</p>
+
+        <h4>Compartilhado</h4>
+
+        <p>Um bloqueio compartilhado (representado por S) é um bloqueio que é adquirido, por padrão, por consultas que estão lendo de uma tabela ou índice. Bloqueios compartilhados são compatíveis com outros bloqueios compartilhados e bloqueios de atualização, mas não com bloqueios exclusivos.</p>
+
+        <h4>Atualização</h4>
+
+        <p>Um bloqueio de atualização (representado por U) é adquirido como parte de uma operação de atualização. Ele é compatível com bloqueios compartilhados, mas não com outros bloqueios de atualização ou bloqueios exclusivos.</p>
+
+        <h4>Exclusivo</h4>
+        
+        <p>Um bloqueio exclusivo (representado por X) é adquirido para qualquer modificação de dados (inserção, atualização, exclusão). Ele não é compatível com nenhum outro tipo de bloqueio.</p>
+
+        <p>Para uma operação de atualização, o SQL Server primeiro adquire um bloqueio de atualização e depois o converte em um bloqueio exclusivo para realizar a atualização real (as razões para isso são explicadas no Books Online, <a href="http://msdn.microsoft.com/en-us/library/ms175519.aspx" target="_blank">http://msdn.microsoft.com/en-us/library/ms175519.aspx</a>, e não serão discutidas mais detalhadamente aqui).</p>
+
+        <h4>Bloqueios de intenção</h4>
+
+        <p>Cada modo de bloqueio tem associado um bloqueio de intenção correspondente (representado por I). Portanto, você verá bloqueios IS (Intent Shared), bloqueios IU (Intent Update) e bloqueios IX (Intent Exclusive).</p>
+
+        <p>Um bloqueio de intenção é usado para reduzir o trabalho que o SQL precisa fazer para determinar se um bloqueio pode ser concedido. Se um bloqueio de linha é necessário por uma consulta, o SQL primeiro adquire o bloqueio de intenção apropriado no nível da tabela e, em seguida, um bloqueio de intenção apropriado no nível da página, antes de adquirir o bloqueio de linha necessário.</p>
+
+        <p>Os bloqueios IS são compatíveis com bloqueios compartilhados e de atualização, bem como com todos os outros bloqueios de intenção. Bloqueios IU são compatíveis com bloqueios compartilhados e outros bloqueios de intenção. Bloqueios IX são compatíveis apenas com outros bloqueios de intenção. </p>
+        
         Lock types
         SQL Server can lock a number of different types of resource, the most obvious being
         tables (OBJECT locks), pages (PAGE locks), and rows (RID or KEY locks), in order of
