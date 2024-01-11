@@ -76,207 +76,91 @@
 
         <p>Os bloqueios IS são compatíveis com bloqueios compartilhados e de atualização, bem como com todos os outros bloqueios de intenção. Bloqueios IU são compatíveis com bloqueios compartilhados e outros bloqueios de intenção. Bloqueios IX são compatíveis apenas com outros bloqueios de intenção. </p>
         
-        Lock types
-        SQL Server can lock a number of different types of resource, the most obvious being
-        tables (OBJECT locks), pages (PAGE locks), and rows (RID or KEY locks), in order of
-        increasing granularity. Locks are granted and released on these objects as needed, in
-        order to satisfy the requirements of the isolation levels in use by the various sessions.
-        In the locking hierarchy, row and key locks are the lowest level, most granular, forms of
-        lock. The more granular the lock, the higher the degree of concurrent access which can
-        be supported. With that, however, comes a higher memory overhead, from having to
-        manage a large number of individual locks.
-        SQL Server automatically chooses locks of the highest possible granularity, suitable for
-        the given workload. However, if too many individual locks are being held on an index or
-        heap, or if forced to do so due to memory pressure, SQL Server may use lock escalation
-        to reduce the total number of locks being held. For example, a large number of individual
-        row locks may be escalated to a single table lock, or a number of page locks may be
-        escalated to a table lock (escalation is always to a table lock). While this will result in
-        lower overhead on SQL Server, the cost will be lower concurrency. Later in the chapter,
-        we'll show how to investigate lock escalation, and its impact on concurrency.
-        One other lock type that needs discussion here is the database-level lock. People are
-        often concerned when they see a large number of database-level locks listed in the results
-        returned by querying the lock-related DMVs (Dynamic Management Views). These will
-        be described later, in the Monitoring Blocking section. In reality this is of no concern at
-        all. Every session takes a shared database lock on the database to which it is connected.
-        This is to ensure that the database cannot be restored, dropped, closed, or detached197
-        Chapter 6: Blocking
-        while there are still sessions using it. These will not cause blocking, except in the case of
-        restoring, dropping, altering, detaching or closing an in-use database.
-        Lock escalation
-        Lock escalation is the process in which SQL Server escalates a low-level, granular lock to
-        a higher-level lock. The locks can start as either row or page locks; it makes no difference
-        to the process of lock escalation. If SQL decides to escalate the locks it will in all cases
-        escalate straight to table locks (except when this behavior is explicitly altered using the
-        LOCK_ESCALATION option, discussed shortly). Locks do not, under any circumstances,
-        escalate from row to page and then to table.
-        In SQL Server, lock escalation is completely dynamic. The thresholds that SQL uses
-        for lock escalation are detailed in Books Online (http://msdn.microsoft.com/en-us/
-        library/ms184286.aspx). For the purposes of this chapter it is enough to say that SQL
-        will attempt to escalate locks when a certain number of locks have been obtained on the
-        table/index, or when the total number of locks, or the amount of lock memory, exceeds
-        configured limits.
-        In some cases, lock escalation can cause blocking because SQL has escalated locks, and so
-        locked the entire table, with the result that concurrent access to that table is restricted. To
-        identify lock escalations, SQL Trace or Profiler can be used with the Lock:Escalation
-        event, in conjunction with the SP:Started or T-SQL:StmtStarted and
-        SP:Completed or T-SQL:StmtCompleted events, to try to correlate the lock escalation
-        with currently executing statements and procedures.
-        If this event is logged and there is measurable blocking around the time of the event
-        being logged, then lock escalation may be causing problems, and the procedures that were
-        running at the time of the event being logged may need to be optimized to reduce the
-        amount or duration of the locking.198
-        Chapter 6: Blocking
-        SQL Server 2008 introduced a new option for altering the way lock escalation occurs in
-        SQL Server. The ALTER TABLE statement now has the LOCK_ESCALATION option. The
-        options for this setting are AUTO, TABLE (default) and DISABLE. Prior to SQL 2008, lock
-        escalation was only to the table level.
-        The TABLE setting is the default behavior; locks are escalated only to table level. The
-        DISABLE setting completely disables lock escalation on this table. This can be useful in
-        some circumstances but must be used with care. Altering lock escalation is discussed
-        later, in the section entitled Hints, Trace Flags and Other Last Resorts.
-        The AUTO setting is the one of interest. If a table is partitioned, the LOCK_ESCALATION
-        option is set to AUTO, and if SQL decides to escalate locks, any locks that are held on
-        the table will escalate to the partition level, not the table level. This can be useful when
-        dealing with a partitioned table where data modifications are confined to one partition
-        but reads are done across many partitions. If the modifications caused an escalation to
-        table level, the reads would be blocked, but if the modifications just escalate to partition
-        level then the reads may not be affected at all. Some caution does need to be employed
-        when considering this setting, as it can, in some cases, result in deadlocks. For an example
-        of such a deadlock see http://www.sqlskills.com/blogs/paul/post/SQL-Server-2008-
-        Partition-level-lock-escalation-details-and-examples.aspx.
-        Concurrency and the transaction isolation levels
-        The degree to which concurrent sessions can access the same resource simultaneously
-        is dictated by the transaction isolation levels in force for the database sessions that are
-        accessing the database.
-        In the ANSI standards, the isolation levels are defined by what data anomalies they
-        allow, not the manner they are enforced. Each isolation level (from the least restrictive
-        to the most restrictive) allows fewer data anomalies. SERIALIZABLE must allow no data
-        anomalies; REPEATABLE READ is defined as an isolation level that only allows phantom199
-        Chapter 6: Blocking
-        rows; READ COMMITTED is identified as an isolation level that allows phantom rows and
-        non-repeatable reads; READ UNCOMMITTED is identified as an isolation level that allows
-        phantom rows, non-repeatable reads and dirty reads.
-        As the isolation level becomes more restrictive, so SQL Server will acquire different
-        modes of lock and hold them for longer periods, in order to ensure the required level is
-        enforced. We'll briefly cover the isolation levels here, and Craig Freedman's blog (http://
-        blogs.msdn.com/b/craigfr/archive/tags/isolation+levels/) is a good source of
-        further reading on this topic.
-        READ UNCOMMITTED
-        In this isolation level SQL Server takes no shared locks at all. Since it takes no locks, a
-        session will not get blocked by exclusive locks. Update and exclusive locks are still taken
-        when modifying data. Because no shared locks are taken, this isolation level allows dirty
-        reads (reads of uncommitted data) as well as all of the data anomalies of the higher
-        isolation levels.
-        READ COMMITED
-        This is the default mode of operation. SQL Server will prevent "dirty reads" (i.e. it will
-        ensure that transactions can only return committed data). To do this, SQL Server will
-        acquire short-lived S locks on each row that is read, releasing the lock as processing
-        of the statement moves on to the next row, although it may hold these locks till the
-        whole statement has finished processing, should that be necessary in order to guarantee
-        consistent results. The shared locks are retained for, at most, the duration of the
-        executing statement, even if the transaction of which the statement is a part is still active.
-        So if the same statement is run again, as part of the same transaction, it could return
-        different results. This is the data anomaly known as a "non-repeatable read."200
-        Chapter 6: Blocking
-        REPEATABLE READ
-        Shared locks are held for longer; for the duration of whole transaction. So, if a statement
-        runs again within the same transaction, you'll get the same result. Hence this isolation
-        level no longer allows non-repeatable reads. It still allows for new rows to have been
-        inserted in the meantime that match the query criteria. These new rows that appear
-        within a result set are known as phantom rows.
-        SERIALIZABLE
-        Transaction A will never see any of the effects of Transaction B for the entire duration
-        of Transaction A. In order to enforce this level, Transaction A will cause SQL Server to
-        acquire key-range locks on rows that have been read, which prevents any other transaction from modifying them, or inserting new rows, until Transaction A completes. The
-        SERIALIZABLE isolation level allows for no data anomalies at all, at the cost of severely
-        restricting the degree to which the database can support concurrent access.
-        Optimistic concurrency using row versioning
-        In addition to the traditional isolation levels discussed in the previous section, SQL
-        Server 2005 introduced two additional isolation levels that use optimistic rather than
-        pessimistic concurrency. Both of these use row versioning rather than locks for
-        concurrency enforcement.
-        There's far more to row versioning than can be covered here, so this is just a brief
-        summary. For full details on how optimistic concurrency works see the article SQL Server
-        2005 Row Versioning-Based Transaction Isolation at http://msdn.microsoft.com/en-us/
-        library/ms345124(v=sql.90).aspx. Despite being written for SQL 2005, it is still valid for
-        SQL 2008.201
-        Chapter 6: Blocking
-        There are two optimistic concurrency isolation levels: READ_COMMITTED_SNAPSHOT
-        and SNAPSHOT. They are often confused with each other, so I will try to touch on the
-        significant differences here. Both of these isolation levels use row versions for read
-        consistency, not locks. So read queries take no locks. Therefore, instead of blocking when
-        they encounter a row that is subject to an exclusive lock, they will simply "read around"
-        the lock, retrieving from the version store (in TempDB) the version of the row consistent
-        with a certain point in time, either the time the statement started, or the time at which
-        the parent transaction started.
-        READ_COMMITTED_SNAPSHOT is an optimistic concurrency version of the READ
-        COMMITTED isolation level, so it allows the same data anomalies. However, as discussed
-        earlier, if a statement running under the traditional READ COMMITTED isolation level
-        encounters data that is being modified by another transaction, it must wait until those
-        changes are either committed or rolled back before it can acquire a shared lock and
-        proceed. In the READ_COMMITTED_SNAPSHOT isolation level, when a locked row is
-        encountered, SQL Server fetches the version of the row from the version store, as it
-        existed when the statement began. In other words, data returned will reflect only what
-        was committed at the time the current statement began. This means that consistency is
-        guaranteed within the statement, not within the transaction as a whole.
-        SNAPSHOT isolation is an optimistic concurrency version of the SERIALIZABLE isolation
-        level. As such, it allows no data anomalies at all. In this isolation level, when a locked row
-        is encountered, SQL fetches the latest row version as it existed when the transaction
-        began. In other words, data returned will reflect only what was committed at the time the
-        current transaction began.
-        The other difference between the two levels is in how they are enabled. If the database
-        option READ_COMMITTED_SNAPSHOT is enabled, then the database's default isolation
-        level becomes READ_COMMITTED_SNAPSHOT, and hints or explicit SET TRANSACTION
-        ISOLATION LEVEL statements will be needed to get the READ COMMITTED isolation level
-        (which will use locks). If the database option ALLOW_SNAPSHOT_ISOLATION is enabled,
-        then all that happens is that sessions may request the SNAPSHOT isolation using a SET
-        TRANSACTION ISOLATION LEVEL statement.202
-        Chapter 6: Blocking
-        Maximizing concurrency
-        In a busy database, SQL Server must maintain a large number of different types of lock,
-        in order to mediate access to shared resources and ensure consistent results, with
-        minimal blocking. However, even a relatively small number of concurrent sessions
-        can result in the acquisition of a surprisingly high number of locks, however fleetingly
-        held. This is especially true when you consider that it's rarely as simple for SQL Server
-        as acquiring "a single lock on a single target row of data." Consider, for example, that if
-        a modification affects a column that is a part of a non-clustered index, either as a key
-        column or an included column, then the non-clustered index must also be changed to
-        reflect the data change, and this requires an additional exclusive lock on the rows or pages
-        affected by the change.
-        In general, however, SQL Server will manage all of this seamlessly and will automatically
-        choose the modes and types of locks appropriate for the isolation level in use, the type
-        and number of operations being performed, and so on.
-        We can help it out by, for example, writing fast, efficient SQL, providing useful indexes,
-        and using the least restrictive isolation level compatible with business requirements.
-        This will allow SQL Server to acquire the minimum necessary number of locks, for the
-        shortest duration, and so minimize blocking and maximize concurrent access. However,
-        beyond this, it is only rarely advisable to directly influence the sort of locks that SQL
-        Server acquires. On those rare occasions, SQL Server does provide a number of lock hints
-        that can be used to dictate which locks SQL Server acquires for certain operations and
-        even, for example, to "disallow" page and row locks on a given index. These options will
-        be discussed later in the chapter, in the Resolving Blocking section.203
-        Chapter 6: Blocking
-        Latches and latch contention
-        Latches can be thought of as light-weight, short-lived locks. Where locks are used to
-        protect the logical and transactional consistency of rows, latches are typically used to
-        protect the physical consistency of pages or memory structures. There are three types of
-        latches that can be encountered in the SQL engine.
-        For further details see http://blogs.msdn.com/b/psssql/archive/2009/07/08/q-a-onlatches-in-the-sql-server-engine.aspx):
-        •	 Latch – used to protect various memory structures within SQL Server.
-        •	 Page Latch – used when SQL is modifying the structure of the page. So, when the page
-        header gets modified, or a row is added to a page, SQL would take a Page Latch before
-        starting and release it once complete.
-        •	 Page I/O Latch – used when pages are moving between disk and memory. So a Page
-        I/O Latch would be taken before a page is fetched from disk, and released once the
-        page is in the cache.
-        Latches (usually Page Latch or Page I/O Latch) can cause blocking in much the same
-        way as locks. However, since latches are usually short-lived it is much rarer to encounter
-        blocking due to latches than to locks.
-        The details around causes and resolutions to latch contention are outside the scope of
-        this chapter, and some specific cases are mentioned elsewhere in the book. For further
-        information, see http://sqlcat.com/sqlcat/b/whitepapers/archive/2011/07/05/
-        diagnosing-and-resolving-latch-contention-on-sql-server.aspx.204
-        Chapter 6: Blocking
+        <h3 id="locktype">Tipos de bloqueio</h3>
+
+        <p>O SQL Server pode bloquear vários tipos diferentes de recursos, sendo os mais óbvios as <strong>tabelas</strong> (bloqueios de OBJETO), <strong>páginas</strong> (bloqueios de PÁGINA) e <strong>linhas</strong> (bloqueios de RID ou CHAVE), em ordem crescente de granularidade. Bloqueios são concedidos e liberados nesses objetos conforme necessário, a fim de atender aos requisitos dos níveis de isolamento em uso pelas diversas sessões. Na hierarquia de bloqueio, os bloqueios de linha e chave são os tipos mais baixos e mais granulares de bloqueio. Quanto mais granular o bloqueio, maior o grau de acesso simultâneo que pode ser suportado. No entanto, isso vem acompanhado de uma sobrecarga de memória mais elevada, devido à necessidade de gerenciar um grande número de bloqueios individuais.</p>
+
+        <p>O SQL Server escolhe automaticamente bloqueios da granularidade <strong>mais alta possível</strong>, adequada para a carga de trabalho fornecida. No entanto, se estiverem sendo mantidos muitos bloqueios individuais em um índice ou heap, ou se for forçado a fazer isso devido à pressão de memória, o SQL Server pode usar a escalada de bloqueio para reduzir o número total de bloqueios mantidos. Por exemplo, um grande número de bloqueios individuais de linha pode ser escalado para um único bloqueio de tabela, ou vários bloqueios de página podem ser escalados para um bloqueio de tabela (a escalada é sempre para um bloqueio de tabela). Embora isso resulte em uma sobrecarga menor no SQL Server, o custo será uma menor concorrência. Mais adiante no capítulo, mostraremos como investigar a escalada de bloqueio e seu impacto na concorrência.</p>
+
+        <p>Outro tipo de bloqueio que precisa ser discutido aqui é o bloqueio em <strong>nível de banco de dados</strong>. As pessoas frequentemente ficam preocupadas quando veem um grande número de bloqueios em nível de banco de dados listados nos resultados retornados pela consulta às DMVs (Visualizações de Gerenciamento Dinâmico) relacionadas a bloqueios. Esses serão descritos mais tarde, na seção de Monitoramento de Bloqueios. Na realidade, isso não é motivo de preocupação. Cada sessão realiza um bloqueio compartilhado no banco de dados ao qual está conectado. Isso é feito para garantir que o banco de dados não possa ser restaurado, excluído, fechado ou desanexado enquanto ainda houver sessões usando-o. Esses bloqueios não causarão bloqueios, exceto no caso de restaurar, excluir, alterar, desanexar ou fechar um banco de dados em uso.</p>
+        
+        <h3 id="lockscalation">Escalada de Bloqueio</h3>
+        
+        <p>A escalada de bloqueio é o processo pelo qual o SQL Server eleva um bloqueio de baixo nível e granular para um bloqueio de nível superior. Os bloqueios podem começar como bloqueios de linha ou página; isso não faz diferença no processo de escalada de bloqueio. Se o SQL decidir realizar a escalada dos bloqueios, em todos os casos ela ocorrerá diretamente para bloqueios de tabela (exceto quando esse comportamento for explicitamente alterado usando a opção <code>LOCK_ESCALATION</code>, discutida em breve). Bloqueios não escalonam, em nenhuma circunstância, de linha para página e depois para tabela.</p>
+
+        <p>No SQL Server, a escalada de bloqueio é completamente dinâmica. Os limiares que o SQL utiliza para a escalada de bloqueio são detalhados no Books Online (<a href="http://msdn.microsoft.com/en-us/library/ms184286.aspx" target="_blank">http://msdn.microsoft.com/en-us/library/ms184286.aspx</a>). Para os propósitos deste capítulo, é suficiente dizer que o SQL tentará realizar a escalada de bloqueio quando um determinado número de bloqueios tiver sido obtido na tabela/índice, ou quando o número total de bloqueios, ou a quantidade de memória de bloqueio, ultrapassar os limites configurados.</p>
+
+        <p>Em alguns casos, a escalada de bloqueio pode causar bloqueios porque o SQL escalou os bloqueios, resultando no travamento da tabela inteira e restringindo o acesso simultâneo a essa tabela. Para identificar escaladas de bloqueio, o SQL Trace ou o Profiler podem ser utilizados com o evento Lock:Escalation, em conjunto com os eventos <code>SP:Started</code> ou <code>T-SQL:StmtStarted</code> e <code>SP:Completed</code> ou <code>T-SQL:StmtCompleted</code>, na tentativa de correlacionar a escalada de bloqueio com as instruções e procedimentos em execução no momento.</p>
+
+        <p>Se este evento estiver registrado e houver bloqueios mensuráveis em torno do momento em que o evento foi registrado, é possível que a escalada de bloqueio esteja causando problemas. Nesse caso, os procedimentos que estavam em execução no momento do evento podem precisar ser otimizados para reduzir a quantidade ou duração dos bloqueios.</p>
+        
+        <p>O SQL Server 2008 introduziu uma nova opção para alterar a forma como ocorre a escalada de bloqueio no SQL Server. A instrução <code>ALTER TABLE</code> agora possui a opção <code>LOCK_ESCALATION</code>. As opções para essa configuração são <code>AUTO</code>, <code>TABLE</code> (padrão) e <code>DISABLE</code>. Antes do SQL Server 2008, a escalada de bloqueio ocorria apenas para o nível da tabela.</p>
+
+        <p>A configuração <code>TABLE</code> é o comportamento padrão; os bloqueios são elevados apenas para o nível da tabela. A configuração <code>DISABLE</code> desativa completamente a escalada de bloqueio nesta tabela. Isso pode ser útil em algumas circunstâncias, mas deve ser usado com cuidado. A alteração na escalada de bloqueio é discutida posteriormente, na seção intitulada <em>"Dicas, Flags de Trace e Outros Últimos Recurso"</em>.</p>
+
+        <p>A configuração <code>AUTO</code> é a de interesse. Se uma tabela for particionada e a opção <code>LOCK_ESCALATION</code> estiver definida como <code>AUTO</code>, e se o SQL decidir escalar os bloqueios, qualquer bloqueio mantido na tabela será elevado para o nível da partição, não para o nível da tabela. Isso pode ser útil ao lidar com uma tabela particionada em que as modificações de dados são restritas a uma partição, mas as leituras são realizadas em várias partições. Se as modificações causassem uma escalada para o nível da tabela, as leituras seriam bloqueadas. No entanto, se as modificações apenas escalarem para o nível da partição, as leituras podem não ser afetadas. Alguma cautela é necessária ao considerar essa configuração, pois ela pode, em alguns casos, resultar em deadlocks. Para um exemplo de tal deadlock, consulte <a href="http://www.sqlskills.com/blogs/paul/post/SQL-Server-2008-Partition-level-lock-escalation-details-and-examples.aspx" target="_blank">http://www.sqlskills.com/blogs/paul/post/SQL-Server-2008-Partition-level-lock-escalation-details-and-examples.aspx</a>.</p>
+
+        <h3 id="concurisolation">Concorrência e os níveis de isolamento de transações</h3>
+
+        <p>O grau em que sessões concorrentes podem acessar o mesmo recurso simultaneamente é ditado pelos <strong>níveis de isolamento de transações</strong> em vigor para as sessões estão acessando o banco de dados.</p>
+
+        <p>Nas normas ANSI, os níveis de isolamento são definidos pelo tipo de anomalias de dados que eles permitem, não pela maneira como são aplicados. Cada nível de isolamento (do menos restritivo ao mais restritivo) permite menos anomalias de dados. <code>SERIALIZABLE</code> não deve permitir nenhuma anomalia de dados; <code>REPEATABLE READ</code> é definido como um nível de isolamento que só permite linhas fantasmas; <code>READ COMMITTED</code> é identificado como um nível de isolamento que permite linhas fantasmas e leituras não repetíveis; <code>READ UNCOMMITTED</code> é identificado como um nível de isolamento que permite linhas fantasmas, leituras não repetíveis e leituras sujas.</p>
+
+        <p>À medida que o nível de isolamento se torna mais restritivo, o SQL Server adquirirá diferentes modos de bloqueio e os manterá por períodos mais longos, a fim de garantir que o nível necessário seja aplicado. Vamos abordar brevemente os níveis de isolamento aqui, e o blog de Craig Freedman (<a href="http://blogs.msdn.com/b/craigfr/archive/tags/isolation+levels/" target="_blank">http://blogs.msdn.com/b/craigfr/archive/tags/isolation+levels/</a>) é uma boa fonte para leituras adicionais sobre esse tópico.</p>
+
+        <h4>READ UNCOMMITTED</h4>
+
+        <p>Neste nível de isolamento, o SQL Server não realiza nenhum bloqueio compartilhado. Como nenhum bloqueio é realizado, uma sessão não será bloqueada por bloqueios exclusivos. Bloqueios de atualização e exclusivos ainda são adquiridos ao modificar dados. Devido à ausência de bloqueios compartilhados, este nível de isolamento permite leituras sujas (leituras de dados não confirmados), assim como todas as anomalias de dados dos níveis de isolamento mais elevados.</p>
+
+        <h4>READ COMMITED</h4>
+
+        <p>Este é o modo de operação padrão. O SQL Server impedirá "leituras sujas" (ou seja, garantirá que as transações só possam retornar dados confirmados). Para fazer isso, o SQL Server adquirirá bloqueios S de curta duração em cada linha que é lida, liberando o bloqueio à medida que o processamento da instrução avança para a próxima linha, embora possa manter esses bloqueios até que toda a instrução tenha terminado o processamento, caso seja necessário para garantir resultados consistentes. Os bloqueios compartilhados são retidos por, no máximo, a duração da instrução em execução, mesmo que a transação da qual a instrução faz parte ainda esteja ativa. Portanto, se a mesma instrução for executada novamente, como parte da mesma transação, ela poderá retornar resultados diferentes. Essa é a anomalia de dados conhecida como "leitura não repetível".</p>
+        
+        <h4>REPEATABLE READ</h4>
+        <p>Os bloqueios compartilhados são mantidos por mais tempo, durante toda a transação. Portanto, se uma instrução for executada novamente dentro da mesma transação, você obterá o mesmo resultado. Portanto, esse nível de isolamento não permite mais leituras não repetíveis. Ainda permite que novas linhas tenham sido inseridas no intervalo de tempo que correspondem aos critérios da consulta. Essas novas linhas que aparecem dentro de um conjunto de resultados são conhecidas como linhas fantasmas.</p>
+
+        <h4>SERIALIZABLE</h4>
+
+        <p>A transação A nunca verá nenhum dos efeitos da Transação B durante toda a duração da Transação A. Para impor esse nível, a Transação A fará com que o SQL Server adquira bloqueios de intervalo de chaves nas linhas que foram lidas, o que impede que qualquer outra transação as modifique ou insira novas linhas até que a Transação A seja concluída. O nível de isolamento <code>SERIALIZABLE</code> não permite nenhuma anomalia de dados, mas isso ocorre com a restrição significativa do grau em que o banco de dados pode suportar acesso simultâneo.</p>
+        
+        <h4>Otimismo de concorrência usando versionamento de linha</h4>
+
+        <p>Além dos níveis de isolamento tradicionais discutidos na seção anterior, o SQL Server 2005 introduziu dois níveis de isolamento adicionais que utilizam concorrência otimista em vez de pessimista. Ambos usam versionamento de linha em vez de bloqueios para a aplicação de concorrência.</p>
+
+        <p>Há muito mais sobre o versionamento de linha do que pode ser abordado aqui, então esta é apenas uma breve síntese. Para obter detalhes completos sobre como a concorrência otimista funciona, consulte o artigo "Isolamento de Transações Baseado em Versionamento de Linha no SQL Server 2005" em <a href="http://msdn.microsoft.com/en-us/library/ms345124(v=sql.90).aspx" target="_blank">http://msdn.microsoft.com/en-us/library/ms345124(v=sql.90).aspx</a>. Apesar de ter sido escrito para o SQL 2005, ainda é válido para o SQL 2008.</p>
+        
+        <p>Existem dois níveis de isolamento de concorrência otimista: <code>READ_COMMITTED_SNAPSHOT</code> e <code>SNAPSHOT</code>. Eles costumam ser confundidos entre si, então vou tentar abordar as diferenças significativas aqui. Ambos esses níveis de isolamento utilizam versionamento de linha para consistência de leitura, não bloqueios. Portanto, consultas de leitura não geram bloqueios. Em vez de bloquear quando encontram uma linha sujeita a um bloqueio exclusivo, elas simplesmente "contornam" o bloqueio, recuperando da versão armazenada (em TempDB) a versão da linha consistente com um determinado ponto no tempo, seja o momento em que a instrução começou ou o momento em que a transação pai começou.</p>
+
+        <p>O <code>READ_COMMITTED_SNAPSHOT</code> é uma versão de concorrência otimista do nível de isolamento <code>READ COMMITTED</code>, portanto, permite as mesmas anomalias de dados. No entanto, como discutido anteriormente, se uma instrução em execução sob o tradicional nível de isolamento <code>READ COMMITTED</code> encontra dados sendo modificados por outra transação, ela deve aguardar até que essas alterações sejam confirmadas ou revertidas antes de poder adquirir um bloqueio compartilhado e continuar. No nível de isolamento <code>READ_COMMITTED_SNAPSHOT</code>, quando uma linha bloqueada é encontrada, o SQL Server busca a versão da linha na versão armazenada, conforme existia quando a instrução começou. Em outras palavras, os dados retornados refletirão apenas o que foi confirmado no momento em que a instrução atual começou. Isso significa que a consistência é garantida dentro da instrução, não dentro da transação como um todo.</p>
+
+        <p>O isolamento <code>SNAPSHOT</code> é uma versão de concorrência otimista do nível de isolamento <code>SERIALIZABLE</code>. Como tal, não permite anomalias de dados. Neste nível de isolamento, quando uma linha bloqueada é encontrada, o SQL busca a versão mais recente da linha conforme ela existia quando a transação começou. Em outras palavras, os dados retornados refletirão apenas o que foi confirmado no momento em que a transação atual começou.</p>
+
+        <p>A outra diferença entre os dois níveis está em como eles são habilitados. Se a opção de banco de dados <code>READ_COMMITTED_SNAPSHOT</code> estiver ativada, o nível de isolamento padrão do banco de dados se tornará <code>READ_COMMITTED_SNAPSHOT</code>, e serão necessárias dicas ou declarações explícitas <code>SET TRANSACTION ISOLATION LEVEL</code> para obter o nível de isolamento <code>READ COMMITTED</code> (que usará bloqueios). Se a opção de banco de dados <code>ALLOW_SNAPSHOT_ISOLATION</code> estiver ativada, tudo o que acontece é que as sessões podem solicitar o isolamento <code>SNAPSHOT</code> usando uma instrução <code>SET TRANSACTION ISOLATION LEVEL</code>.</p>
+
+        <h4>Maximizando a concorrência.</h4>
+
+        <p>Em um banco de dados movimentado, o SQL Server precisa manter uma grande quantidade de diferentes tipos de bloqueio para mediar o acesso a recursos compartilhados e garantir resultados consistentes, com bloqueio mínimo. No entanto, mesmo um número relativamente pequeno de sessões concorrentes pode resultar na aquisição de um número surpreendentemente alto de bloqueios, mesmo que momentaneamente retidos. Isso é especialmente verdadeiro quando se considera que raramente é tão simples para o SQL Server quanto adquirir "um único bloqueio em uma única linha de dados de destino". Considere, por exemplo, que se uma modificação afeta uma coluna que faz parte de um índice não clusterizado, seja como uma coluna de chave ou uma coluna incluída, então o índice não clusterizado também deve ser alterado para refletir a alteração nos dados, e isso requer um bloqueio exclusivo adicional nas linhas ou páginas afetadas pela mudança.</p>
+
+        <p>Em geral, no entanto, o SQL Server gerenciará tudo isso de forma transparente e escolherá automaticamente os modos e tipos de bloqueios apropriados para o nível de isolamento em uso, o tipo e número de operações sendo realizadas, entre outros fatores.</p>
+
+        <p>Podemos colaborar nisso, por exemplo, escrevendo consultas SQL rápidas e eficientes, fornecendo índices úteis e utilizando o nível de isolamento menos restritivo compatível com os requisitos do negócio. Isso permitirá que o SQL Server adquira o número mínimo necessário de bloqueios, pelo menor tempo possível, minimizando assim bloqueios e maximizando o acesso concorrente. No entanto, além disso, raramente é aconselhável influenciar diretamente o tipo de bloqueios que o SQL Server adquire. Em ocasiões excepcionais, o SQL Server fornece algumas sugestões de bloqueio que podem ser utilizadas para especificar quais bloqueios o SQL Server adquire para determinadas operações e até mesmo, por exemplo, para "proibir" bloqueios de página e de linha em um índice específico. Essas opções serão discutidas mais adiante no capítulo, na seção de <a href="#">Resolução de Bloqueios</a>.</p>
+        
+        <h3 id="latches">Latches e conteção de latches</h3>
+
+        <p>Latches podem ser considerados como bloqueios leves e de curta duração. Enquanto os bloqueios são utilizados para proteger a consistência lógica e transacional das linhas, os latches são geralmente usados para proteger a consistência física de páginas ou estruturas de memória. Existem três tipos de latches que podem ser encontrados no motor do SQL.</p>
+
+        <p>Para mais detalhes, consulte <a href="http://blogs.msdn.com/b/psssql/archive/2009/07/08/q-a-onlatches-in-the-sql-server-engine.aspx" target="_blank">http://blogs.msdn.com/b/psssql/archive/2009/07/08/q-a-onlatches-in-the-sql-server-engine.aspx</a>:</p>
+
+        <ul>
+            <li><strong>Latch</strong> - utilizado para proteger várias estruturas de memória dentro do SQL Server.</li>
+            <li><strong>Latch de Página</strong> - utilizado quando o SQL está modificando a estrutura da página. Portanto, quando o cabeçalho da página é modificado ou uma linha é adicionada a uma página, o SQL adquire um Latch de Página antes de começar e o libera após a conclusão.</li>
+            <li><strong>Latch de E/S de Página</strong> - utilizado quando as páginas estão sendo movidas entre o disco e a memória. Assim, um Latch de E/S de Página seria adquirido antes que uma página seja buscada do disco e liberado uma vez que a página esteja em cache.</li>
+        </ul>
+
+        <p>Os latches (geralmente Latch de Página ou Latch de E/S de Página) podem causar bloqueios de maneira semelhante aos bloqueios. No entanto, como os latches geralmente têm curta duração, é muito mais raro encontrar bloqueios devido a latches do que devido a bloqueios.</p>
+
+        <p>Os detalhes sobre as causas e resoluções para a contenção de latches estão fora do escopo deste capítulo, e alguns casos específicos são mencionados em outras partes do livro. Para mais informações, consulte <a href="http://sqlcat.com/sqlcat/b/whitepapers/archive/2011/07/05/diagnosing-and-resolving-latch-contention-on-sql-server.aspx" target="_blank">http://sqlcat.com/sqlcat/b/whitepapers/archive/2011/07/05/diagnosing-and-resolving-latch-contention-on-sql-server.aspx</a>.</p>
+        
         Monitoring Blocking
         In this section, we'll cover some of the important tools and techniques that can be used to
         diagnose, troubleshoot, and resolve blocking issues in a SQL Server database. We'll cover
