@@ -161,34 +161,23 @@
 
         <p>Os detalhes sobre as causas e resoluções para a contenção de latches estão fora do escopo deste capítulo, e alguns casos específicos são mencionados em outras partes do livro. Para mais informações, consulte <a href="http://sqlcat.com/sqlcat/b/whitepapers/archive/2011/07/05/diagnosing-and-resolving-latch-contention-on-sql-server.aspx" target="_blank">http://sqlcat.com/sqlcat/b/whitepapers/archive/2011/07/05/diagnosing-and-resolving-latch-contention-on-sql-server.aspx</a>.</p>
         
-        Monitoring Blocking
-        In this section, we'll cover some of the important tools and techniques that can be used to
-        diagnose, troubleshoot, and resolve blocking issues in a SQL Server database. We'll cover
-        techniques that can be employed to resolve "live" instances of blocking, where important
-        business processes are blocked from proceeding, normal business function is impeded,
-        and end-users (and managers) are complaining. Usually, in such cases, the problem
-        manifests itself as poor performance or timeouts inside the application.
-        When blocking is actively occurring at the time you are notified, there are several DMVs
-        (or system views, back on SQL 2000) and system stored procedures that can be used to
-        troubleshoot the problem. We'll also look at ways of getting cumulative or aggregated
-        locking, and log wait statistics, to get an overall view of the severity of blocking within
-        the instance.
-        Of course, our ultimate goal is to monitor possible blocking issues on an ongoing basis,
-        and deal with them before they affect end-users. To that end, we'll move on to discuss
-        ongoing monitoring, using DMVs as well as event notifications, and the blocked_
-        process_report and lock_escalation events, to get automatic notification when a
-        blocking event occurs.
-        Before we begin, it's worth briefly noting the way in which the various locks show up in
-        the system views and DMVs, when they appear as wait types. The wait type for locks has
-        the form LCK_M_<lock type>. So, a wait to acquire a shared lock appears as LCK_M_S
-        (note there's no indication of the lock granularity, only the type requested), a wait for an
-        exclusive lock will appear as LCK_M_X, and a wait for an intent shared lock will appear as
-        LCK_M_IS. This format can be extrapolated to the other lock types.205
-        Chapter 6: Blocking
-        Using sysprocesses (SQL Server 2000 and later)
-        In SQL Server 2000, we can use the sysprocesses system view to find blocking as well
-        as blocked processes, as shown in Listing 6.1.
-        SELECT spid ,
+        <h2 id="lockmon">Monitoramento de Bloqueio</h2>
+
+        <p>Nesta seção, abordaremos algumas das ferramentas e técnicas importantes que podem ser utilizadas para diagnosticar, solucionar e resolver problemas de bloqueio em um banco de dados do SQL Server. Vamos explorar técnicas que podem ser empregadas para resolver instâncias "ao vivo" de bloqueio, onde processos de negócios importantes estão impedidos de avançar, a função comercial normal é prejudicada, e os usuários finais (e gerentes) estão reclamando. Geralmente, nesses casos, o problema se manifesta como desempenho fraco ou tempos de espera dentro da aplicação.</p>
+
+        <p>Quando o bloqueio está ocorrendo ativamente no momento em que você é notificado, existem várias DMVs (ou visões do sistema, no caso do SQL 2000) e procedimentos armazenados do sistema que podem ser utilizados para diagnosticar o problema. Também examinaremos maneiras de obter bloqueios cumulativos ou agregados e estatísticas de espera no log, para obter uma visão geral da gravidade do bloqueio dentro da instância.</p>
+
+        <p>É claro que nosso objetivo final é monitorar possíveis problemas de bloqueio de forma contínua e lidar com eles antes que afetem os usuários finais. Para alcançar esse objetivo, passaremos a discutir o monitoramento contínuo, utilizando DMVs, notificações de eventos, e eventos como blocked_process_report e lock_escalation, para obter notificações automáticas quando um evento de bloqueio ocorre.</p>
+
+        <p>Antes de começarmos, vale a pena observar brevemente a maneira como os vários bloqueios aparecem nas visões do sistema e DMVs, quando se apresentam como tipos de espera. O tipo de espera para bloqueios tem a forma <code>LCK_M_&lt;tipo de bloqueio&gt;</code>. Assim, uma espera para adquirir um bloqueio compartilhado aparece como <code>LCK_M_S</code> (observe que não há indicação da granularidade do bloqueio, apenas do tipo solicitado), uma espera por um bloqueio exclusivo aparecerá como <code>LCK_M_X</code>, e uma espera por um bloqueio de intenção compartilhada aparecerá como <code>LCK_M_IS</code>. Esse formato pode ser extrapolado para os outros tipos de bloqueio.</p>
+
+        <h3 id="usesysproc">Usando sysprocesses (SQL Server 2000 e posterior)</h3>
+
+        <p>No SQL Server 2000, podemos usar a visualização do sistema sysprocesses para encontrar processos de bloqueio e processos bloqueados, conforme mostrado na Listagem 6.1.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  spid ,
         status ,
         blocked ,
         open_tran ,
@@ -197,144 +186,142 @@
         waittime ,
         cmd ,
         lastwaittype
-        FROM master.dbo.sysprocesses
-        WHERE blocked <> 0
-        Listing 6.1: Using sysprocesses to find blocking.
-        The Blocked column shows the SPID that is causing the blocking, as shown in Figure
-        6.1, and is the primary indicator of blocking events. It will have a value of 0 for any session
-        that is not blocked.
-        Figure 6.1: SPID 52 is blocking a shared lock request by SPID 53.206
-        Chapter 6: Blocking
-        Note that the system procedures sp_who and sp_who2 are simply views onto the
-        sysprocesses system view and can be used in much the same way. Once we have the
-        SPIDs of the blocking and blocked sessions, we can take a look at what they are running
-        using DBCC INPUTBUFFER, which will return the first 4,000 characters of the batch that
-        each session is running, as shown in Figure 6.2.
-        Figure 6.2: Using DBCC INPUTBUFFER to return the text of the queries involved in blocking.
-        If we want to know what locks SPID 52 is holding that are preventing SPID 53 from
-        getting the shared read lock that it wants, we can query the syslockinfo system table,
-        or use the sp_lock system stored procedure. The latter is a lot less cryptic and far easier
-        to understand.
-        If we run the sp_lock procedure for SPID 52 then, among all the other locks, we can see
-        from the output in Figure 6.3 that SPID 52 holds an IX lock on page 1:1961 in database 5.
-        This is the page that SPID 53 is blocked from accessing, as seen from the waitresource
-        column in sysprocesses (Figure 6.1). The IX lock held by SPID 52 is not compatible
-        with the S lock that SPID 53 requested. Hence, SPID 53 must wait until that IX lock is
-        released before it can acquire the S lock that it wants.207
-        Chapter 6: Blocking
-        Figure 6.3: Using the sp_lock stored procedure.
-        Prior to SQL Server 2000 SP4, a SPID would only be displayed in the blocked column
-        in the sysprocesses view if that session was causing lock waits. Post-SP4, the SPID
-        is shown for sessions causing both lock and latch waits; in other words, if SPID 53 were
-        waiting to acquire a latch rather than a lock, it would not appear in the blocked column
-        pre-SP4, but would appear post-SP4.
-        In most cases, this appears much the same way as with blocking, except that the
-        waittype column shows a Latch, Page Latch or Page I/O Latch wait rather than a LCK
-        wait. In some cases, specifically certain I/O-related latches, the value in the blocked
-        column is the value for the blocked session's SPID instead of the blocking SPID, so it
-        appears to be self-blocking.208
-        Chapter 6: Blocking
-        For more resources on the changes to SQL Server 2000 blocking and the sysprocesses
-        system view, refer to: The blocked column in the sysprocesses table is populated for latch waits
-        after you install SQL Server 2000 SP4 at http://support.microsoft.com/kb/906344.
-        Cumulative wait statistics with DBCC SQLPERF
-        (waitstats)
-        In SQL Server 2000, the cumulative wait statistic information for the instance was only
-        available through the DBCC SQLPERF(waitstats) command. It provides the total
-        waiting tasks and total wait time since the instance was started or since the wait stats
-        were cleared using the DBCC SQLPERF(waitstats, clear) command.
-        While this command cannot help diagnose individual blocking problems, it can be
-        used to get an overall picture of the most common waits in the system. This can help in
-        ensuring that it is the actual problem that gets investigated, rather than something that
-        has been incorrectly assumed to be the problem. When blocking is prevalent in one of
-        the databases running in an instance, one of the top wait types for the instance will be a
-        LCK_* wait type, which is a wait while attempting to acquire a specific type of lock.
-        Dynamic Management Views
-        Although the sysprocesses system view, and the DBCC SQLPERF(waitstats)
-        command, can still be used to find active blocking in SQL Server 2005 and 2008, Dynamic
-        Management Views (DMVs) offer more in-depth information for troubleshooting the
-        blocking problem.
-        In order to see this in action, we'll need to create a blocking event in the database. For the
-        purposes of this demo, I'm using the AdventureWorks 2008 database (downloadable
-        from http://sqlserversamples.codeplex.com/).209
-        Chapter 6: Blocking
-        DECLARE @SalesOrderHeaderID INT
-        BEGIN TRANSACTION
-        INSERT INTO Sales.SalesOrderHeader
-        (RevisionNumber, OrderDate, DueDate, ShipDate, Status,
-        OnlineOrderFlag, PurchaseOrderNumber, AccountNumber, CustomerID,
-        SalesPersonID, TerritoryID, BillToAddressID, ShipToAddressID,
-        ShipMethodID, CreditCardID, CreditCardApprovalCode,
-        CurrencyRateID, Comment, rowguid, ModifiedDate)
-        VALUES
-        (5, ‘2011/06/20', ‘2011/06/25', ‘2011/06/30', 5, 0, NULL,
-        ‘10-4030-018749', 18749, NULL, 6, 28374, 28374, 1, 8925,
-        ‘929849Vi46003', NULL, NULL, NEWID(), GETDATE()
-        )
-        SET @SalesOrderHeaderID = @@IDENTITY
-        INSERT INTO Sales.SalesOrderDetail
+<cls>FROM</cls>    master.dbo.<com>sysprocesses</com>
+<cls>WHERE</cls>   blocked <> 0
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listing 6.1</strong>: Using sysprocesses to find blocking.</p>
+
+        <p>A coluna <code>Blocked</code> mostra o SPID que está causando o bloqueio, como mostrado na Figura 6.1, sendo o principal indicador de eventos de bloqueio. Ela terá um valor de 0 para qualquer sessão que não esteja bloqueada.</p>
+
+        <img src="imagens/fig61.png" alt="blocking">
+
+        <p class="legenda"><strong>Figura 6.1</strong>: O SPID 52 está bloqueando uma solicitação de bloqueio compartilhado pelo SPID 53.</p>
+
+        <p>Observe que os procedimentos do sistema <code>sp_who</code> e <code>sp_who2</code> são simplesmente visões da visualização do sistema <code>sysprocesses</code> e podem ser usados de maneira semelhante. Uma vez que tenhamos os SPIDs das sessões de bloqueio e bloqueadas, podemos verificar o que estão executando usando o <code>DBCC INPUTBUFFER</code>, que retornará os primeiros 4.000 caracteres do lote que cada sessão está executando, conforme mostrado na Figura 6.2.</p>
+
+        <img src="imagens/fig62.png" alt="DBCC INPUTBUFFER">
+
+        <p class="legenda"><strong>Figura 6.2</strong>: Utilizando o <code>DBCC INPUTBUFFER</code> para retornar o texto das consultas envolvidas no bloqueio.</p>
+
+        <p>Se quisermos saber quais bloqueios o SPID 52 está mantendo e que estão impedindo o SPID 53 de obter o bloqueio de leitura compartilhada que deseja, podemos consultar a tabela do sistema <code>syslockinfo</code> ou usar o procedimento armazenado do sistema <code>sp_lock</code>. Este último é menos críptico e muito mais fácil de entender.</p>
+
+        <p>Se executarmos o procedimento <code>sp_lock</code> para o SPID 52, então, entre todos os outros bloqueios, podemos ver a partir da saída na Figura 6.3 que o SPID 52 possui um bloqueio <code>IX</code> na página <code>1:1961</code> no banco de dados <code>5</code>. Esta é a página à qual o SPID 53 está bloqueado de acessar, como visto na coluna <code>waitresource</code> em <code>sysprocesses</code> (Figura 6.1). O bloqueio <code>IX</code> mantido pelo SPID 52 não é compatível com o bloqueio S que o SPID 53 solicitou. Portanto, o SPID 53 deve aguardar até que esse bloqueio <code>IX</code> seja liberado antes de poder adquirir o bloqueio S que deseja.</p>
+
+        <img src="imagens/fig63.pgn.PNG" alt="Figura 6.3: Utilizando o procedimento armazenado sp_lock.">
+
+        <p class="legenda"><strong>Figura 6.3</strong>: Utilizando o procedimento armazenado sp_lock.</p>
+
+        <p>Antes do SQL Server 2000 SP4, um SPID só seria exibido na coluna <code>blocked</code> na visualização <code>sysprocesses</code> se essa sessão estivesse causando espera por <strong>bloqueio</strong>. Pós-SP4, o SPID é mostrado para sessões que causam tanto espera por bloqueio quanto por <strong>latch</strong>; em outras palavras, se o SPID 53 estivesse aguardando para adquirir um latch em vez de um bloqueio, ele não apareceria na coluna <code>blocked</code> pré-SP4, mas apareceria pós-SP4.</p>
+
+        <p>Na maioria dos casos, isso parece muito semelhante ao bloqueio, exceto que a coluna <code>waittype</code> mostra uma espera de Latch, Page Latch ou Page I/O Latch em vez de uma espera de <code>LCK</code>. Em alguns casos, especificamente em latches relacionados à E/S, o valor na coluna <code>blocked</code> é o valor para o SPID da sessão bloqueada em vez do SPID do bloqueador, então parece ser um bloqueio autoimposto.</p>
+
+        <p>Para obter mais recursos sobre as alterações no bloqueio do SQL Server 2000 e na visualização do sistema <code>sysprocesses</code>, consulte: <em>A coluna blocked na tabela sysprocesses é populada para esperas de latches após a instalação do SQL Server 2000 SP4</em> em <a href="http://support.microsoft.com/kb/906344" target="_blank">http://support.microsoft.com/kb/906344</a>.</p>
+
+        <h3 id="SQLPERF">Estatísticas acumulativas de espera com DBCC SQLPERF (waitstats)</h3>
+
+        <p>No SQL Server 2000, as informações estatísticas acumulativas de espera para a instância estavam disponíveis apenas por meio do comando <code>DBCC SQLPERF(waitstats)</code>. Ele fornece o número total de tarefas em espera e o tempo total de espera desde que a instância foi iniciada ou desde que as estatísticas de espera foram limpas usando o comando <code>DBCC SQLPERF(waitstats, clear)</code>.</p>
+
+        <p>Embora este comando não possa ajudar a diagnosticar problemas individuais de bloqueio, pode ser utilizado para obter uma visão geral dos waits mais comuns no sistema. Isso ajuda a garantir que o problema real seja investigado, em vez de algo que tenha sido erroneamente assumido como o problema. Quando o bloqueio é predominante em uma das bases de dados em execução em uma instância, um dos principais tipos de espera para a instância será um tipo de espera <code>LCK_*</code>, que é uma espera ao tentar adquirir um tipo específico de bloqueio.</p>
+
+        <h3 id="dmvs">Visões de Gerenciamento Dinâmico (DMVs)</h3>
+
+        <p>Embora a visualização do sistema <code>sysprocesses</code> e o comando <code>DBCC SQLPERF(waitstats)</code> ainda possam ser utilizados para encontrar bloqueios ativos no SQL Server 2005 e 2008, as Visões de Gerenciamento Dinâmico (DMVs) oferecem informações mais detalhadas para solucionar problemas de bloqueio.</p>
+        
+        <p>Para ver isso em ação, precisaremos criar um evento de bloqueio no banco de dados. Para os fins desta demonstração, estou utilizando o banco de dados <code>AdventureWorks</code> 2008 (disponível para download em <a href="http://sqlserversamples.codeplex.com/" target="_blank">http://sqlserversamples.codeplex.com/</a>).</p>
+        
+        <div id="container">
+            <pre><code>
+<cls>DECLARE</cls> @SalesOrderHeaderID <cls>INT</cls>
+
+<cls>BEGIN </cls>TRANSACTION
+
+<cls>INSERT INTO</cls> Sales.SalesOrderHeader
+      (RevisionNumber, OrderDate, DueDate, ShipDate, Status,
+      OnlineOrderFlag, PurchaseOrderNumber, AccountNumber, CustomerID,
+      SalesPersonID, TerritoryID, BillToAddressID, ShipToAddressID,
+      ShipMethodID, CreditCardID, CreditCardApprovalCode,
+      CurrencyRateID, Comment, rowguid, ModifiedDate)
+<cls>VALUES</cls>
+     (5, <string>‘2011/06/20'</string>, <string>‘2011/06/25'</string>, <string>‘2011/06/30'</string>, 5, 0, <join>NULL</join>,
+       <string>‘10-4030-018749'</string>, 18749, <join>NULL</join>, 6, 28374, 28374, 1, 8925,
+       <string>‘929849Vi46003'</string>, <join>NULL</join>, <join>NULL</join>, <func>NEWID</func>(), <func>GETDATE</func>()
+     )
+<cls>SET</cls> @SalesOrderHeaderID = <func>@@IDENTITY</func>
+
+<cls>INSERT  INTO</cls> Sales.SalesOrderDetail
         ( SalesOrderID, CarrierTrackingNumber, OrderQty, ProductID,
         SpecialOfferID, UnitPrice, UnitPriceDiscount, rowguid,
         ModifiedDate )
-        VALUES ( @SalesOrderHeaderID, ‘4911-403C-98', 15, 722, 1, 2039.994, 0,
-        NEWID(), GETDATE() ),
-        ( @SalesOrderHeaderID, ‘4911-403C-98', 4, 709, 1, 5.70, 0,
-        NEWID(), GETDATE() ),
-        ( @SalesOrderHeaderID, ‘4911-403C-98', 24, 716, 1, 28.8404, 0,
-        NEWID(), GETDATE() )
-        Listing 6.2: An uncommitted INSERT transaction in AdventureWorks 2008.
-        Note that I've left the transaction uncommitted. Hence, the exclusive locks taken on the
-        two tables are still being held. For the sake of a realistic example, we can say that either
-        there's a long-running SELECT after that, or something else that will run for a while, or
-        maybe an error caused the batch to abort leaving the transaction open.
-        Now, open a new SSMS window and connect to the AdventureWorks 2008
-        database and run a simple report against one of those tables that was involved in
-        the INSERT transaction.210
-        Chapter 6: Blocking
-        SELECT FirstName ,
+<cls>VALUES</cls>  ( @SalesOrderHeaderID, <string>‘4911-403C-98'</string>, 15, 722, 1, 2039.994, 0,
+          <func>NEWID</func>(), <func>GETDATE</func>() ),
+        ( @SalesOrderHeaderID, <string>‘4911-403C-98'</string>, 4, 709, 1, 5.70, 0,
+          <func>NEWID</func>(), <func>GETDATE</func>() ),
+        ( @SalesOrderHeaderID, <string>‘4911-403C-98'</string>, 24, 716, 1, 28.8404, 0,
+          <func>NEWID</func>(), <func>GETDATE</func>() )
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 6.2</strong>: Uma transação <code>INSERT</code> não confirmada no <code>AdventureWorks</code> 2008.</p>
+
+        <p>Observe que deixei a transação não confirmada. Portanto, os bloqueios exclusivos obtidos nas duas tabelas ainda estão sendo mantidos. Para um exemplo realista, podemos dizer que há uma <code>SELECT</code> de longa duração após isso, ou algo mais que será executado por um tempo, ou talvez um erro tenha causado a interrupção do lote, deixando a transação aberta.</p>
+
+        <p>Agora, abra uma nova janela do SSMS e conecte-se ao banco de dados <code>AdventureWorks</code> 2008. Execute um relatório simples em uma das tabelas que estavam envolvidas na transação <code>INSERT</code>.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  FirstName ,
         LastName ,
-        SUM(soh.TotalDue) AS TotalDue ,
-        MAX(OrderDate) AS LastOrder
-        FROM Sales.SalesOrderHeader AS soh
-        INNER JOIN Sales.Customer AS c ON soh.CustomerID = c.CustomerID
-        INNER JOIN Person.Person AS p ON c.PersonID = p.BusinessEntityID
-        WHERE soh.OrderDate >= ‘2011/01/01'
-        GROUP BY c.CustomerID ,
+        <func>SUM</func>(soh.TotalDue) <cls>AS</cls> TotalDue ,
+        <func>MAX</func>(OrderDate) <cls>AS</cls> LastOrder
+<cls>FROM</cls>    Sales.SalesOrderHeader AS soh
+        <join>INNER JOIN</join> Sales.Customer <cls>AS</cls> c <cls>ON</cls> soh.CustomerID = c.CustomerID
+        <join>INNER JOIN</join> Person.Person <cls>AS</cls> p <cls>ON</cls> c.PersonID = p.BusinessEntityID
+<cls>WHERE</cls>   soh.OrderDate >= <string>‘2011/01/01'</string>
+<cls>GROUP BY</cls> c.CustomerID ,
         FirstName ,
         LastName
-        Listing 6.3: A query against the SalesOrderHeader table.
-        Right away, we will see that the SELECT statement will "hang" whereas, in the absence of
-        blocking, it would complete in milliseconds. Now let's look at the DMVs to see how we
-        would detect that if it were a real system with a real blocking problem.
-        Using the sys.dm_exec_requests and sys.dm_exec_
-        sessions DMVs
-        One of the first places to look is the DMV that shows currently executing tasks. This is
-        the replacement for sysprocesses in SQL Server 2005 and above, and shows much the
-        same information that sysprocesses did (and a fair bit more).
-        The script in Listing 6.4 will show a list of all blocked sessions as well as the sessions that
-        are blocking them. This can be very useful when there is a long blocking chain.
-        SELECT er.session_id ,
-        host_name , program_name , original_login_name , er.reads ,
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 6.3</strong>: Uma consulta contra a tabela SalesOrderHeader.</p>
+
+        <p>Imediatamente, perceberemos que a instrução <code>SELECT</code> vai "pendurar", enquanto, na ausência de bloqueio, ela seria concluída em milissegundos. Agora, vamos examinar as Visões de Gerenciamento Dinâmico (DMVs) para ver como detectaríamos isso se fosse um sistema real com um problema real de bloqueio.</p>
+
+        <h4>Usando as DMVs sys.dm_exec_requests e sys.dm_exec_sessions</h4>
+
+        <p>Um dos primeiros lugares para procurar é a DMV que mostra as tarefas atualmente em execução. Esta é a substituição para <code>sysprocesses</code> no SQL Server 2005 e acima, e mostra informações bastante semelhantes às que <code>sysprocesses</code> fornecia (e um pouco mais).</p>
+
+        <p>O script na Listagem 6.4 mostrará uma lista de todas as sessões bloqueadas, bem como as sessões que as estão bloqueando. Isso pode ser muito útil quando há uma cadeia longa de bloqueios.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  er.session_id ,
+        <func>host_name</func> , <func>program_name</func> , original_login_name , er.reads ,
         er.writes ,er.cpu_time , wait_type , wait_time , wait_resource ,
         blocking_session_id , st.text
-        FROM sys.dm_exec_sessions es
-        LEFT JOIN sys.dm_exec_requests er
-        ON er.session_id = es.session_id
-        OUTER APPLY sys.dm_exec_sql_text(er.sql_handle) st
-        WHERE blocking_session_id > 0211
-        Chapter 6: Blocking
-        UNION
-        SELECT es.session_id , host_name , program_name , original_login_name ,
+<cls>FROM</cls>    <com>sys.dm_exec_sessions</com> es
+        <join>LEFT JOIN</join> <com>sys.dm_exec_requests</com> er
+                     <cls>ON</cls> er.session_id = es.session_id
+        <join>OUTER APPLY</join> <com>sys.dm_exec_sql_text</com>(er.sql_handle) st
+<cls>WHERE</cls>   blocking_session_id > 0
+<cls>UNION</cls>
+<cls>SELECT</cls>  es.session_id , <func>host_name</func> , <func>program_name</func> , original_login_name ,
         es.reads , es.writes , es.cpu_time , wait_type , wait_time ,
         wait_resource , blocking_session_id , st.text
-        FROM sys.dm_exec_sessions es
-        LEFT JOIN sys.dm_exec_requests er
-        ON er.session_id = es.session_id
-        OUTER APPLY sys.dm_exec_sql_text(er.sql_handle) st
-        WHERE es.session_id IN ( SELECT blocking_session_id
-        FROM sys.dm_exec_requests
-        WHERE blocking_session_id > 0 )
-        Listing 6.4: Find blocking with sys.dm_exec_requests and sys.dm_exec_sessions.
+<cls>FROM</cls>    <com>sys.dm_exec_sessions</com> es
+        <join>LEFT JOIN</join> <com>sys.dm_exec_requests</com> er
+                     <cls>ON</cls> er.session_id = es.session_id
+        <join>OUTER APPLY</join> <com>sys.dm_exec_sql_text</com>(er.sql_handle) st
+<cls>WHERE</cls>   es.session_id IN ( <cls>SELECT</cls> blocking_session_id
+                           <cls>FROM</cls> <com>sys.dm_exec_requests</com>
+                           <cls>WHERE</cls> blocking_session_id > 0 )
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 6.4</strong>: Encontrar bloqueios com sys.<code>dm_exec_requests</code> e sys.<code>dm_exec_sessions</code>.</p>
+
         The output of this query, for the simulated blocking that we set up earlier, is shown in
         Figure 6.4.
         Figure 6.4: Details of the blocked and blocking sessions.
