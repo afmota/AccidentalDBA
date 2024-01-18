@@ -264,7 +264,7 @@ footer {
     text-align: center;
     padding: 10px 0px;
     background-color: var(--cor5);
-    border-radius: 10px;
+    border-radius: 0px 0px 10px 10px;
 }
 
 footer > p {
@@ -278,6 +278,10 @@ i#burger {
     display: block;
     text-align: center;
     padding: 10px;
+}
+
+i#home {
+    vertical-align: bottom;
 }
 
 i#burger:hover {
@@ -308,3 +312,20 @@ menu > ul > li > a:hover {
     color: var(--cor0);
 }
 
+div#topo {
+    background-color: #330000;
+    color: white;
+    border-radius: 5px 5px 0px 0px;
+    text-align: center;
+    vertical-align: bottom;
+    margin: 0px;
+    padding: 5px;
+}
+
+div#topo > a {
+    font-size: 1.2em;
+    color: white;
+    padding: 10px 10px 5px 10px;
+    text-decoration: none;
+    transition-duration: 0.5s;
+}
