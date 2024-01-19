@@ -313,13 +313,14 @@ menu > ul > li > a:hover {
 }
 
 div#topo {
-    background-color: #330000;
+    background-color: var(--cor5);
     color: white;
     border-radius: 5px 5px 0px 0px;
     text-align: center;
     vertical-align: bottom;
     margin: 0px;
     padding: 5px;
+    border-bottom: 1px solid gray;
 }
 
 div#topo > a {
