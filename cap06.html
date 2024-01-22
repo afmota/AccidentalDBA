@@ -323,98 +323,103 @@
 
         <p class="legenda"><strong>Listagem 6.4</strong>: Encontrar bloqueios com sys.<code>dm_exec_requests</code> e sys.<code>dm_exec_sessions</code>.</p>
 
-        The output of this query, for the simulated blocking that we set up earlier, is shown in
-        Figure 6.4.
-        Figure 6.4: Details of the blocked and blocking sessions.
-        This shows the blocked and blocking session. The NULLs visible in the blocking session
-        (52) indicate that it is not currently running any queries and hence has no entry in sys.
-        dm_exec_requests. We can get the last command that it ran by querying sys.dm_
-        exec_connections and using the most_recent_sql_handle column as a parameter
-        to sys.dm_exec_sql_text, as shown in Listing 6.5.
-        SELECT ec.session_id ,
+        <p>A saída desta consulta, para o bloqueio simulado que configuramos anteriormente, é mostrada na Figura 6.4.</p>
+
+        <img src="imagens/fig64.png" alt="Detalhes de bloqueado e bloqueador">
+
+        <p>Figura 6.4: Detalhes das sessões bloqueadas e bloqueadoras.</p>
+
+        <p>Isso mostra a sessão bloqueada e bloqueadora. Os valores <code>NULL</code> visíveis na sessão bloqueadora (52) indicam que ela não está executando atualmente nenhuma consulta e, portanto, não possui nenhuma entrada em <code>sys.dm_exec_requests</code>. Podemos obter o último comando que ela executou consultando <code>sys.dm_exec_connections</code> e usando a coluna <code>most_recent_sql_handle</code> como parâmetro para <code>sys.dm_exec_sql_text</code>, conforme mostrado na Listagem 6.5.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  ec.session_id ,
         ec.connect_time ,
-        st.dbid AS DatabaseID ,
+        st.<cls>dbid AS</cls> DatabaseID ,
         st.objectid ,
         st.text
-        FROM sys.dm_exec_connections ec
-        CROSS APPLY sys.dm_exec_sql_text(ec.most_recent_sql_handle) st
-        WHERE session_id = 52
-        Listing 6.5: Finding the command that caused blocking via sys.dm_exec_connections.212
-        Chapter 6: Blocking
-        This is enough to identify the source of the blocking query, the machine, the login name,
-        and the application name. If this was an ad hoc query run by someone who simply doesn't
-        know better, then the resolution could be as simple as asking that person to stop running
-        the query and to teach them, so that the problem won't reoccur.
-        If the query is coming from an application, then between the application name and the
-        query text it should be possible to identify the source of the problematic code with a view
-        to fixing it (some options for fixing are given later in the chapter).
-        Using the sys.dm_os_waiting_tasks DMV
-        The sys.dm_os_waiting_tasks DMV is primarily used to show all waiting tasks
-        currently active or blocked. In order to take full advantage of this DMV, JOIN on the sys.
-        dm_exec_requests DMV and CROSS APPLY to sys.dm_exec_sql_text.
-        SELECT blocking.session_id AS blocking_session_id ,
-        blocked.session_id AS blocked_session_id ,
-        waitstats.wait_type AS blocking_resource ,
+<cls>FROM</cls>    <com>sys.dm_exec_connections</com> ec
+        <join>CROSS APPLY</join> <com>sys.dm_exec_sql_text</com>(ec.most_recent_sql_handle) st
+<cls>WHERE</cls>   session_id = 207
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 6.5</strong>: Encontrando o comando que causou o bloqueio via sys.dm_exec_connections.</p>
+        
+        <p>Isso é o suficiente para identificar a origem da consulta de bloqueio, a máquina, o nome de login e o nome da aplicação. Se esta foi uma consulta improvisada executada por alguém que simplesmente não sabe melhor, então a solução pode ser tão simples quanto pedir a essa pessoa para parar de executar a consulta e ensiná-la, para que o problema não se repita.</p>
+
+        <p>Se a consulta está vindo de uma aplicação, então entre o nome da aplicação e o texto da consulta deve ser possível identificar a origem do código problemático com o objetivo de corrigi-lo (algumas opções de correção são apresentadas posteriormente no capítulo).</p>
+
+        <h4>Using the sys.dm_os_waiting_tasks DMV</h4>
+        
+        <p>O DMV <code>sys.dm_os_waiting_tasks</code> é usado principalmente para exibir todas as tarefas em espera atualmente ativas ou bloqueadas. Para aproveitar ao máximo este DMV, faça um JOIN com o DMV <code>sys.dm_exec_requests</code> e utilize <code>CROSS APPLY</code> com <code>sys.dm_exec_sql_text</code>.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  blocking.session_id <cls>AS</cls> blocking_session_id ,
+        blocked.session_id <cls>AS</cls> blocked_session_id ,
+        waitstats.wait_type <cls>AS</cls> blocking_resource ,
         waitstats.wait_duration_ms ,
         waitstats.resource_description ,
-        blocked_cache.text AS blocked_text ,
-        blocking_cache.text AS blocking_text
-        FROM sys.dm_exec_connections AS blocking
-        INNER JOIN sys.dm_exec_requests blocked
-        ON blocking.session_id = blocked.blocking_session_id
-        CROSS APPLY sys.dm_exec_sql_text(blocked.sql_handle)
-        blocked_cache
-        CROSS APPLY sys.dm_exec_sql_text(blocking.most_recent_sql_handle)
-        blocking_cache
-        INNER JOIN sys.dm_os_waiting_tasks waitstats
-        ON waitstats.session_id = blocked.session_id
-        Listing 6.6: Investigating blocking using the sys.dm_os_waiting_tasks DMV.
-        The results for our simulated blocking case are shown in Figure 6.5.213
-        Chapter 6: Blocking
-        Figure 6.5: Results of the sys.dm_os_waiting_tasks query.
-        In the results from the query that takes any match by having a valid blocked SPID entry
-        for a SPID and matching entry in sys.dm_os_waiting_tasks, we can see session
-        53 is being blocked by session 52. This doesn't give us much more information than the
-        previous query (the additional columns returned in the previous section can be added
-        here too, and were omitted solely for clarity), though it provides more detail on the
-        resource on which blocking is occurring.
-        We could then use that information to help resolve the problem and stop it from
-        reoccurring. For more on sys.dm_os_waiting_tasks refer to Books Online
-        (http://msdn.microsoft.com/en-us/library/ms188743.aspx).
-        Using the sys.dm_tran_locks DMV
-        This is not necessarily the first DMV that someone would look at when diagnosing
-        blocking, as it's certainly not as easy to use as the DMVs discussed previously. This is the
-        replacement for the syslockinfo system table. It provides a snapshot of the state of
-        locking in a SQL Server instance, across all databases. It returns a row for every currently
-        active request to the lock manager for a lock that has been granted or is waiting to be granted.
-        The columns provided offer information regarding both the resource on which the lock is
-        being held (or has been requested), and the owner of the request.
-        The main use of this DMV is to get further information on the locks held by processes
-        that are known to be blocking each other. Using Listing 6.7, we can take a look at the
-        locks held and requested by the two processes that we already know are blocking.214
-        Chapter 6: Blocking
-        SELECT request_session_id ,
+        blocked_cache.<cls>text AS</cls> blocked_text ,
+        blocking_cache.<cls>text AS</cls> blocking_text
+<cls>FROM</cls>    <com>sys.dm_exec_connections</com> <cls>AS</cls> blocking
+        <join>INNER JOIN</join> <com>sys.dm_exec_requests</com> blocked
+                    <cls>ON</cls> blocking.session_id = blocked.blocking_session_id
+        <join>CROSS APPLY</join> <com>sys.dm_exec_sql_text</com>(blocked.<cls>sql_handle</cls>)
+                                                      blocked_cache
+        <join>CROSS APPLY</join> <com>sys.dm_exec_sql_text</com>(blocking.most_recent_sql_handle)
+                                                      blocking_cache
+        <join>INNER JOIN</join> <com>sys.dm_os_waiting_tasks</com> waitstats
+                    <cls>ON</cls> waitstats.session_id = blocked.session_id
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 6.6</strong>: Investigando bloqueios usando o DMV sys.dm_os_waiting_tasks.</p>
+
+        <p>Os resultados para o nosso caso simulado de bloqueio são mostrados na Figura 6.5.</p>
+
+        <img src="imagens/fig65.png" alt="Resultados da consulta sys.dm_os_waiting_tasks.">
+
+        <p class="legenda"><strong>Figura 6.5</strong>: Resultados da consulta sys.dm_os_waiting_tasks.</p>
+
+        <p>Nos resultados da consulta que considera qualquer correspondência ao ter uma entrada válida de <code>SPID</code> bloqueado para um <code>SPID</code> e uma entrada correspondente em <code>sys.dm_os_waiting_tasks</code>, podemos ver que a sessão 53 está sendo bloqueada pela sessão 52. Isso não nos fornece muitas informações adicionais em relação à consulta anterior (as colunas adicionais retornadas na seção anterior podem ser adicionadas aqui também e foram omitidas apenas por clareza), embora forneça mais detalhes sobre o recurso em que o bloqueio está ocorrendo.</p>
+
+        <p>Poderíamos usar essas informações para ajudar a resolver o problema e evitá-lo de acontecer novamente. Para obter mais informações sobre <code>sys.dm_os_waiting_tasks</code>, consulte a documentação online (<a href="http://msdn.microsoft.com/en-us/library/ms188743.aspx" target="_blank">http://msdn.microsoft.com/en-us/library/ms188743.aspx</a>).</p>
+
+        <h4>Utilizando o DMV sys.dm_tran_locks</h4>
+
+        <p>Este não é necessariamente o primeiro DMV que alguém consultaria ao diagnosticar bloqueios, pois certamente não é tão fácil de usar quanto os DMVs discutidos anteriormente. Este é o substituto para a tabela de sistema <code>syslockinfo</code>. Ele fornece uma imagem instantânea do estado de bloqueio em uma instância do SQL Server, abrangendo todas as bancos de dados. Retorna uma linha para cada <em>solicitação atualmente ativa ao gerenciador de bloqueio para um bloqueio que foi concedido ou está aguardando ser concedido</em>. As colunas fornecidas oferecem informações sobre o recurso no qual o bloqueio está sendo mantido (ou foi solicitado) e o proprietário da solicitação.</p>
+
+        <p>O principal uso deste DMV é obter informações adicionais sobre os bloqueios mantidos por processos que se sabe estar bloqueando uns aos outros. Usando o Exemplo 6.7, podemos dar uma olhada nos bloqueios mantidos e solicitados pelos dois processos que já sabemos estar causando bloqueios.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls>  request_session_id ,
         resource_type ,
-        DB_NAME(resource_database_id) AS DatabaseName ,
+        <func>DB_NAME</func>(resource_database_id) <cls>AS</cls> DatabaseName ,
         resource_associated_entity_id ,
         resource_description ,
         request_mode ,
         request_status
-        FROM sys.dm_tran_locks AS dtl
-        WHERE request_session_id IN ( 52, 53 )
-        AND resource_type NOT IN ( ‘DATABASE', ‘METADATA' )
-        Listing 6.7: Querying the sys.dm_tran_locks DMV.
-        This reveals details of all the locks held and requested by those two sessions, as shown in
-        Figure 6.6.
-        Figure 6.6: Detailed locking information from the sys.dm_tran_locks DMV.215
-        Chapter 6: Blocking
-        Just for those two simple queries there are 84 locks at the object, page, or key level. This is
-        why I say this is probably not the first place to look, but a place to look for further information once a problem is identified.
-        The highlighted line (the sole lock with a wait status) and the row above show the
-        problem in the simulated example. Session 53 wants a shared lock on page 1:1961, but
-        session 52 already has an IX lock on that page and, as mentioned earlier, IX locks are only
-        compatible with other intent locks, not with a shared lock. Hence session 53 will have to
-        wait until session 52 releases that IX lock.
+<cls>FROM</cls>    sys.dm_tran_locks <cls>AS</cls> dtl
+<cls>WHERE</cls>   request_session_id <join>IN</join> ( 52, 53 )
+        <join>AND</join> resource_type <join>NOT IN</join> ( <string>'DATABASE'</string>, <string>'METADATA'</string> )
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Exemplo 6.7</strong>: Consultando o DMV <code>sys.dm_tran_locks</code>.</p>
+        
+        <p>Isso revela detalhes de todos os bloqueios mantidos e solicitados por essas duas sessões, conforme mostrado na Figura 6.6.</p>
+
+        <img src="imagens/fig66.png" alt="Informações detalhadas de bloqueio do DMV sys.dm_tran_locks.">
+
+        <p class="legenda"><strong>Figura 6.6</strong>: Informações detalhadas de bloqueio do DMV sys.dm_tran_locks.</p>
+        
+        <p>Apenas para essas duas consultas simples, existem 84 bloqueios no nível de objeto, página ou chave. É por isso que eu digo que este provavelmente não é o primeiro lugar para procurar, mas sim um local para buscar informações adicionais uma vez que um problema seja identificado.</p>
+
+        <p>A linha destacada (o único bloqueio com status de espera) e a linha acima mostram o problema no exemplo simulado. A sessão 53 deseja um bloqueio compartilhado na página <code>1:1961</code>, mas a sessão 52 já possui um bloqueio <code>IX</code> (intenção exclusiva) nessa página e, como mencionado anteriormente, os bloqueios <code>IX</code> são compatíveis apenas com outros bloqueios de intenção, não com um bloqueio compartilhado. Portanto, a sessão 53 terá que aguardar até que a sessão 52 libere esse bloqueio <code>IX</code>.</p>
+
         Cumulative wait statistics using sys.dm_os_wait_stats
         Any time an executing task is forced to wait for a resource in the engine, the time spent
         waiting is tracked, accumulatively, by SQL Server 2005 (and later), in the sys.dm_os_
