@@ -136,7 +136,7 @@
             </code></pre>
         </div>
         
-        <p class="legenda"><strong>Exemplo 3.1</strong>: Verificando a pressão da CPU por meio do tempo de espera do sinal.</p>
+        <p class="legenda"><strong>Listagem 3.1</strong>: Verificando a pressão da CPU por meio do tempo de espera do sinal.</p>
         
         <p>Como esta exibição de gerenciamento de espera (DMV) mostra tempos de espera e contagens agregadas desde que as estatísticas foram zeradas ou desde que o servidor foi iniciado, uma visualização pontual das estatísticas de espera geralmente não é muito útil. O que é mais útil é comparar as estatísticas de espera em um determinado momento com as estatísticas em um momento anterior e ver como elas mudaram. A outra opção é zerar as estatísticas de espera da DMV, usando <code>DBCC SQLPERF("sys.dm_os_wait_stats",CLEAR);</code>, esperar um pouco e, em seguida, fazer consultas para ver o que se acumulou nesse período de tempo conhecido e definido.</p>
         
@@ -149,7 +149,7 @@
         
         <div id="container">
             <pre><code>
-<cls>SELECT TOP</cls> ( 10 )
+<cls id="lista32">SELECT TOP</cls> ( 10 )
         wait_type ,
         waiting_tasks_count ,
         ( wait_time_ms - signal_wait_time_ms ) AS resource_wait_time ,
@@ -175,7 +175,7 @@
             </code></pre>
         </div>
         
-        <p class="legenda"><strong>Exemplo 3.2</strong>: Encontrando os 10 principais eventos de espera (cumulativos).</p>
+        <p class="legenda"><strong>Listagem 3.2</strong>: Encontrando os 10 principais eventos de espera (cumulativos).</p>
 
         <p>Três tipos de espera interessantes para se observar, em relação à pressão da CPU, são <code>SOS_SCHEDULER_YIELD</code>, <code>CXPACKET</code> e <code>CMEMTHREAD</code>.</p>
 

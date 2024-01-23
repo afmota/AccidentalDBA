@@ -420,65 +420,53 @@
 
         <p>A linha destacada (o único bloqueio com status de espera) e a linha acima mostram o problema no exemplo simulado. A sessão 53 deseja um bloqueio compartilhado na página <code>1:1961</code>, mas a sessão 52 já possui um bloqueio <code>IX</code> (intenção exclusiva) nessa página e, como mencionado anteriormente, os bloqueios <code>IX</code> são compatíveis apenas com outros bloqueios de intenção, não com um bloqueio compartilhado. Portanto, a sessão 53 terá que aguardar até que a sessão 52 libere esse bloqueio <code>IX</code>.</p>
 
-        Cumulative wait statistics using sys.dm_os_wait_stats
-        Any time an executing task is forced to wait for a resource in the engine, the time spent
-        waiting is tracked, accumulatively, by SQL Server 2005 (and later), in the sys.dm_os_
-        wait_stats DMV. The values provided in this DMV are running totals, accumulated
-        across all sessions since the server was last restarted or the statistics were manually reset
-        using the DBCC SQLPERF command, as shown in Listing 6.8.
-        DBCC SQLPERF("sys.dm_os_wait_stats",CLEAR);
-        Listing 6.8: Clearing existing wait statistics using DBCC SQLPERF.
-        While the information in this DMV cannot be used on its own to diagnose individual
-        blocking problems, it can be used to find out whether locking waits are one of the most
-        common waits in the system. Simply run the query in Listing 3.2 (Chapter 3) and look for
-        high incidences of the LCK_* wait types, which are a sign that a task had to wait for locks
-        held by another task to be released, before continuing to execute. For example, having
-        cleared the existing wait statistics, we can re-create our previous blocking simulation
-        (listings 6.2 and 6.3). As we repeatedly simulate this blocking, we should see rising counts
-        for the LCK_M_IX wait event, as shown in Figure 6.7.216
-        Chapter 6: Blocking
-        Figure 6.7: Investigating the LCK_M_IX wait event.
-        In general, high wait time could originate from a single instance of a high wait, from very
-        many processes with very low individual waits, or from a few processes with moderate
-        waits. The sys.dm_os_wait_stats DMV can provide a picture of overall, instancewide behavior.
-        Performance Monitor
-        I'm not going to go into much detail here but it is just worth noting that Performance
-        Monitor (PerfMon) has a number of counters that can be used to monitor locking and
-        blocking within a SQL instance. As with the aggregated wait statistics, PerfMon data
-        can be used to indicate that there may be a problem, but it is insufficient on its own to
-        identify the cause of the problem. Identifying the cause requires use of the DMVs or of
-        some of the automated reporting (discussed next). The main use of these counters is to
-        establish a baseline level of activity for these events, so that we can establish "normal"
-        behavior, and thus quickly spot abnormal behavior. The main counters of interest
-        are Avg Wait Time (ms), Lock Waits/sec, and Number of Deadlocks/sec, as
-        shown in Figure 6.8.
-        The Lock requests/sec counter can also be traced, but since the acquisition of a
-        large number of locks is quite normal behavior in SQL Server, it may not tell you
-        anything of value.217
-        Chapter 6: Blocking
-        Figure 6.8: Monitoring locking-related PerfMon counters.
-        Automated Detection and Notification of
-        Blocking
-        Automatic detection and notification requires some form of job or scheduled process that
-        polls the server at regular intervals. While this is effective in detecting blocking, running a
-        process against the server will consume processing resources and should be done strategically, to minimize the footprint of the process of gathering the information itself.
-        In SQL Server 2000 the only option in this area was the sp_blocker_pss80 procedure,
-        but things have improved significantly in SQL Server 2005 and later, with the emergence
-        of the Blocked Process Report and Lock Escalation event classes, along with event
-        notifications.218
-        Chapter 6: Blocking
-        The Sp_blocker_pss80 process
-        In SQL Server 2000, the only available option for automated detection and notification was to run the procedure sp_blocker_pss80 using either an infinite loop and
-        WAITFOR DELAY, or a job or scheduled task with a very short interval. The sp_blocker_
-        pss80 procedure will log information about the blocking process and blocked process,
-        along with gathering the batch statement, and lock and wait statistics during the time of
-        the blocking event.
-        The Sp_blocker_pss80 process
-        Sp_blocker_pss80 is a Microsoft-provided solution for investigating blocking on SQL Server 7.0
-        and 2000 and is well documented. To learn more about setting up and utilizing this process, refer to KB
-        article 271509 at http://support.microsoft.com/kb/271509/.
-        If the sp_blocker_pss80 is not used, a custom script can be written using
-        sysprocesses or sp_who2 to do much the same thing.
+        <h4>Estatísticas acumuladas de espera usando sys.dm_os_wait_stats</h4>
+
+        <p>A qualquer momento em que uma tarefa em execução é forçada a esperar por um recurso no mecanismo, o tempo gasto aguardando é rastreado, acumulativamente, pelo SQL Server 2005 (e versões posteriores), na visão de gerenciamento dinâmico (DMV) <code>sys.dm_os_wait_stats</code>. Os valores fornecidos neste DMV são totais em execução, acumulados em todas as sessões desde a última reinicialização do servidor ou desde que as estatísticas tenham sido reiniciadas manualmente usando o comando <code>DBCC SQLPERF</code>, conforme mostrado na Listagem 6.8.</p>
+
+        <div id="container">
+            <pre><code>
+DBCC SQLPERF("sys.dm_os_wait_stats",CLEAR);
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 6.8</strong>: Limpando as estatísticas de espera existentes usando DBCC SQLPERF.</p>
+
+        <p>Embora as informações neste DMV não possam ser usadas por si só para diagnosticar problemas de bloqueio individuais, elas podem ser utilizadas para determinar se as esperas por bloqueio são uma das esperas mais comuns no sistema. Basta executar a consulta na <a href="cap03.html#lista32" target="_self"><em>Listagem 3.2 (Capítulo 3)</em></a> e procurar por altas incidências dos tipos de espera <code>LCK_*</code>, que indicam que uma tarefa teve que esperar que bloqueios mantidos por outra tarefa fossem liberados antes de continuar a execução. Por exemplo, após limpar as estatísticas de espera existentes, podemos recriar nossa simulação de bloqueio anterior (listagens 6.2 e 6.3). Ao repetidamente simular esse bloqueio, deveríamos observar contagens crescentes para o evento de espera <code>LCK_M_IX</code>, conforme mostrado na Figura 6.7.</p>
+
+        <img src="imagens/fig67.PNG" alt="Investigando o evento de espera LCK_M_IX.">
+
+        <p class="legenda"><strong>Figura 6.7</strong>: Investigando o evento de espera LCK_M_IX.</p>
+
+        <p>Em geral, um tempo de espera elevado pode originar-se de uma única instância de espera elevada, de muitos processos com esperas individuais muito baixas ou de alguns processos com esperas moderadas. A visão de gerenciamento dinâmico (DMV) <code>sys.dm_os_wait_stats</code> pode fornecer uma visão do comportamento geral em toda a instância.</p>
+
+        <h3 id="perfmon">Performance Monitor</h3>
+
+        <p>Não vou entrar em muitos detalhes aqui, mas vale a pena observar que o Performance Monitor (PerfMon) possui diversos contadores que podem ser usados para monitorar bloqueios e bloqueios dentro de uma instância do SQL. Assim como as estatísticas de espera agregadas, os dados do PerfMon podem ser usados para indicar que pode haver um problema, mas são insuficientes por si só para identificar a causa do problema. Identificar a causa requer o uso das DMVs ou de alguns dos relatórios automatizados (discutidos a seguir). O principal uso desses contadores é estabelecer um nível de atividade básico para esses eventos, para que possamos determinar o comportamento "normal" e, assim, identificar rapidamente o comportamento anormal. Os principais contadores de interesse são <code>Avg Wait Time (ms)</code>, <code>Lock Waits/sec</code> e <code>Number of Deadlocks/sec</code>, como mostrado na Figura 6.8.</p>
+
+        <p>O contador <code>Lock requests/sec</code> também pode ser rastreado, mas, como a aquisição de um grande número de bloqueios é um comportamento bastante normal no SQL Server, esse contador pode não fornecer informações valiosas por si só.</p>
+
+        <img src="imagens/fig68.PNG" alt="">
+
+        <p class="legenda"><strong>Figura 6.8</strong>: Monitorando os contadores do PerfMon relacionados a bloqueios.</p>
+
+        <h2 id="autodetect">Automatização da Detecção e Notificação de Bloqueios</h2>
+
+        <p>A detecção automática e notificação requer algum tipo de trabalho ou processo agendado que consulta o servidor em intervalos regulares. Embora isso seja eficaz na detecção de bloqueios, a execução de um processo contra o servidor consumirá recursos de processamento e deve ser feita estrategicamente para minimizar o impacto do processo na coleta das informações em si.</p>
+
+        <p>No SQL Server 2000, a única opção nessa área era o procedimento <code>sp_blocker_pss80</code>, mas as coisas melhoraram significativamente no SQL Server 2005 e posterior, com o surgimento do <code>Blocked Process Report</code> e das classes de eventos <code>Lock Escalation</code>, juntamente com notificações de eventos.</p>
+
+        <h3 id="spblockerpss80">O processo sp_blocker_pss80</h3>
+
+        <p>No SQL Server 2000, a única opção disponível para detecção e notificação automatizadas era executar o procedimento <code>sp_blocker_pss80</code> usando um loop infinito com <code>WAITFOR DELAY</code>, ou um trabalho ou tarefa agendada com um intervalo muito curto. O procedimento <code>sp_blocker_pss80</code> registrará informações sobre o processo de bloqueio e o processo bloqueado, juntamente com a coleta da instrução batch e estatísticas de bloqueio e espera durante o evento de bloqueio.</p>
+
+        <div class="dica">
+            <p class="destaque">O processo Sp_blocker_pss80</p>
+            O <code>sp_blocker_pss80</code> é uma solução fornecida pela Microsoft para investigar bloqueios no SQL Server 7.0 e 2000, e está bem documentada. Para obter mais informações sobre a configuração e utilização desse processo, consulte o artigo da Base de Conhecimento (KB) 271509 em <a href="http://support.microsoft.com/kb/271509/" target="_blank">http://support.microsoft.com/kb/271509/</a>.
+        </div>
+
+        <p>Se o <code>sp_blocker_pss80</code> não for utilizado, é possível escrever um script personalizado usando <code>sysprocesses</code> ou <code>sp_who2</code> para realizar funções semelhantes.</p>
+
         SQL Trace
         SQL Trace is a powerful feature that allows for the creation of event traces within SQL
         Server, using a set of stored procedures. These procedures are the same ones that
