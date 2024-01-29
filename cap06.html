@@ -461,217 +461,222 @@ DBCC SQLPERF("sys.dm_os_wait_stats",CLEAR);
         <p>No SQL Server 2000, a única opção disponível para detecção e notificação automatizadas era executar o procedimento <code>sp_blocker_pss80</code> usando um loop infinito com <code>WAITFOR DELAY</code>, ou um trabalho ou tarefa agendada com um intervalo muito curto. O procedimento <code>sp_blocker_pss80</code> registrará informações sobre o processo de bloqueio e o processo bloqueado, juntamente com a coleta da instrução batch e estatísticas de bloqueio e espera durante o evento de bloqueio.</p>
 
         <div class="dica">
-            <p class="destaque">O processo Sp_blocker_pss80</p>
+            <p class="destaque">O processo sp_blocker_pss80</p>
             O <code>sp_blocker_pss80</code> é uma solução fornecida pela Microsoft para investigar bloqueios no SQL Server 7.0 e 2000, e está bem documentada. Para obter mais informações sobre a configuração e utilização desse processo, consulte o artigo da Base de Conhecimento (KB) 271509 em <a href="http://support.microsoft.com/kb/271509/" target="_blank">http://support.microsoft.com/kb/271509/</a>.
         </div>
 
         <p>Se o <code>sp_blocker_pss80</code> não for utilizado, é possível escrever um script personalizado usando <code>sysprocesses</code> ou <code>sp_who2</code> para realizar funções semelhantes.</p>
 
-        SQL Trace
-        SQL Trace is a powerful feature that allows for the creation of event traces within SQL
-        Server, using a set of stored procedures. These procedures are the same ones that
-        SQL Profiler uses to run its traces. The events that SQL Trace collects range from
-        deadlock events, to ALTER commands, security or blocking, to complete SQL Batch
-        events. SQL Trace should be utilized only when there is a need to capture events for
-        troubleshooting. Events such as SP:Stmt* or Lock* will occur very frequently on a busy
-        server and traces that capture these events will consume a great deal of resources in order
-        to log all the events.219
-        Chapter 6: Blocking
-        Troubleshooting blocking with SQL Trace can be extremely effective when used strategically to capture both the queries that are blocked and those that are causing the blocking.
-        While the blocked process report (discussed in the next section) was only introduced in
-        SQL Server 2005, monitoring of locks and query statistics from SQL Trace in SQL Server
-        2000 is still a powerful tool in finding and resolving blocking and other events.
-        The best, least resource-intensive way to capture traces is to run a server-side trace,
-        with output directed to a file on a fast, local drive. The easiest way to create a server-side
-        script is to use Profiler to set up the initial trace and the export it (all the details for how
-        to do this are in Chapter 5). For automatic detection of blocking, the most likely event to
-        trace is the blocked process report, although tracing for statement or batch completion,
-        lock escalation or lock timeouts may also be of use. Again, be very careful when tracing
-        frequently occurring events, such as Lock Acquired, as those may result in a trace that
-        has a severe impact on the server.
-        The blocked process report
-        The blocked process report is implemented as an event that fires when a non-system
-        task has been blocked by a deadlock detectable lock. An event is fired every time blocking
-        occurs that exceeds in duration the threshold value, configured by the "blocked process
-        threshold" sp_configure option. The limitation that it must be a deadlock detectable
-        lock stems from the implementation of the event in the database engine, which uses the
-        background deadlock monitor (covered in the next chapter) to walk through the list of
-        waiting tasks that exceed the defined threshold limit.
-        The default value for the "blocked process threshold" is zero, meaning that the database
-        engine doesn't perform the additional checks of waiting tasks and won't generate the
-        blocked process reports. The value for the option is an integer between 0 and 86,400,
-        and determines the number of seconds that a task must have been waiting for a locked
-        resource before the report generates. Multiple reports can be generated for the same
-        blocking chain if the value for the threshold is exceeded multiple times. So for example, if
-        we set the threshold to 5 seconds and a task is blocked for 18 seconds then three blocked220
-        Chapter 6: Blocking
-        process reports would be generated. For further information on setting up and using
-        the blocked process report event, see http://www.simple-talk.com/content/article.
-        aspx?article=671 or http://bit.ly/qC6zz3.
-        Listing 6.9 shows how to enable the blocked process report, and sets the threshold to 2
-        seconds, using the sp_configure procedure (this would generally be considered rather
-        low for most systems, but I've set it there just for demo purposes).
-        sp_configure ‘show advanced options', 1
-        go
-        RECONFIGURE
-        go
-        sp_configure ‘blocked process threshold', 2
-        go
-        RECONFIGURE
-        go
-        Listing 6.9: Enabling the blocked process report and setting the threshold.
-        The blocked process report can be captured in a number of ways. SQL Server Profiler can
-        be used to actively capture the Blocked Process Report event class, or alternatively
-        you can create a server-side SQL Trace script, using the sp_trace_* stored procedures
-        as explained earlier.
-        When the blocked process threshold is met, the trace will log the event in the trace file.
-        The fn_trace_gettable function can be used to read the file into a tabular format in
-        SSMS, as shown in Figure 6.9.221
-        Chapter 6: Blocking
-        Figure 6.9: Reading the blocked process report using fn_trace_gettable.
-        Each event is logged with the session ID, end time and, as shown in Figure 6.9, the
-        duration of blocking. The session ID is of little interest, as it is the ID of the system task
-        that is checking the waiting tasks, not that of the blocked or blocking sessions. In SSMS,
-        clicking on the XML will open a new window with the XML nicely formatted. In the
-        first row from Figure 6.9, the results logged are from the blocking simulation performed
-        earlier in this chapter, and are shown in Listing 6.10.
-        <blocked-process-report>
-        <blocked-process>
-        <process id="process5a4f708" taskpriority="0" logused="0" waitresource="PAGE:
-        5:1:1961" waittime="2143" ownerId="94338" transactionname="SELECT"
-        lasttranstarted="2011-08-24T18:43:59.553" XDES="0x84fbf1e0" lockMode="S"
-        schedulerid="8" kpid="2588" status="suspended" spid="53" sbid="0" ecid="0"
-        priority="0" trancount="0" lastbatchstarted="2011-08-24T18:43:59.543"
-        lastbatchcompleted="2011-08-24T18:43:57.873" clientapp="Microsoft SQL Server
-        Management Studio - Query" hostname="AMachine" hostpid="4344" loginname="SomeLogin"
-        isolationlevel="read committed (2)" xactid="94338" currentdb="5"
-        lockTimeout="4294967295" clientoption1="671090784" clientoption2="390200">
-        <executionStack>
-        <frame line="1" sqlhandle="0x02000000314f4a04e43e9f09208ee7f0f3b4ddd93bd13222
-        Chapter 6: Blocking
-        3f8"/>
-        </executionStack>
-        <inputbuf>
-        SELECT FirstName, LastName,
-        SUM(soh.TotalDue) AS TotalDue, MAX(OrderDate) AS LastOrder
-        FROM Sales.SalesOrderHeader AS soh
-        INNER JOIN Sales.Customer AS c ON soh.CustomerID = c.CustomerID INNER JOIN
-        Person.Person AS p ON c.PersonID = p.BusinessEntityID WHERE soh.OrderDate &gt;=
-        &apos;2011/01/01&apos;
-        GROUP BY c.CustomerID, FirstName, LastName
-        </inputbuf>
-        </process>
-        </blocked-process>
-        <blocking-process>
-        <process status="sleeping" spid="52" sbid="0" ecid="0" priority="0" trancount="1"
-        lastbatchstarted="2011-08-24T18:43:43.493" lastbatchcompleted="2011-08-
-        24T18:43:44.817" clientapp="Microsoft SQL Server Management Studio - Query"
-        hostname=" AMachine " hostpid="4344" loginname="SomeLogin" isolationlevel="read
-        committed (2)" xactid="93835" currentdb="5" lockTimeout="4294967295"
-        clientoption1="671090784" clientoption2="390200">
-        <executionStack/>
-        <inputbuf>
-        DECLARE @SalesOrderHeaderID INT
-        BEGIN TRANSACTION
-        INSERT INTO Sales.SalesOrderHeader
-        (RevisionNumber, OrderDate, DueDate, ShipDate, Status,
-        OnlineOrderFlag, PurchaseOrderNumber, AccountNumber, CustomerID,
-        SalesPersonID, TerritoryID, BillToAddressID, ShipToAddressID,
-        ShipMethodID, CreditCardID, CreditCardApprovalCode, CurrencyRateID,
-        Comment, rowguid, ModifiedDate)
-        VALUES
-        (5, &apos;2011/06/20&apos;, &apos;2011/06/25&apos;, &apos;2011/06/30&apos;, 5,
-        0, NULL,
-        &apos;10-4030-018749&apos;, 18749, NULL, 6, 28374, 28374, 1, 8925,
-        &apos;929849Vi46003&apos;, NULL, NULL, NEWID(), GETDATE()
-        )
-        SET @SalesOrderHeaderID = @@IDENTITY
-        INSERT INTO Sales.SalesOrderDetail
-        (SalesOrderID, CarrierTrackingNumber, OrderQty, ProductID,
-        SpecialOfferID, UnitPrice, UnitPriceDiscount, rowguid,223
-        Chapter 6: Blocking
-        ModifiedDate)
-        VALUES
-        (@SalesOrderHeaderID, &apos;4911-403C-98&apos;, 15, 722, 1, 2039.994, 0,
-        NEWID(), GETDATE()),
-        (@SalesOrderHeaderID, &apos;4911-403C-98&apos;, 4, 709, 1, 5.70, 0,
-        NEWID(), GETD </inputbuf>
-        </process>
-        </blocking-process>
-        </blocked-process-report>
-        Listing 6.10: Output of the blocked process report.
-        The blocked process is shown as the SELECT statement while the blocking process is the
-        open transaction with uncommitted INSERTs.
-        Some blocking events may happen only periodically throughout a normal day or week of
-        operations in SQL Server. The blocked process report, captured by a server-side trace, can
-        be used to log these events automatically. The trace information can later be imported
-        into SQL and used in Reporting Services or other reporting containers for analysis and
-        resolution of these types of performance problems.
-        Event notifications
-        Event notifications have been available since SQL Server 2005 and offer the ability
-        to capture, in real-time, most DDL events and trace events in SQL Server. Event notifications use Service Broker queues in order to capture log the events that you wish to
-        monitor. When used in conjunction with the BLOCKED_PROCESS_REPORT event and
-        the LOCK_ESCALATION event (SQL 2008 only), this would allow for instances of both
-        events to be logged, asynchronously, as they happen. This asynchronous model means
-        that event logging has a lower impact on overall server performance than when using
-        SQL Trace or Profiler.
-        To set up event notifications we need to first configure and enable Service Broker in the
-        database that we wish to monitor. Once Service Broker is ready, a queue and a service,224
-        Chapter 6: Blocking
-        based on the queue, are created. Finally, we can create the event notification that will
-        use the service. If you haven't done so already, enable the BLOCKED_PROCESS_REPORT
-        event as was shown in Listing 6.9. Next, ensure Service Broker is enabled as shown in
-        Listing 6.11.
-        ALTER DATABASE AdventureWorks SET ENABLE_BROKER
-        GO
-        Listing 6.11: Enable Service Broker.
-        Set up the queue:
-        CREATE QUEUE systemeventqueue
-        GO
-        Listing 6.12: Create the Service Broker queue.
-        Set up the service:
-        CREATE SERVICE systemeventservice
-        ON QUEUE systemeventqueue ( [http://schemas.microsoft.com/SQL/Notifications/
-        PostEventNotification] )
-        GO
-        Listing 6.13: Create the Service Broker service.
-        Create the event notification on the service:
-        CREATE EVENT NOTIFICATION notification_blocking
-        ON SERVER
-        WITH FAN_IN
-        FOR blocked_process_report
-        TO SERVICE ‘systemeventservice', ‘current database' ;
-        GO
-        Listing 6.14: Create the event notification for blocking events.225
-        Chapter 6: Blocking
-        All that's left now is to receive any blocked event messages that are logged in the queue,
-        converting the MESSAGE_BODY column to XML format as shown in Listing 6.15.
-        RECEIVE CAST(message_body AS XML), * FROM systemeventqueue
-        Listing 6.15: Retrieving messages from the Service Broker queue.
-        The output of this query, for the blocking example that we've used throughout the
-        chapter, is shown in Figure 6.10.
-        Figure 6.10: Event notification for the blocked process report.
-        Notice that multiple entries have been inserted into the queue, due to the fact that we set
-        the threshold for the event to two seconds. So, if a blocking event lasted for ten seconds,
-        five unique rows would be logged in the systemeventqueue.
-        Creating an event notification session for the LOCK_ESCALATION event is done in
-        exactly the same manner, as shown in Listing 6.16.
-        CREATE EVENT NOTIFICATION notification_lockescalation
-        ON SERVER
-        WITH FAN_IN
-        FOR lock_escalation
-        TO SERVICE ‘systemeventservice', ‘current database' ;
-        GO
-        Listing 6.16: Create an event notification for lock escalation events.226
-        Chapter 6: Blocking
-        Extended Events
-        In SQL Server 2008 there are no Extended Events for detecting blocking. However, in
-        Denali (the next major version of SQL Server), the sqlserver.blocked_process_
-        report event has been added. This, like the blocked process trace event and the blocked
-        process event notification, require that the server configuration setting blocked
-        process threshold be set using sp_configure.
-        The Extended Event session can be set up with the Denali Extended Events wizard, as
-        shown in Figure 6.11.
+        <h3 id="sqltrace">SQL Trace</h3>
+
+        <p>O SQL Trace é um recurso poderoso que permite a criação de rastreamentos de eventos dentro do SQL Server, utilizando um conjunto de stored procedures. Essas procedures são as mesmas que o SQL Profiler utiliza para executar seus rastreamentos. Os eventos que o SQL Trace coleta variam desde eventos de deadlock, comandos <code>ALTER</code>, segurança ou bloqueios, até eventos completos de lotes SQL. O SQL Trace deve ser utilizado apenas quando há a necessidade de capturar eventos para solucionar problemas. Eventos como <code>SP:Stmt*</code> ou <code>Lock*</code> ocorrerão com muita frequência em um servidor movimentado, e rastreamentos que capturam esses eventos consumirão muitos recursos para registrar todos os eventos.</p>
+        
+        <p>A solução de problemas de bloqueio com o SQL Trace pode ser extremamente eficaz quando usada estrategicamente para capturar tanto as consultas que estão sendo bloqueadas quanto aquelas que estão causando o bloqueio. Embora o relatório de processos bloqueados (discutido na próxima seção) tenha sido introduzido apenas no SQL Server 2005, o monitoramento de travas e estatísticas de consultas do SQL Trace no SQL Server 2000 ainda é uma ferramenta poderosa para encontrar e resolver bloqueios e outros eventos.</p>
+
+        <p>A melhor maneira, com menor impacto nos recursos, de capturar rastreamentos é executar um rastreamento no lado do servidor, com a saída direcionada para um arquivo em um disco local rápido. A forma mais simples de criar um script do lado do servidor é usar o Profiler para configurar o rastreamento inicial e, em seguida, exportá-lo (todos os detalhes sobre como fazer isso estão no Capítulo 5). Para a detecção automática de bloqueios, o evento mais provável para rastrear é o relatório de processos bloqueados, embora o rastreamento de conclusão de declarações ou lotes, escalonamento de travas ou expiração de travas também possa ser útil. Novamente, tenha muito cuidado ao rastrear eventos que ocorrem com muita frequência, como <code>LockAcquired</code>, pois isso pode resultar em um rastreamento que tem um impacto severo no servidor.</p>
+
+        <h4>O relatório de processos bloqueados</h4>
+
+        <p>O relatório de processos bloqueados é implementado como um evento que é acionado quando uma tarefa não relacionada ao sistema é bloqueada por uma trava detectável por deadlock. Um evento é acionado toda vez que ocorre um bloqueio que ultrapassa a duração do valor limite, configurado pela opção "blocked process threshold" no <code>sp_configure</code>. A limitação de que deve ser uma trava detectável por deadlock decorre da implementação do evento no mecanismo de banco de dados, que utiliza o monitor de deadlock em segundo plano (abordado no próximo capítulo) para percorrer a lista de tarefas em espera que ultrapassam o limite definido.</p>
+
+        <p>O valor padrão para a opção "blocked process threshold" é zero, o que significa que o mecanismo do banco de dados não realiza verificações adicionais de tarefas em espera e não gera os relatórios de processos bloqueados. O valor para a opção é um número inteiro entre 0 e 86.400 e determina o número de segundos que uma tarefa deve esperar por um recurso bloqueado antes que o relatório seja gerado. Múltiplos relatórios podem ser gerados para a mesma cadeia de bloqueio se o valor do limiar for ultrapassado várias vezes. Por exemplo, se definirmos o limiar para 5 segundos e uma tarefa for bloqueada por 18 segundos, serão gerados três relatórios de processos bloqueados. Para obter mais informações sobre como configurar e usar o evento de relatório de processos bloqueados, consulte <a href="http://www.simple-talk.com/content/article.aspx?article=671" target="_blank">http://www.simple-talk.com/content/article.aspx?article=671</a> ou <a href="http://bit.ly/qC6zz3" target="_blank">http://bit.ly/qC6zz3</a>.</p>
+
+        <p>O Exemplo 6.9 mostra como habilitar o relatório de processos bloqueados e define o limiar para 2 segundos, utilizando o procedimento <code>sp_configure</code> (geralmente, esse valor seria considerado baixo para a maioria dos sistemas, mas eu o configurei assim apenas para fins de demonstração).</p>
+
+        <div id="container">
+            <pre><code>
+<proc>sp_configure</proc> <string>‘show advanced options'</string>, 1
+<cls>go</cls>
+<cls>RECONFIGURE</cls>
+<cls>go</cls>
+<proc>sp_configure</proc> <string>‘blocked process threshold'</string>, 2
+<cls>go</cls>
+<cls>RECONFIGURE</cls>
+<cls>go</cls>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listing 6.9</strong>: Enabling the blocked process report and setting the threshold.</p>
+
+        <p>O relatório de processos bloqueados pode ser capturado de várias maneiras. O SQL Server Profiler pode ser usado para capturar ativamente a classe de evento <code>Blocked Process Report</code>, ou alternativamente, você pode criar um script de rastreamento SQL do lado do servidor, usando as stored procedures <code>sp_trace_*</code>, conforme explicado anteriormente.</p>
+
+        <p>Quando o limite de processos bloqueados é atingido, o rastreamento registrará o evento no arquivo de rastreamento. A função <code>fn_trace_gettable</code> pode ser usada para ler o arquivo em um formato tabular no SSMS, conforme mostrado na Figura 6.9.</p>
+
+        <img src="imagens/fig69.PNG" alt="Lendo o relatório de processos bloqueados usando fn_trace_gettable.">
+
+        <p class="legenda"><strong>Figura 6.9</strong>: Lendo o relatório de processos bloqueados usando fn_trace_gettable.</p>
+
+        <p>Cada evento é registrado com o ID da sessão, o horário de término e, como mostrado na Figura 6.9, a duração do bloqueio. O ID da sessão tem pouco interesse, pois é o ID da tarefa do sistema que está verificando as tarefas em espera, não o das sessões bloqueadas ou bloqueadoras. No SSMS, clicar no XML abrirá uma nova janela com o XML formatado de maneira agradável. Na primeira linha da Figura 6.9, os resultados registrados são da simulação de bloqueio realizada anteriormente neste capítulo e são mostrados no Exemplo 6.10.</p>
+
+        <div id="container">
+            <pre><code>
+&lt;<proc>blocked-process-report</proc>&gt;
+  &lt;<proc>blocked-process</proc>&gt;
+    &lt;<proc>process</proc> <string>id</string>="<cls>process5a4f708</cls>" <string>taskpriority</string>="<cls>0</cls>" <string>logused</string>="<cls>0</cls>" <string>waitresource</string>="<cls>PAGE:
+5:1:1961</cls>" <string>waittime</string>="2143" <string>ownerId</string>="94338" <string>transactionname</string>="<cls>SELECT</cls>"
+<string>lasttranstarted</string>="<cls>2011-08-24T18:43:59.553</cls>" <string>XDES</string>="<cls>0x84fbf1e0</cls>" <string>lockMode=</string>"<cls>S</cls>"
+<string>schedulerid</string>="<cls>8</cls>" <string>kpid</string>="<cls>2588</cls>" <string>status</string>="<cls>suspended</cls>" <string>spid</string>="<cls>53</cls>" <string>sbid</string>="<cls>0</cls>" <string>ecid</string>="<cls>0</cls>"
+<string>priority</string>="<cls>0</cls>" <string>trancount</string>="<cls>0</cls>" <string>lastbatchstarted</string>="<cls>2011-08-24T18:43:59.543</cls>"
+<string>lastbatchcompleted</string>="<cls>2011-08-24T18:43:57.873</cls>" <string>clientapp</string>="<cls>Microsoft SQL Server
+Management Studio - Query</cls>" <string>hostname</string>="<cls>AMachine</cls>" <string>hostpid</string>="<cls>4344</cls>" <string>loginname</string>="<cls>SomeLogin</cls>"
+<string>isolationlevel</string>="<cls>read committed (2)</cls>" <string>xactid</string>="<cls>94338</cls>" <string>currentdb</string>="<cls>5</cls>"
+<string>lockTimeout</string>="<cls>4294967295</cls>" <string>clientoption1</string>="<cls>671090784</cls>" <string>clientoption2</string>="<cls>390200</cls>"&gt;
+      &lt;<proc>executionStack</proc>&gt;
+        &lt;<proc>frame</proc> <string>line</string>="<cls>1</cls>" <string>sqlhandle</string>="<cls>0x02000000314f4a04e43e9f09208ee7f0f3b4ddd93bd13
+3f8</cls>"/&gt;
+      &lt;/<proc>executionStack</proc>&gt;
+      &lt;<proc>inputbuf</proc>&gt;
+SELECT FirstName, LastName,
+    SUM(soh.TotalDue) AS TotalDue, MAX(OrderDate) AS LastOrder
+  FROM Sales.SalesOrderHeader AS soh
+    INNER JOIN Sales.Customer AS c ON soh.CustomerID = c.CustomerID INNER JOIN
+Person.Person AS p ON c.PersonID = p.BusinessEntityID WHERE soh.OrderDate &gt;=
+&apos;2011/01/01&apos;
+  GROUP BY c.CustomerID, FirstName, LastName
+      &lt;/<proc>inputbuf</proc>&gt;
+    &lt;/<proc>process</proc>&gt;
+  &lt;/<proc>blocked-process</proc>&gt;
+  &lt;<proc>blocking-process</proc>&gt;
+    &lt;<proc>process</proc> <string>status</string>="<cls>sleeping</cls>" <string><cls>spid</cls></string>="<cls>52</cls>" <string>sbid</string>="<cls>0</cls>" <string>ecid</string>="<cls>0</cls>" <string>priority</string>="<cls>0</cls>" <string>trancount</string>="<cls>1</cls>"
+<string>lastbatchstarted</string>="<cls>2011-08-24T18:43:43.493</cls>" <string>lastbatchcompleted</string>="<cls>2011-08-
+24T18:43:44.817</cls>" <string>clientapp</string>="<cls>Microsoft SQL Server Management Studio - Query</cls>"
+<string>hostname</string>=" <cls>AMachine</cls> " <string>hostpid</string>="<cls>4344</cls>" <string>loginname</string>="<cls>SomeLogin</cls>" <string>isolationlevel</string>="<cls>read
+committed (2)</cls>" <string>xactid</string>="<cls>93835</cls>" <string>currentdb</string>="<cls>5</cls>" <string>lockTimeout</string>="<cls>4294967295</cls>"
+<string>clientoption1</string>="<cls>671090784</cls>" <string>clientoption2</string>="<cls>390200</cls>"&gt;
+    &lt;<proc>executionStack</proc>/&gt;
+    &lt;<proc>inputbuf</proc>&gt;
+DECLARE @SalesOrderHeaderID INT
+
+BEGIN TRANSACTION
+
+INSERT INTO Sales.SalesOrderHeader
+     (RevisionNumber, OrderDate, DueDate, ShipDate, Status,
+      OnlineOrderFlag, PurchaseOrderNumber, AccountNumber, CustomerID,
+      SalesPersonID, TerritoryID, BillToAddressID, ShipToAddressID,
+      ShipMethodID, CreditCardID, CreditCardApprovalCode, CurrencyRateID,
+      Comment, rowguid, ModifiedDate)
+VALUES
+    (5, &apos;2011/06/20&apos;, &apos;2011/06/25&apos;, &apos;2011/06/30&apos;, 5,
+0, NULL,
+       &apos;10-4030-018749&apos;, 18749, NULL, 6, 28374, 28374, 1, 8925,
+       &apos;929849Vi46003&apos;, NULL, NULL, NEWID(), GETDATE()
+      )
+SET @SalesOrderHeaderID = @@IDENTITY
+
+INSERT INTO Sales.SalesOrderDetail
+     (SalesOrderID, CarrierTrackingNumber, OrderQty, ProductID,
+       SpecialOfferID, UnitPrice, UnitPriceDiscount, rowguid,
+       ModifiedDate)
+VALUES
+     (@SalesOrderHeaderID, &apos;4911-403C-98&apos;, 15, 722, 1, 2039.994, 0,
+       NEWID(), GETDATE()),
+     (@SalesOrderHeaderID, &apos;4911-403C-98&apos;, 4, 709, 1, 5.70, 0,
+       NEWID(), GETD &lt;/inputbuf&gt;
+    &lt;/<proc>process</proc>&gt;
+  &lt;/<proc>blocking-process</proc>&gt;
+&lt;/<proc>blocked-process-report</proc>&gt;
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Exemplo 6.10</strong>: Saída do relatório de processos bloqueados.</p>
+        
+        <p>O processo bloqueado é exibido como a instrução <code>SELECT</code>, enquanto o processo de bloqueio é a transação aberta com <code>INSERT</code>s não confirmados.</p>
+
+        <p>Alguns eventos de bloqueio podem ocorrer apenas periodicamente ao longo de um dia normal ou semana de operações no SQL Server. O relatório de processos bloqueados, capturado por uma trace do lado do servidor, pode ser usado para registrar automaticamente esses eventos. As informações da trace podem posteriormente ser importadas para o SQL e utilizadas no Reporting Services ou em outros containers de relatórios para análise e resolução desses tipos de problemas de desempenho.</p>
+
+        <h3 id="eventnotif">Notificações de Eventos</h3>
+
+        <p>Notificações de eventos estão disponíveis desde o SQL Server 2005 e oferecem a capacidade de capturar, em tempo real, a maioria dos eventos DDL (Data Definition Language) e eventos de rastreamento no SQL Server. As notificações de eventos utilizam filas do Service Broker para registrar os eventos que você deseja monitorar. Quando usadas em conjunto com o evento <code>BLOCKED_PROCESS_REPORT</code> e o evento <code>LOCK_ESCALATION</code> (apenas no SQL Server 2008), isso permite que instâncias de ambos os eventos sejam registradas assincronamente, à medida que ocorrem. Esse modelo assíncrono significa que o registro de eventos tem um impacto menor no desempenho geral do servidor em comparação com o uso do SQL Trace ou Profiler.</p>
+
+        <p>Para configurar notificações de eventos, primeiro precisamos configurar e ativar o Service Broker no banco de dados que desejamos monitorar. Uma vez que o Service Broker estiver pronto, uma fila e um serviço, baseado na fila, serão criados. Por fim, podemos criar a notificação de evento que usará o serviço. Se ainda não o fez, ative o evento <code>BLOCKED_PROCESS_REPORT</code>, conforme mostrado na Lista 6.9. Em seguida, certifique-se de que o Service Broker esteja ativado, conforme mostrado na Lista 6.11.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>ALTER DATABASE</cls> AdventureWorks <cls>SET ENABLE_BROKER</cls>
+<cls>GO</cls>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 6.11</strong>: Ativar o Service Broker.</p>
+        
+        <p>Configure a fila:</p>
+
+        <div id="container">
+            <pre><code>
+<cls>CREATE QUEUE</cls> systemeventqueue
+<cls>GO</cls>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 6.12</strong>: Criar a fila do Service Broker.</p>
+        
+        <p>Configure o serviço:</p>
+
+        <div id="container">
+            <pre><code>
+<cls>CREATE SERVICE</cls> systemeventservice
+<cls>ON QUEUE</cls> systemeventqueue ( [http://schemas.microsoft.com/SQL/Notifications/
+PostEventNotification] )
+<cls>GO</cls>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 6.13</strong>: Criar o serviço do Service Broker.</p>
+
+        <p>Criar a notificação de evento no serviço:</p>
+
+        <div id="container">
+            <pre><code>
+<cls>CREATE EVENT NOTIFICATION</cls> notification_blocking
+<cls>ON SERVER</cls>
+<cls>WITH FAN_IN</cls>
+<cls>FOR</cls> blocked_process_report
+<cls>TO SERVICE</cls> <string>'systemeventservice'</string>, <string>'current database'</string> ;
+<cls>GO</cls>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 6.14</strong>: Criar a notificação de evento para eventos de bloqueio.</p>
+
+        <p>Tudo o que resta agora é receber quaisquer mensagens de eventos bloqueados que estejam registradas na fila, convertendo a coluna <code>MESSAGE_BODY</code> para o formato XML, como mostrado na Lista 6.15.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>RECEIVE</cls> <func>CAST</func>(message_body <cls>AS XML</cls>), * <cls>FROM</cls> systemeventqueue
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 6.15</strong>: Recuperando mensagens da fila do Service Broker.</p>
+
+        <p>A saída desta consulta, para o exemplo de bloqueio que usamos ao longo do capítulo, é mostrada na Figura 6.10.</p>
+
+        <img src="imagens/fig610.PNG" alt="">
+
+        <p class="legenda"><strong>Figura 6.10</strong>: Notificação de evento para o relatório de processo bloqueado.</p>
+
+        <p>Observe que várias entradas foram inseridas na fila, devido ao fato de termos definido o limite para o evento como dois segundos. Portanto, se um evento de bloqueio durasse dez segundos, cinco linhas únicas seriam registradas na <code>systemeventqueue</code>.</p>
+
+        <p>Criar uma sessão de notificação de evento para o evento <code>LOCK_ESCALATION</code> é feito exatamente da mesma maneira, conforme mostrado na listagem 6.16.</p>
+
+        <div id="container">
+            <pre><code>
+<cls>CREATE EVENT NOTIFICATION</cls> notification_lockescalation
+<cls>ON SERVER</cls>
+<cls>WITH</cls> FAN_IN
+<cls>FOR lock_escalation</cls>
+<cls>TO SERVICE</cls> <string>'systemeventservice'</string>, <string>'current database'</string> ;
+<cls>GO</cls>
+            </code></pre>
+        </div>
+
+        <p class="legenda"><strong>Listagem 6.16</strong>: Criar uma notificação de evento para eventos de escalonamento de bloqueio.</p>
+
+        <h3 id="extendevent">Eventos Estendidos</h3>
+
+        <p>No SQL Server 2008, não existem Extended Events para detectar bloqueios. No entanto, no Denali (a próxima grande versão do SQL Server), o evento <code>sqlserver.blocked_process_report</code> foi adicionado. Isso, assim como o evento de rastreamento de processo bloqueado e a notificação de evento de processo bloqueado, requer que a configuração do servidor, chamada <code>blocked process threshold</code>, seja definida usando <code>sp_configure</code>.</p>
+
+        <p>A sessão Extended Event pode ser configurada com o assistente Denali Extended Events, conforme mostrado na Figura 6.11.</p>
+
         Figure 6.11: Setting up an Extended Event session.227
         Chapter 6: Blocking
         The events can be sent to a memory buffer, as in this example, but in a production

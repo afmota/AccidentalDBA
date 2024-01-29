@@ -179,6 +179,7 @@ a:hover {
 code {
     font-family: var(--fonte-codigo);
     font-size: 1em;
+    font-weight: 600;
     word-wrap: break-word;
 }
 
