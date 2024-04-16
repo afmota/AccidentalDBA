@@ -650,7 +650,7 @@ PostEventNotification] )
 
         <p>A saída desta consulta, para o exemplo de bloqueio que usamos ao longo do capítulo, é mostrada na Figura 6.10.</p>
 
-        <img src="imagens/fig610.PNG" alt="">
+        <img src="imagens/fig610.PNG" alt="Notificação de evento para o relatório de processo bloqueado">
 
         <p class="legenda"><strong>Figura 6.10</strong>: Notificação de evento para o relatório de processo bloqueado.</p>
 
@@ -677,108 +677,73 @@ PostEventNotification] )
 
         <p>A sessão Extended Event pode ser configurada com o assistente Denali Extended Events, conforme mostrado na Figura 6.11.</p>
 
-        Figure 6.11: Setting up an Extended Event session.227
-        Chapter 6: Blocking
-        The events can be sent to a memory buffer, as in this example, but in a production
-        environment would more likely be sent to disk, as we did when using SQL Trace. For
-        quick monitoring, the data can also be viewed live, as shown in Figure 6.12.
-        Figure 6.12: Viewing Extended Event data.
-        For more information on Extended Events, Jonathan's An XEvent a day series is well worth
-        reading: http://www.sqlskills.com/blogs/jonathan/category/XEvent-a-Day-Series.
-        aspx.228
-        Chapter 6: Blocking
-        Resolving Blocking
-        The manner in which we resolve blocking will vary depending on the particular reason
-        for the block and, in some cases, the version and edition of SQL Server that is being used.
-        As noted earlier in this chapter, blocking is most often caused by long-running queries
-        that hold certain locks on a row, table, page, or even database. In cases where T-SQL
-        statements are causing locks to be set and held for long periods, the only real answer to
-        the problem is to tune the queries to ensure they run as fast as possible. This may not
-        eradicate blocking completely, but your goal is certainly to see, for example, a significant
-        reduction in the number of recorded blocked process report events, as locks are acquired
-        and released faster, and fewer instances of blocking reach the configured threshold for
-        the event.
-        To all databases, and the applications that use them, are attached a specific set of requirements and expected response times. What's considered "normal" for one application
-        may be considered very worrying in another. For example, one application may trigger a
-        lengthy process that requires an exclusive lock on a table for its entire duration, and still
-        be considered an acceptable part of normal business operating procedures. Conversely,
-        another process, one that never holds locks for more than a few seconds, may be cause
-        for concern.
-        In short, before you go in and start tuning, you need to know what's normal and expected
-        behavior, and how this is reflected in execution times and locking periods. It may be that
-        your blocking threshold is set at a level that is catching blocking events for processes that
-        are behaving perfectly normally; make sure this threshold is set appropriately for your
-        system (see Listing 6.9).229
-        Chapter 6: Blocking
-        Bad database design
-        A database that is poorly normalized, such that data changes have to be made in a number
-        of places instead of one, will result in transactions that run for longer than necessary.
-        Modification transactions acquire exclusive locks, and the the risk of blocking rises the
-        more that are acquired, and the longer they are held.
-        This is not something that is easily fixed after the database is in production; proper
-        normalization is an issue that should be kept in mind during the design phase.
-        Denormalization and OLTP systems
-        People often claim that denormalizing a database improves performance. The real story is that
-        denormalization can improve read performance at the expense of write performance. This is why denormalization may be useful for data warehouse or decision-support systems, but is seldom appropriate for
-        OLTP-type systems.
-        Inappropriate isolation level
-        A fairly common cause of severe blocking is the use of an inappropriately high isolation
-        level, often without the knowledge of the application developer. I've seen more than one
-        data access library that, by default, requests an isolation level of SERIALIZABLE when
-        connecting to SQL Server. This results in a huge number of rows being locked for long
-        periods, for just about any operation. In many cases, the degree of transaction isolation
-        needed by the application does not warrant the use of SERIALIZABLE; if it is causing
-        issues then the application needs to be examined to see if the level can be lowered
-        to REPEATABLE READ or even READ COMMITTED, or whether one of the SNAPSHOT
-        isolation levels can be used. This is something that needs to be evaluated on a case-bycase basis; there is no single isolation level that's appropriate for all applications.230
-        Chapter 6: Blocking
-        One of the most effective ways, on SQL Server 2005 or above, to deal with applications and databases that are highly prone to blocking is to either use READ COMMITTED
-        SNAPSHOT isolation on the entire database, or to enable SNAPSHOT isolation and use it in
-        the most affected areas. The overhead of maintaining the row version store in TempDB is
-        often not severe, especially in light of the considerable advantages of having read queries
-        that don't block writers and vice versa.
-        Of course, testing needs to be done before making a change as radical as switching the
-        entire database over to READ COMMITTED SNAPSHOT, but it should be a serious consideration if dealing with an application prone to severe blocking.
-        Poorly written queries
-        Queries that are written inefficiently will hold locks for longer than necessary. When
-        there are multiple such queries running concurrently there is a good chance that severe
-        blocking will occur. Full coverage of how to write efficient queries would require at least
-        one book on its own; two good ones are: Inside SQL Server 2005 Query Tuning and Optimization (http://www.amazon.com/Inside-Microsoft®-SQL-Server-2005/dp/0735621969)
-        and SQL Server 2008 Query Performance Tuning Distilled (http://www.amazon.com/
-        Server-Performance-Tuning-Distilled-Experts/dp/1430219025). Here, we'll stick to a
-        few general principles:
-        •	 Keep transactions as short as possible (but no shorter). For example, if a select does not
-        need to be run within the transaction, put it outside.
-        •	 Ensure that columns that are compared/joined have the same data type to avoid
-        implicit conversion problems.
-        •	 Keep queries as simple as possible. Test whether splitting a complex query up and
-        using temp tables to hold intermediate results will be faster or not.
-        •	 Use set-based methods as much as possible. They are faster than row-by-row
-        processing in the vast majority of cases.231
-        Chapter 6: Blocking
-        Missing indexes
-        If SQL is missing an index that would be useful to the query, then that query will take
-        longer to run than necessary, holding locks longer than necessary, and it will read more
-        data than is necessary, in this way taking and releasing many more locks than it would in
-        the presence of the index. This increases the chances of the query either blocking another
-        query or being blocked itself. For more on preventing, finding and fixing duplicate and
-        missing indexes, refer to Chapter 5.
-        Poor application design
-        Often, poor application design imposes on the database a process flow that can hugely
-        increase the prevalence of blocking events in the database. Fixing problems caused
-        by application design is never easy, as it usually demands close cooperation between
-        DBAs, developers and vendors. Nevertheless, if the application is really the source of the
-        problem, it has to be done.
-        Some of the classic application design malpractices that can cause blocking are: user
-        input within transactions; applications that read far more information than they need;
-        and overly-chatty applications. I'll spend a couple of paragraphs on each.
+        <img src="imagens/fig611.png" alt="Configurando uma sessão de Evento Estendido.">
+
+        <p class="legenda"><strong>Figura 6.11</strong>: Configurando uma sessão de Evento Estendido.</p>
+
+        <p>Os eventos podem ser enviados para um buffer de memória, como neste exemplo, mas em um ambiente de produção provavelmente seriam enviados para o disco, como fizemos ao usar o SQL Trace. Para monitoramento rápido, os dados também podem ser visualizados ao vivo, como mostrado na Figura 6.12.</p>
+
+        <img src="imagens/fig612.png" alt="Visualizando dados do Evento Estendido.">
+        
+        <p class="legenda"><strong>Figura 6.12</strong>: Visualizando dados do Evento Estendido.</p>
+
+        <p>Para obter mais informações sobre Extended Events, a série "Um XEvent por dia" de Jonathan é muito útil de ser lida: <a href="http://www.sqlskills.com/blogs/jonathan/category/XEvent-a-Day-Series.aspx" target="_blank">http://www.sqlskills.com/blogs/jonathan/category/XEvent-a-Day-Series.aspx</a>.</p>
+        
+        <h2 id="resolvingblocks">Resolvendo Bloqueios</h2>
+
+        <p>A maneira pela qual resolvemos bloqueios variará dependendo do motivo específico do bloqueio e, em alguns casos, da versão e edição do SQL Server que está sendo utilizada. Como observado anteriormente neste capítulo, o bloqueio é mais frequentemente causado por consultas de longa duração que mantêm determinados bloqueios em uma linha, tabela, página ou até mesmo banco de dados. Nos casos em que declarações T-SQL estão causando a definição e a manutenção de bloqueios por longos períodos, a única resposta real para o problema é ajustar as consultas para garantir que elas sejam executadas o mais rápido possível. Isso pode não erradicar completamente o bloqueio, mas seu objetivo é certamente ver, por exemplo, uma redução significativa no número de eventos de relatório de processo bloqueado registrados, à medida que os bloqueios são adquiridos e liberados mais rapidamente, e menos instâncias de bloqueio alcançam o limite configurado para o evento.</p>
+
+        <p>Para todos os bancos de dados e as aplicações que os utilizam, estão associados um conjunto específico de requisitos e tempos de resposta esperados. O que é considerado "normal" para uma aplicação pode ser considerado muito preocupante em outra. Por exemplo, uma aplicação pode acionar um processo longo que requer um bloqueio exclusivo em uma tabela durante toda a sua duração e ainda assim ser considerada uma parte aceitável dos procedimentos operacionais normais do negócio. Por outro lado, outro processo, um que nunca mantém bloqueios por mais do que alguns segundos, pode ser motivo de preocupação.</p>
+
+        <p>Em resumo, antes de começar a ajustar, é necessário conhecer o comportamento normal e esperado, e como isso se reflete nos tempos de execução e períodos de bloqueio. Pode ser que seu limite de bloqueio esteja definido em um nível que está capturando eventos de bloqueio para processos que estão se comportando perfeitamente normalmente; certifique-se de que esse limite esteja configurado adequadamente para o seu sistema (consulte a Listagem 6.9).</p>
+
+        <h3 id="baddb">Design de banco de dados ruim</h3>
+
+        <p>Um banco de dados que está mal normalizado, de modo que as mudanças nos dados precisam ser feitas em vários lugares em vez de um único, resultará em transações que são executadas por mais tempo do que o necessário. Transações de modificação adquirem bloqueios exclusivos, e o risco de bloqueio aumenta quanto mais são adquiridos e quanto mais tempo são mantidos.</p>
+
+        <p>Isso não é algo que seja facilmente corrigido depois que o banco de dados está em produção; a normalização adequada é uma questão que deve ser considerada durante a fase de design.</p>
+
+        <div class="dica">
+            <p class="destaque">Denormalização e sistemas OLTP.</p>
+            As pessoas frequentemente afirmam que a denormalização de um banco de dados melhora o desempenho. A verdadeira história é que a denormalização pode melhorar o desempenho de leitura às custas do desempenho de escrita. Por isso, a denormalização pode ser útil para data warehouses ou sistemas de suporte à decisão, mas raramente é apropriada para sistemas do tipo OLTP.
+        </div>
+
+        <h3 id="inisolevel">Nível de isolamento inadequado.</h3>
+
+        <p>Uma causa bastante comum de bloqueios graves é o uso de um nível de isolamento inadequadamente alto, muitas vezes sem o conhecimento do desenvolvedor da aplicação. Já vi mais de uma biblioteca de acesso a dados que, por padrão, solicita um nível de isolamento <code>SERIALIZABLE</code> ao se conectar ao SQL Server. Isso resulta em um grande número de linhas sendo bloqueadas por longos períodos, para praticamente qualquer operação. Em muitos casos, o grau de isolamento de transação necessário pela aplicação não justifica o uso de <code>SERIALIZABLE</code>; se estiver causando problemas, a aplicação precisa ser examinada para ver se o nível pode ser reduzido para <code>REPEATABLE READ</code> ou até mesmo <code>READ COMMITTED</code>, ou se um dos níveis de isolamento <code>SNAPSHOT</code> pode ser usado. Isso é algo que precisa ser avaliado caso a caso; não há um único nível de isolamento que seja apropriado para todas as aplicações.</p>
+        
+        <p>Uma das maneiras mais eficazes, no SQL Server 2005 ou superior, de lidar com aplicações e bancos de dados que são altamente propensos a bloqueios é usar o isolamento <code>READ COMMITTED SNAPSHOT</code> em todo o banco de dados, ou habilitar o isolamento <code>SNAPSHOT</code> e usá-lo nas áreas mais afetadas. O custo de manter o armazenamento de versão de linha no <code>TempDB</code> geralmente não é severo, especialmente diante das consideráveis vantagens de ter consultas de leitura que não bloqueiam escritores e vice-versa.</p>
+
+        <p>É claro que testes precisam ser realizados antes de fazer uma mudança tão radical quanto a alteração de todo o banco de dados para <code>READ COMMITTED SNAPSHOT</code>, mas isso deve ser considerado seriamente ao lidar com uma aplicação propensa a bloqueios severos.</p>
+
+        <h3 id="poorlyqueries">Consultas mal escritas</h3>
+
+        <p>Consultas escritas de forma ineficiente manterão bloqueios por mais tempo do que o necessário. Quando várias dessas consultas são executadas simultaneamente, há uma boa chance de ocorrerem bloqueios severos. Cobrir completamente como escrever consultas eficientes exigiria pelo menos um livro por si só; dois bons exemplos são: <em>Inside SQL Server 2005 Query Tuning and Optimization</em> (<a href="http://www.amazon.com/Inside-Microsoft®-SQL-Server-2005/dp/0735621969" target="_blank">http://www.amazon.com/Inside-Microsoft®-SQL-Server-2005/dp/0735621969</a>) e <em>SQL Server 2008 Query Performance Tuning Distilled</em> (<a href="http://www.amazon.com/Server-Performance-Tuning-Distilled-Experts/dp/1430219025" target="_blank">http://www.amazon.com/Server-Performance-Tuning-Distilled-Experts/dp/1430219025</a>). Aqui, vamos nos ater a alguns princípios gerais:</p>
+
+        <ul>
+            <li>Mantenha as transações o mais curtas possível (mas não mais curtas que o necessário). Por exemplo, se um select não precisa ser executado dentro da transação, coloque-o fora.</li>
+            <li>Certifique-se de que as colunas que são comparadas/juntadas tenham o mesmo tipo de dados para evitar problemas de conversão implícita.</li>
+            <li>Mantenha as consultas o mais simples possível. Teste se dividir uma consulta complexa e usar tabelas temporárias para armazenar resultados intermediários será mais rápido ou não.</li>
+            <li>Use métodos baseados em conjunto (set-based) sempre que possível. Eles são mais rápidos do que o processamento linha por linha na grande maioria dos casos.</li>
+        </ul>
+        
+        <h3 id="missidx">Índices ausentes</h3>
+
+        <p>Se o SQL estiver sem um índice que seria útil para a consulta, então essa consulta levará mais tempo para ser executada do que o necessário, mantendo bloqueios por mais tempo do que o necessário, e lerá mais dados do que é necessário, dessa forma, adquirindo e liberando muitos mais bloqueios do que faria na presença do índice. Isso aumenta as chances de a consulta bloquear outra consulta ou ser bloqueada ela mesma. Para mais informações sobre como prevenir, encontrar e corrigir índices duplicados e ausentes, consulte o <a href="cap05.html">Capítulo 5</a>.</p>
+
+        <h3 id="desbadapp">Design de aplicação ruim</h3>
+
+        <p>Frequentemente, um design de aplicação ruim impõe ao banco de dados um fluxo de processo que pode aumentar enormemente a ocorrência de eventos de bloqueio no banco de dados. Corrigir problemas causados pelo design da aplicação nunca é fácil, pois geralmente exige uma cooperação próxima entre DBAs, desenvolvedores e fornecedores. No entanto, se a aplicação for realmente a fonte do problema, isso precisa ser feito.</p>
+
+        <p>Algumas das práticas clássicas de design de aplicativos que podem causar bloqueios são: entrada de usuário dentro de transações; aplicativos que leem muito mais informações do que precisam; e aplicativos excessivamente comunicativos. Vou dedicar alguns parágrafos a cada um.</p>
+
         User input within transactions
         This happens when an application starts a transaction, does some work and then waits
         for the user to confirm an action, or to input data, or similar. This is a potentially serious
         problem, because the transaction is open and the locks are held until the user acts. Tales
         are rife of users going to lunch or leaving for the day with transactions left open and locks
-        held in the database, causing severe blocking problems.232
-        Chapter 6: Blocking
+        held in the database, causing severe blocking problems.
+        
         The solution is to never allow any form of user interaction within a database transaction.
         A database transaction should be started and committed (or rolled back) in a single trip to
         the database.
