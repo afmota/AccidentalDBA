@@ -1,0 +1,886 @@
+Chapter 9: Truncated Tables, Dropped
+Objects and Other Accidents Waiting
+to Happen
+The sudden disappearance of an important object in a database, or of all the data in a
+table, can test the nerves of even the most imperturbable DBA. In the best case, the data
+or object can be recovered in a matter of minutes. Sometimes it can take several days.
+In the worst case, it can never be recovered and might even mean the end of business for
+a company.
+Regardless of how strictly you control write access to your databases, such accidents,
+whether user initiated or due to a bug in application code or to hardware problems, can
+and will happen, and will bring with them a real risk of data loss. The primary responsibility of any database administrator is to ensure the ability to recover a database and its
+data quickly, and with no, or minimum acceptable, loss. Without a complete, secure set of
+database and log backups, the chances of achieving this are slim.
+This chapter covers the following strategies, tools, and tweaks for ensuring an adequate
+response to accidental data loss, and minimizing the risk of it happening in the first place.
+•	 Recovering the database from backup, to a marked transaction, or particular point
+in time.
+•	 Last ditch attempts to save your data, in the absence of backups – including use of log
+recovery tools, source control, or High Availability solutions, such as replication or
+log shipping.
+•	 Using the default trace to obtain details of what happened and who did it.309
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+•	 Minimizing risk of data loss through:
+•	 a well-planned and tested backup and recovery strategy
+•	 a strict change control process
+•	 a well-designed permissions architecture based on "minimum required rights."
+•	 Using DML and DDL triggers to prevent or log changes. These access control tweaks
+are especially useful in cases where you can't implement as tight a security model as
+you would like.
+Example Case: The Missing Sales Order Data
+A manager is running the usual series of "end of business day" reports, when he or she
+notices that the numbers seems a lot lower than usual. The manager decides to run the
+same reports for the current month and finds that the month-to-date totals exactly match
+today's daily totals. You, as the DBA, hear your phone ring just as you are walking out the
+office. The manager demands, angrily, to know why the numbers are all wrong.
+Some quick research reveals that the SalesOrderDetail table contains data only for
+the last three hours of the business day! You know that the Sales application was implemented almost a year ago, and so the SalesOrderDetail table should have entries
+dating back to the day that the application was implemented. It is now up to you to
+determine what happened, and recover the data that is missing from the database.310
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+Recovering Lost Data
+All too often, in the face of such a problem, people's first instinct is to focus on who
+caused the problem, and how to prove it. Of course, this will need to be established,
+but it's a secondary objective. The paramount concern is that a critical object or data is
+missing from a database, and the very first step is to recover the object or data in the most
+efficient manner possible.
+In truth, there is only one sure way to recover all, or very nearly all, of the lost data,
+and that's to perform a RESTORE operation, using the last full database backup, and
+the sequence of log backups that succeeded it. In this way, it should be possible to
+recover the database to a point immediately before the data was lost. This will only be
+possible if the database has been operating in FULL recovery model, and if you have
+been taking, and retaining in a safe location, regular full database backups and transaction log backups. We'll examine, first, the case where full and log backups are available,
+and then the "damage limitation" strategies that you might consider in the absence of
+such backup files.
+Recovering from backup
+As discussed, the extent of your exposure to data loss as a result of events such as this will
+be determined to a large degree by the recovery model selected for the database, and by
+your backup strategy.
+In this section, we'll assume the database in question in using the FULL recovery model
+and that full and transaction log backups, representing an unbroken LSN chain (see
+Chapter 8) are available; then we'll demonstrate how to restore a database to a specific
+point within a log file.311
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+The RESTORE LOG command supports three different options for restoring a database to
+a particular point within a log file, each of which is described in Books Online.
+•	 Recovering to a marked transaction (http://msdn.microsoft.com/en-us/library/
+ms188623.aspx).
+•	 Recovering to a specific point in time (http://msdn.microsoft.com/en-us/library/
+ms178143.aspx).
+•	 Recovering to a Log Sequence Number (http://msdn.microsoft.com/en-us/library/
+ms191459.aspx).
+In the first instance, we'll demonstrate restoring to a point represented by a marked
+transaction. We'll then discuss general issues regarding restores to a specific point in time
+within a log file.
+Restore to a marked transaction
+Marked transactions can be used to create a known recovery point for significant changes
+to a database, or multiple databases when the same transaction mark is used in multiple
+databases, to establish a common recovery point for all of the affected databases. It is
+rare that a user who mistakenly drops, truncates, or deletes a table will have been kind
+enough to use a marked transaction. However, a wise DBA can use them to create an easy
+recovery point, prior to deploying a large set of changes to a database, in cases where the
+potential for problems exists.
+To simulate this type of restore, we'll use the AdventureWorks database. The first step is
+to put the database into FULL recovery and take a full backup of the database to begin the
+LSN chain, as shown in Listing 9.1.312
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+USE [master]
+GO
+ALTER DATABASE [AdventureWorks] SET RECOVERY FULL
+GO
+BACKUP DATABASE [AdventureWorks]
+TO DISK = N'D:\SQLBackups\AdventureWorks.bak'
+WITH NOFORMAT,
+INIT,
+NAME = N'AdventureWorks-Full Database Backup',
+SKIP,
+STATS = 10,
+CHECKSUM
+GO
+Listing 9.1: Setting AdventureWorks to use FULL recovery model.
+With a full backup taken, we have a known point in time where the database is in a
+known, good state. Next, we simulate transactional work on the database by modifying
+rows in the ErrorLog table of the database. After that, we take a log backup to capture
+those changes.
+USE [AdventureWorks]
+GO
+SELECT ErrorTime ,UserName ,ErrorNumber ,
+ErrorSeverity ,ErrorState ,ErrorProcedure ,
+ErrorMessage
+FROM dbo.ErrorLog
+GO
+INSERT INTO dbo.ErrorLog
+( ErrorTime ,UserName ,ErrorNumber ,
+ErrorSeverity ,ErrorState ,ErrorProcedure ,
+ErrorMessage
+)
+SELECT GETDATE() ,
+SYSTEM_USER ,
+100 ,
+12 ,
+1 ,
+'SomeProcedure' ,
+'Failed'
+GO313
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+SELECT ErrorTime ,UserName ,ErrorNumber ,
+ErrorSeverity ,ErrorState ,ErrorProcedure ,
+ErrorMessage
+FROM dbo.ErrorLog
+GO
+BACKUP LOG [AdventureWorks]
+TO DISK = N'D:\SQLBackups\AdventureWorks_Log1.bak'
+WITH NOFORMAT,
+INIT,
+NAME = N'AdventureWorks-Transaction Log Backup',
+SKIP,
+STATS = 10
+GO
+Listing 9.2: Insert data into ErrorLog; back up the AdventureWorks log.
+Now, we simulate our lost data issue, by issuing a DELETE against the Sales.SalesOrderDetail table, without a WHERE clause filter. The subsequent SELECT operation will
+return zero rows.
+BEGIN TRANSACTION Delete_Bad_SalesOrderDetail WITH MARK
+DELETE Sales.SalesOrderDetail
+-- Forgotten WHERE clause = Oops
+COMMIT TRANSACTION
+GO
+SELECT SalesOrderID ,
+SalesOrderDetailID ,
+CarrierTrackingNumber ,
+OrderQty ,
+ProductID ,
+SpecialOfferID ,
+UnitPrice ,
+UnitPriceDiscount ,
+rowguid ,
+ModifiedDate
+FROM Sales.SalesOrderDetail
+GO
+Listing 9.3: An erroneous (marked) transaction deletes the SaleOrderDetail table.314
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+Even though the data in the table has been deleted, the database is still online. It isn't
+until 5 p.m., when the end-of-day report is run that the boss discovers the problem. Now
+our focus shifts immediately to recovering the data, if possible. Since the database is in
+FULL recovery model, it is generally safe to assume that, as long as the entire LSN chain
+(see Chapter 8) is intact, the data can be recovered without data loss.
+It is important to first know the extent of the data loss, and its impact on the overall
+operational environment for your server (hopefully, via your auditing tool, as we'll discuss
+later in the chapter). In this case, the SalesOrderDetail information has been lost,
+which affects the ability to view the details of past orders, but doesn't stop new orders
+from being entered, or stop application changes to other data inside the database, for
+example, updating a customer's contact information.
+We can't afford to lose any changes or additions to the sales order data made after the
+data loss occurred so, in such cases, the quickest method of recovery may be to restore a
+copy of the database to a point in time before the data loss occurred, and then transfer the
+missing data back into the table in the live database. Preferably, we'll restore this copy to a
+different server but if only one SQL Server exists in the environment, the database can be
+restored with a different name side-by-side with the existing database.
+The first step, shown in Listing 9.4, is to back up the existing database transaction log
+using BACKUP LOG.
+USE [master]
+GO
+BACKUP LOG [AdventureWorks]
+TO DISK = N'D:\SQLBackups\AdventureWorks_Log2.bak'
+WITH NOFORMAT,
+INIT,
+NAME = N'AdventureWorks-Transaction Log Backup',
+SKIP,
+STATS = 10
+GO
+Listing 9.4: Final log backup of the live transaction log.315
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+At this stage, i.e. before we actually begin restoring and recovering the copy database,
+and then copying the lost data back to the live database, it is generally a recommended
+practice to take a separate full backup of the "damaged" database, as shown in Listing 9.5.
+This will secure the existing state before making any changes, protecting against further
+loss from another mistake during the data recovery process. It is extremely important that
+this backup be made to a different location than the existing full database backup, since
+this would overwrite the backup set, making recovery impossible.
+BACKUP DATABASE [AdventureWorks]
+TO DISK = N'D:\SQLBackups\AdventureWorks_Damaged.bak'
+WITH NOFORMAT,
+INIT,
+NAME = N'AdventureWorks-Damaged Full DB Backup',
+SKIP,
+STATS = 10,
+CHECKSUM
+GO
+Listing 9.5: Full backup of the damaged database.
+We now begin the RESTORE operations, starting by restoring our good full backup,
+from Listing 9.1. Note that, because we're restoring to a copy of the database rather
+than restoring to the live database, we specify the MOVE option to create new database
+files for the database, as shown in Listing 9.6. We also specify the NORECOVERY option,
+which puts the copy database into a restoring state and allows us to continue the restore
+operation by applying additional backups.
+--Begin Recovery Process
+RESTORE DATABASE [AdventureWorks_Copy]
+FROM DISK = N'D:\SQLBackups\AdventureWorks.bak'
+WITH FILE = 1,
+MOVE N'AdventureWorks_Data' TO N'D:\SQLDATA\AdventureWorks_Copy.mdf',
+MOVE N'AdventureWorks_Log' TO N'D:\SQLDATA\AdventureWorks_Copy_1.ldf',
+NORECOVERY,
+STATS = 10
+GO
+Listing 9.6: Restoring a copy of AdventureWorks from a full backup.316
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+In our example, the rogue DELETE statement was a marked transaction, and so we can
+recover the database to the point that this marked transaction began. To do this, all of
+the transaction log backups up to the one containing the marked transaction are restored
+using the RESTORE LOG command, specifying the STOPBEFOREMARK option with the
+marked transaction name, as well as the NORECOVERY option to allow subsequent log
+backups to be applied to the database, as shown in Listing 9.7.
+RESTORE LOG [AdventureWorks_Copy]
+FROM DISK = N'D:\SQLBackups\AdventureWorks_Log1.bak'
+WITH FILE = 1,
+NORECOVERY,
+STATS = 10,
+STOPBEFOREMARK = N'Delete_Bad_SalesOrderDetail'
+GO
+Listing 9.7: Restoring the first log backup.
+When applying log backups, the output information will contain the following statement
+until the log backup containing the marked transaction is restored.
+This log file contains records logged before the designated mark. The database is
+being left in the Restoring state so you can apply another log file.
+When this message appears, subsequent log backups must continue to be applied, to
+roll the database forward in time to the marked transaction. The first log backup to be
+restored that does not contain this message is the log backup that contains the marked
+transaction, and no further log backups need to be applied to the database to recover the
+lost data. In this example, the second log backup contains the marked transaction, and so
+needs to be restored.
+RESTORE LOG [AdventureWorks_Copy]
+FROM DISK = N'D:\SQLBackups\AdventureWorks_Log2bak'
+WITH FILE = 1,
+NORECOVERY,
+STATS = 10,
+STOPBEFOREMARK = N'Delete_Bad_SalesOrderDetail'
+GO
+Listing 9.8: Restoring the second log backup, containing the marked transaction.317
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+Restoring this log file will not output the message, meaning that the database can be
+recovered using the RESTORE DATABASE command and the WITH RECOVERY option. The
+database will enter the recovery process, which will roll back the marked transaction, as
+well as any changes that occurred after, or were uncommitted when the marked transaction began.
+RESTORE DATABASE [AdventureWorks_Copy]
+WITH RECOVERY
+GO
+Listing 9.9: Recovering the AdventureWorks_Copy database.
+A simple query will validate that the copy database has the missing data, and this data
+can now be copied back into the production database using an INSERT statement, or the
+Import/Export wizard, or a SSIS Package.
+When inserting the data back into the original Sales.SalesOrderDetail table, it
+is necessary to turn on IDENTITY_INSERT for the table, in order to preserve the
+SalesOrderDetaiID values as they exist in the restored copy, and prevent new
+identity values from being generated as the rows are reinserted into the live database,
+as shown in Listing 9.10.
+USE [AdventureWorks]
+GO
+SET IDENTITY_INSERT Sales.SalesOrderDetail ON
+INSERT INTO Sales.SalesOrderDetail
+( SalesOrderID , SalesOrderDetailID ,
+CarrierTrackingNumber , OrderQty ,
+ProductID , SpecialOfferID ,
+UnitPrice ,UnitPriceDiscount ,
+rowguid , ModifiedDate
+)
+SELECT SalesOrderID , SalesOrderDetailID ,
+CarrierTrackingNumber , OrderQty ,
+ProductID , SpecialOfferID ,
+UnitPrice , UnitPriceDiscount ,
+rowguid , ModifiedDate318
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+FROM AdventureWorks_Copy.Sales.SalesOrderDetail
+WHERE NOT EXISTS ( SELECT SalesOrderDetailID
+FROM Sales.SalesOrderDetail )
+SET IDENTITY_INSERT Sales.SalesOrderDetail OFF
+GO
+Listing 9.10: Inserting the lost data back into AdventureWorks.
+As a sanity check, it makes sense to validate that the data was "restored" to the live
+database in the same state as it existed in the copy database, either by manually reviewing
+the two datasets or, if the data sets are very large, using the EXCEPT operator to examine
+any data that is different between the two tables, as shown in Listing 9.11.
+-- comparing both data sets
+SELECT *
+FROM Sales.SalesOrderDetail
+GO
+SELECT *
+FROM AdventureWorks_Copy.Sales.SalesOrderDetail
+GO
+-- data differences
+SELECT *
+FROM Sales.SalesOrderDetail
+EXCEPT
+SELECT *
+FROM AdventureWorks_Copy.Sales.SalesOrderDetail
+GO
+Listing 9.11: Checking the state of the reinserted data.
+Restore to a point in time
+This previous example used a marked transaction to establish the point of recovery but,
+in most cases, a point-in-time recovery will be used to apply the transaction logs up to a
+known point in time before the data loss occurred. Once the point in time is reached in
+the RESTORE LOG process, the database can be recovered.319
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+If the exact time when the data loss occurred is unknown, one option is to restore a
+backup of the database in STANDBY mode. This allows further log backups to be
+restored but, unlike when using NORECOVERY, the database is still readable. So the
+scheme might be:
+1. Restore a full backup of the database, in STANDBY mode, alongside the live database.
+2. Gradually roll the database forward, by applying each log file to the standby database,
+till you reach the point when the bad transaction occurred, and data was lost.
+3. Copy the lost data across to the live database and drop the restored copy.
+Listing 9.12 restores a copy of AdventureWorks in STANDBY mode.
+--Begin Recovery Process
+RESTORE DATABASE [AdventureWorks_Copy]
+FROM DISK = N'D:\SQLBackups\AdventureWorks.bak'
+WITH FILE = 1,
+MOVE N'AdventureWorks_Data' TO
+N'D:\SQLDATA\AdventureWorks_Copy.mdf',
+MOVE N'AdventureWorks_Log' TO
+N'D:\SQLDATA\AdventureWorks_Copy_1.ldf',
+STANDBY =
+N'D:\SQLBackups\AdventureWorks_Copy_UNDO.bak',
+STATS = 10
+GO
+Listing 9.12: Restoring a full backup of AdventureWorks in STANDBY.
+The WITH STANDBY option specifies an undo file to allow read-only access to the
+restoring database and allow continued RESTORE LOG operations to occur.
+RESTORE LOG [AdventureWorks_Copy]
+FROM DISK = N'D:\SQLBackups\AdventureWorks_Log2.bak'
+WITH FILE = 1,
+STANDBY =
+N'D:\SQLBackups\AdventureWorks_Copy_UNDO.bak',320
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+STATS = 10,
+STOPAT = 'Jan 05, 2011 11:00 AM'
+GO
+Listing 9.13: Restoring log backups to the standby database.
+This process is not necessarily straightforward, and can be quite time-consuming.
+Unless you've purchased a specialized log reading tool, and can interrogate the log
+backup directly, rolling the logs forward can mean a series of painstaking steps involving
+restoring a log, checking the data, restoring a bit further, and so on, to identify the point
+in the log chain where the data was lost.
+Recovering without a backup
+The depth of trouble in which you might find yourself, and the extent of potential data
+loss, will depend on which backups you do, and don't, have.
+A valid full backup is the starting point for every recovery situation; without one there is
+little hope of recovering data lost due to a mistake. In short, if absolutely no full backup of
+the database exists, nothing anyone can do will help recover a missing object or data.
+The first thing to do, in the event of a data loss incident, is to check the current recovery
+model of the database, as shown in Listing 9.14.
+-- SQL Server 2000
+SELECT name ,
+DATABASEPROPERTYEX(name, 'Recovery')
+FROM sysdatabases
+-- SQL Server 2005/2008
+SELECT name ,
+recovery_model_desc
+FROM sys.databases
+Listing 9.14: Checking the recovery model.321
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+If the database is in SIMPLE recovery, there is no real hope of recovering with zero data
+loss, since the only recovery point is the latest full or differential backup. It's not possible
+to take a log backup in this recovery model, and the transaction log records are truncated
+automatically at CHECKPOINT allowing the space to be reused (log truncation is discussed
+in full detail in Chapter 8). At this point, the only option is to confess the mistake to
+management and pray for clemency, which may not be forthcoming.
+If the database is in FULL recovery but there has never been a full database backup,
+then the database is actually functioning as if it were in SIMPLE recovery and, again,
+it won't be possible to recover the lost data. When a database is changed from the
+SIMPLE recovery model to the FULL recovery model, the transaction log continues to
+be truncated at CHECKPOINT as it would under SIMPLE recovery until a full backup of
+the database is taken, which restarts the log chain. As of SQL Server 2005, the BACKUP
+LOG command will fail for a database using the FULL recovery model if an initial full
+backup has not been performed. This was a change from SQL Server 2000, which would
+allow the log backups to be taken even though they were useless, without a full backup to
+establish the start of the LSN chain.
+If the database is in FULL recovery, and it has had a full backup since the database was
+switched to FULL recovery, but no log backups, then there may be some small hope. If
+you're fairly certain that the LSN chain is intact (e.g. no one ever took a log backup and
+deleted it), then it may be that you can simply take a log backup and proceed as described
+in the previous section.
+However, if the LSN chain has been broken, by manual log truncation, a corrupt log
+backup, or a missing log backup (see Chapter 8), then this route will be closed. However,
+it may still be possible that the specific actions that resulted in data loss exist inside
+the transaction log and that a third-party tool may be able to read the log records and
+generate the INSERT, UPDATE or DELETE statements to reverse the operation. It's worth
+a try, but if the log records describing the change have been lost, then not even thirdparty tools will be able to help.322
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+Log recovery tools
+There are a couple of tools on the market that can attempt to recover the lost information
+or object from the transaction log. If you are on SQL Server 2000, Red Gate offers a free
+tool, SQL Log Rescue (http://www.red-gate.com/products/SQL_Log_Rescue/index.
+htm), which can be used to attempt recovery. For SQL Server 2005 and 2008, ApexSQL
+offers the ApexSQL Log tool (http://www.apexsql.com/sql_tools_log.asp) which can
+potentially recover the information from the transaction log. It should be noted that,
+while these tools offer the potential for recovery, they do not guarantee it, and should
+not be relied upon. The only guaranteed method of recovery is a solid backup plan for
+the database.
+Recovering objects from source control
+If the loss is a database object and not data, for example, a stored procedure, trigger,
+function or view, the object should be recoverable without restoring a backup of the
+database. Any database code should be stored inside of a source control management
+system like Team Foundation Server, Visual Source Safe, Subversion, CVS, PVCS or one
+of the numerous other products available for source control. Recovery of an object from
+source control is generally as simple as checking the latest production revision out and
+redeploying the object back to the database.
+If no source control management system is being used, the same steps used to recover
+lost data can be used to recover the missing database object. The only difference in the
+process is that the object can be scripted from the restored copy and then created on the
+production database from the script.323
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+Recovering data from a secondary/replica database
+When planning for disaster recovery it is imperative that you thoroughly understand
+the details of what specific configurations do or don't provide. SQL Server offers a lot of
+out-of-the-box high availability options, including database mirroring, log shipping, replication, and clustering. In addition to these, most hardware vendors offer high availability
+options, such as RAID, disk mirroring, and SAN mirroring and replication.
+It is common to use a combination of hardware and SQL Server high availability options
+to protect against the impacts of hardware failures, but none of these options offers
+protection against changes to the database that occur inside of SQL Server. Most of
+these technologies, with the exception of clustering, which maintains a single copy of
+the database files on a shared SAN disk, are used to keep duplicate copies of the database,
+but the problem is that as changes occur in the principal database, they are made to the
+duplicated databases as well.
+It is technically possible to recover from a loss when using log shipping or replication
+if the change is caught fast enough, but this can be complicated, and could require
+rebuilding the configuration after the recovery was performed.
+In log shipping configurations, it may be possible to put the log-shipped copy database
+into read-only, standby mode, and then query out the deleted data, before the transaction
+log containing the change is applied to the log-shipped copy. However, if a point-in-time
+restore is required including the most recent log backup file, the log shipping configuration would have to be reinitialized after the data recovery was completed, since the
+point-in-time restore of the log would break the log shipping.
+With replication configurations, depending on the topology, the process of inserting
+rows back into a publisher by querying a subscriber can cause conflicts to occur when the
+INSERT operations are replicated back down to the subscriber(s). In such cases, it may be
+necessary to split the replication, with the subscriber being used to reconstitute the data
+and then reinitialize the subscriber after the data recovery operation has been completed.324
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+Finding the Culprit
+After recovering the missing objects or data, your focus can turn towards finding out
+who made the fateful modification. This can be very hard, unless some form of auditing
+mechanism is already in place.
+In SQL Server 2000, no auditing mechanisms are enabled by default. However, in SQL
+Server 2005 and 2008, the default trace is, as its name might suggest, active by default. It
+captures a number of important trace events that can be used to identify changes made to
+the database schema, and who made them. However, the default trace does not contain
+any information about data modification statements (INSERT, UPDATE, DELETE).
+The default trace is configured to write its trace files to the ErrorLog path for the SQL
+Server instance. It uses file rollover when the current trace file reaches 20 MB in size,
+and it maintains a maximum of five trace files. Once the fifth file is full, the oldest file is
+deleted, meaning that the trace data is only retained for a certain period.
+Details of the default trace, including rollover characteristics, the file to which the trace is
+writing, and so on, can be found through the sys.traces dynamic management view.
+SELECT *
+FROM sys.traces
+WHERE is_default = 1 ;
+Listing 9.15: Querying sys.traces for the default trace characteristics.
+Unlike user-defined traces, the default trace cannot be changed, but it can be disabled
+completely, using sp_configure. The full list of events that the default trace collects
+can be found by running the query in Listing 9.16.325
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+SELECT DISTINCT
+e.trace_event_id ,
+e.name
+FROM sys.fn_trace_geteventinfo (1) t
+JOIN sys.trace_events e
+ON t.eventID = e.trace_event_id
+Listing 9.16: Events collected by the default trace.
+The Object:Deleted and Object:Altered trace events can be used to investigate
+accidental changes to, or removal of, any table or other object in the database.
+The contents of a trace file can be read using the sys.fn_trace_gettable system
+function. If the trace is configured to use file rollover, as is the default trace, then the
+function will read the trace file provided, plus any subsequent rollover files. If you use the
+filename, Log.trc, then any file in that path with "Log" as its base name, will be read.
+DECLARE @FileName NVARCHAR(260)
+SELECT @FileName = SUBSTRING(path, 0,
+LEN(path) - CHARINDEX('\',
+REVERSE(path)) + 1)
++ '\Log.trc'
+FROM sys.traces
+WHERE is_default = 1 ;
+SELECT loginname ,
+hostname ,
+applicationname ,
+databasename ,
+objectName ,
+starttime ,
+e.name AS EventName ,
+databaseid
+FROM sys.fn_trace_gettable(@FileName, DEFAULT) AS gt
+INNER JOIN sys.trace_events e
+ON gt.EventClass = e.trace_event_id
+WHERE ( gt.EventClass = 47 -- Object:Deleted Event
+-- from sys.trace_events
+OR gt.EventClass = 164326
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+) -- Object:Altered Event from sys.trace_events
+AND gt.EventSubClass = 0
+AND gt.DatabaseID = DB_ID('AdventureWorks')
+Listing 9.17: Reading a trace file using sys.fn_trace_gettable.
+As noted earlier, if the default trace has rolled over five times, or the SQL Service has been
+restarted five times, since the object was changed or dropped, the information about who
+made the change, and when, may not exist.
+However, if the database is in the FULL recovery model then the information may still
+exist in the transaction log or transaction log backups. One of the third-party tools
+mentioned in the Recovering without a backup section of this chapter may be able to read
+the backups or log file to identify who made the change.
+Prevention is Better than Cure
+Benjamin Franklin once said, "An ounce of prevention is worth a pound of cure." This
+now-famous quote was made in reference to fire-fighting, in a time when people who
+suffered fire damage to their homes also suffered irreversible economic loss. In 1752, he
+helped establish the Philadelphia Contribution for Insurance Against Loss by Fire to help
+ensure that people with insurance policies were not financially drained by the damage
+caused by a house fire.
+These days, the loss of data can be equally damaging economically, resulting in the loss
+of business, as well as fees, penalties, or even fines. Fortunately, a little bit of up-front
+work and planning will, in most cases, prevent the problem from occurring, or at least
+minimize the impact that a loss causes.
+First, it's important to accept that, regardless of how strictly you control write-access to
+your databases, accidents can, and will, happen. At some point, a user or application with
+permission to modify objects and data in the database for perfectly legitimate reasons,327
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+will make a mistake, and cause data loss. As such, it's vitally important to have in place
+a recovery plan that will enable you to recover from such losses, as well as from other
+disasters, such as hardware failure.
+Having said this, it's also important to realize that the cause of most data losses can be
+traced to inadequate change control, and to developers, analysts, or other employees
+who had "too many rights" inside of a production database. As such, steps must also
+be taken to tighten up the change control process, and to implement a strict security
+model for production environments, which should also be replicated in development
+and testing environments.
+Plan for recovery from all data losses
+Planning for recovery is not just about planning to recover from a crashed or corrupt
+database; it's planning to recover from any type of problem, including the accidental
+deletion or truncation of a table. The only way to protect against accidental data loss in
+every case that it could occur, including hardware failures, is to have a solid backup plan
+for the database. It is out of scope for this chapter to offer full coverage of configuring
+database backups in SQL Server. However, we will cover a couple of basics that must be
+understood, in the context of preventing data loss from user- or application-initiated
+changes to the database.
+In most cases, it is a relatively easy task to restore an accidentally-dropped or truncated
+object, or to undo an unwanted data change, as long as the database is operating in the
+FULL recovery model, and regular full (and differential) database backups are being taken,
+along with transaction log backups.
+While use of the FULL recovery model allows for point-in-time restoration of a
+database, its use also requires significantly more planning and resources. For example,
+when running in FULL, a database will require frequent backups of the transaction
+log throughout the day, in order to minimize log file growth and to support the agreed328
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+maximum data loss limits. For example, if the maximum acceptable data loss is 2 hours,
+then a viable backup plan might be to take weekly full backups, nightly differential
+backups, and transaction log backups every two hours. This scheme would restrict the
+number of restore operations required for a point-in-time recovery to a maximum of 13;
+the last full backup, the last differential backup, and a maximum of 11 transaction log
+backups in a given day. Of course, if the maximum acceptable data loss is 10 minutes
+instead of 2 hours, then you'll need to adapt the scheme appropriately.
+If it isn't possible to run certain databases in FULL recovery, for example due to lack
+of resources, then the extent of data loss that is possible must be made clear to all
+concerned. In SIMPLE recovery, the transaction log is auto-truncated and so it is likely
+that you will only be able to restore an object to the time of the last full or differential
+backup. The exposure to risk of data loss can be minimized by taking more frequent full
+backups, and/or interspersing full backups with differential backups but, ultimately, some
+degree of data loss, equating to the time between the loss occurring and the time the last
+backup was taken, is inevitable. If data loss is unacceptable under any circumstance, the
+SIMPLE recovery model won't be sufficient to meet your business needs.
+Even if measures are put in place to minimize the time it takes to discover the problem
+(e.g. change logging), it's likely that the problem will not be discovered and addressed
+before the log is truncated, rendering useless any log reading tools (assuming one is
+available in the first place).
+Recovery of dropped or erroneously-modified database objects, such as stored procedures, is generally possible without losing any changes, even in SIMPLE model, unless the
+code changes occur more frequently than you have differential backups from which to
+recover. Unfortunately, it's still true that many developers have direct production access
+to the systems and change/deploy code all the time without any release process.
+Regardless of the recovery model in use, it is important that the actual backup files be
+stored in a secure location that is separate from the actual disks that hold the database
+files. This protects the backups from corruption in the event of a critical disk failure that329
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+causes database corruption. The backup files would generally be stored on some form of
+tape media, or backup appliance using RAID storage.
+It's also important, though often overlooked, that the backup files are retained for an
+adequate period of time. I've seen cases where backups were being taken, but point-intime recovery of a dropped object wasn't possible because the retention period of the log
+backups was too low.
+Implement a change control process
+One of the biggest causes of accidentally-dropped objects or erroneously-deleted data
+in a production database is the lack of any established and documented change control
+process. Any change to a production database should be developed in a development
+environment, and then tested in a testing or staging environment that mimics the actual
+production environment. This includes mimicking, in the development and test systems,
+the minimal access rights that a user will (or at least should, as discussed shortly) have in
+the production database.
+A common argument against this kind of configuration is that the hardware and
+management costs associated with maintaining three separate environments are too
+high. There are several counter-arguments to this. Firstly, the cost of setting up separate
+development and test systems isn't as high as you might think, especially with virtualization. Also, bear in mind that the development server doesn't need to match the
+configuration of the production server, since it won't see normal production load, and
+unless full regression tests using production loads are run against the testing or staging
+environment, it also doesn't require a matching configuration to production.
+The most powerful counterargument, however, takes the form of a question: "How much,
+per minute, does a database outage cost the company?" If you allow development in
+production you greatly increase the risk of untested changes causing data loss or server330
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+outages. In most cases, a single outage caused by a deleted table or dropped object will
+exceed the cost of having a dedicated development and testing environments.
+Implement an appropriate security model
+In smaller IT environments, where a dedicated database administrator doesn't exist,
+security is an often overlooked aspect of database design and configuration. Generally,
+security lock-downs only occur as a knee-jerk reaction to a data loss incident.
+In my first year as a database developer, I worked in an environment where every
+developer had sysadmin rights in SQL Server, just because it was easier to create a
+login and check the box for the sysadmin role, providing access to anything, than it was
+to define the specific objects to which each person required rights. I worked in Query
+Analyzer or Management Studio, where it is very easy to fire off a query to any connected
+server, occasionally the wrong server. This ability, coupled with the rights necessary to
+drop a table from a production database, make for a potentially lethal combination. I
+know, because I made this mistake and brought the operations of a multi-million dollar
+a year business to a halt for a number of hours while a table was recovered from backup.
+Years later, as a Senior DBA, I was connected to the wrong server at the wrong time, and
+dropped an 80 GB table from a production database.
+The first instance was caused by human error coupled with database privileges that I
+simply should not have been granted. The second instance was just a really bad day at
+the office.
+There are two lessons here: the first one is that we should do everything we can to
+control, tightly, access rights in our production databases, and so minimize the risk of
+accidental data loss. Such concerns should override any objections on the grounds of
+reduced developer productivity. We'll discuss ways to implement this access control in the
+very next section.331
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+The second lesson is that accidents can, and will, still happen, even to the most experienced developer or DBA. Such mistakes can cost you your job, regardless of whether
+there are significant security problems in the environment. What might save you is the
+ability to recover the data very quickly, so make sure your recovery plan gives you the best
+possible chance of doing that.
+Access control measures
+A full discussion of access control mechanisms is out of scope for this book, but we'll
+cover a few of the key points to consider when devising your access control mechanisms.
+Some of the things I look out for, in particular, are:
+•	 Use of Windows logins – modern application design should favor the use of Windows
+rather than SQL logins, with write permissions being granted only to those Windows
+logins that really need them. Individual users that are not members of the DBA team
+should not have write access to production databases.
+•	 Database changes through stored procedures – changes to the database should be
+made through stored procedures, which offer far greater control over the level of
+damage a user can cause than is possible with direct, ad hoc access to the database.
+Under no circumstances should a non-DBA login have the ability to create, alter, or
+drop an object from a production database.
+•	 Strict regulation of membership of all database roles – this includes not only the
+obvious, high-privilege users and roles such as dbo or sysadmin, but also any role
+that proffers database modification privileges on its members, such as the db_owner,
+db_datawriter, or db_ddladmin database roles.
+•	 A particular problem is the application login that runs as the dbo user, or is a
+member of the db_owner role in SQL Server. The combination of a high-privilege
+role and application login details that are widely known by many users is a recipe for
+potential problems.332
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+Permissions through stored procedures
+One of the easiest ways to control what a user can or cannot do in a production database
+is to perform database modifications through stored procedures, and then restrict users
+to EXECUTE rights on those stored procedures.
+This effectively reduces the risks associated with the user having production access, since
+the only code they can execute is code that has already been written. However, if a stored
+procedure has the ability to DELETE every row in a database table, even minimizing user
+permissions to EXECUTE only won't prevent a problem.
+Using triggers to prevent or log changes
+It is possible that, due to the architecture of an application, it is not possible to
+implement a tight security model that prevents database access to all non-DBA or
+application service account users. In cases where it is impossible to lock down database
+access sufficiently, or where this will require long-term redesign of the application as well
+as the database, database triggers are a useful option. They can be used to prevent, or even
+log, changes that occur to the database, for auditing purposes. Two types of trigger exist
+in SQL Server:
+•	 DML triggers which fire when a change is made to the data in a table
+•	 DDL triggers which fire when a change is made to one of the database schema objects.
+DML triggers
+DML triggers can be created on a table or view and execute code in response to any data
+manipulation language event (INSERT, UPDATE, or DELETE) on the parent object. DML
+triggers can be used to provide audit tracking of all changes in a table, by writing information about the changes to a secondary table.333
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+Listing 9.18 shows how to create an audit table and auditing trigger to track changes to
+the Sales.SalesOrderDetail table in AdventureWorks.
+USE AdventureWorks
+GO
+CREATE TABLE Sales.SalesOrderDetailAudit
+(
+AuditID INT IDENTITY ,
+SalesOrderID INT ,
+SalesOrderDetailID INT ,
+CarrierTrackingNumber NVARCHAR(25) ,
+OrderQty SMALLINT ,
+ProductID INT ,
+SpecialOfferID INT ,
+UnitPrice MONEY ,
+UnitPriceDiscount MONEY ,
+LineTotal MONEY ,
+rowguid UNIQUEIDENTIFIER ,
+ModifiedDate DATETIME ,
+AuditAction VARCHAR(30) ,
+ChangeDate DATETIME ,
+ChangedBy SYSNAME ,
+CONSTRAINT PK_Audit_SalesOrderDetail_AuditID
+PRIMARY KEY CLUSTERED
+( AuditID ASC )
+)
+GO
+CREATE TRIGGER SalesOrderDetail_AUDIT_TRIGGER ON Sales.SalesOrderDetail
+AFTER INSERT, UPDATE, DELETE
+AS
+DECLARE @i_action VARCHAR(30) ,
+@d_action VARCHAR(30)
+SELECT @i_action = 'INSERTED' ,
+@d_action = 'DELETED'
+IF EXISTS ( SELECT 1
+FROM inserted )
+AND EXISTS ( SELECT 1
+FROM deleted )
+--RECORD WAS UPDATED
+BEGIN334
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+SELECT @i_action = 'UPDATED_TO' ,
+@d_action = 'UPDATED_FROM'
+END
+INSERT INTO Sales.SalesOrderDetailAudit
+( SalesOrderID , SalesOrderDetailID ,
+CarrierTrackingNumber , OrderQty ,
+ProductID , SpecialOfferID ,
+UnitPrice , UnitPriceDiscount ,
+LineTotal , rowguid ,
+ModifiedDate , AuditAction ,
+ChangeDate , ChangedBy
+)
+SELECT SalesOrderID , SalesOrderDetailID ,
+CarrierTrackingNumber , OrderQty ,
+ProductID , SpecialOfferID ,
+UnitPrice , UnitPriceDiscount ,
+LineTotal , rowguid ,
+ModifiedDate , @i_action ,
+GETDATE() , ORIGINAL_LOGIN
+FROM INSERTED
+UNION ALL
+SELECT SalesOrderID , SalesOrderDetailID ,
+CarrierTrackingNumber , OrderQty ,
+ProductID , SpecialOfferID ,
+UnitPrice , UnitPriceDiscount ,
+LineTotal , rowguid ,
+ModifiedDate , @d_action ,
+GETDATE() , SYSTEM_USER
+FROM DELETED
+GO
+Listing 9.18: A DML trigger to log data changes to an audit table.
+Any DML operation performed against the Sales.SalesOrderDetail table will be
+logged to the audit table, with the type of action performed, when it occurred, and who
+made the change. Auditing in this manner requires more space inside the database, since
+every operation is duplicated in the audit table. To demonstrate how this auditing works,
+we'll UPDATE the OrderQty for one of the rows (WHERE SalesOrderDetailID =1) and
+then SELECT the rows from the audit table, as shown in Listing 9.19.335
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+UPDATE Sales.SalesOrderDetail
+SET OrderQty = 10
+WHERE SalesOrderDetailID = 1
+GO
+SELECT *
+FROM Sales.SalesOrderDetailAudit
+GO
+Listing 9.19: An audited UPDATE on the SalesOrderDetail table.
+The UPDATE statement wrote to the audit table the original state of the data, as well
+as the state of the data after the UPDATE. Using this information, the operation can be
+undone by issuing another UPDATE with the original value, or by performing a JOIN to
+the audit table to correct multiple rows in a set based operation.
+UPDATE sod
+SET sod.OrderQty = soda.OrderQty
+FROM Sales.SalesOrderDetail sod
+JOIN Sales.SalesOrderDetailAudit soda
+ON sod.SalesOrderDetailID =
+soda.SalesOrderDetailID
+WHERE soda.AuditAction = 'UPDATED_FROM'
+AND soda.SalesOrderDetailID = 1
+Listing 9.20: Reverting the UPDATE using the audit table.
+In a production environment it is likely that, over time, a row will have been updated
+more than once, so you'll want to target the WHERE clause to changes from a specific date
+range, by placing an additional predicate on the ChangeDate column of the audit table.
+Along with writing the changes to an audit table, a DML trigger can also be used to
+prevent changes, based on the number of rows being affected. This is accomplished by
+checking the number of rows in the inserted and deleted tables in the trigger and
+issuing a ROLLBACK if they exceed a set value, as shown in Listing 9.21.336
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+CREATE TRIGGER SalesOrderDetail_Prevent ON Sales.SalesOrderDetail
+FOR UPDATE, DELETE
+AS
+DECLARE @INS INTEGER ,
+@DEL INTEGER
+SELECT @INS = COUNT(*)
+FROM INSERTED
+SELECT @DEL = COUNT(*)
+FROM DELETED
+IF ( ( @INS > 1000
+AND @DEL > 1000
+)
+OR @DEL > 1000
+)
+BEGIN
+PRINT 'You must disable Trigger "Sales.SalesOrderDetail_Prevent" to
+change more than 1000 rows.'
+ROLLBACK
+END
+GO
+Listing 9.21: Preventing any UPDATE that would affect more than 1,000 rows.
+Attempting to UPDATE or DELETE more than 1,000 rows of data will cause the transaction to rollback and return the following error:
+You must disable Trigger "Sales.SalesOrderDetail_Prevent" to change more than 1000
+rows.
+Msg 3609, Level 16, State 1, Line 1
+The transaction ended in the trigger. The batch has been aborted.
+If the operation is an intended operation, the trigger can be disabled using the DISABLE
+TRIGGER statement allowing the operation to complete, and then using ENABLE
+TRIGGER to turn the trigger back on once the operation completes.337
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+DISABLE TRIGGER Sales.SalesOrderDetail_Prevent
+ON Sales.SalesOrderDetail
+-- Perform data changes
+ENABLE TRIGGER Sales.SalesOrderDetail_Prevent
+ON Sales.SalesOrderDetail
+Listing 9.22: Disabling and enabling DML triggers.
+DDL triggers
+DDL triggers were added to SQL Server 2005 and are similar to DML triggers except that
+they fire in response to Data Definition Language events.
+DDL triggers can be used to log database changes as well as prevent the changes from
+occurring at all. Unlike DML triggers, DDL triggers can be scoped to a specific database,
+or at the server level, and they can be configured to fire in response to a much larger set
+of events. DDL events are grouped into a hierarchy to allow a trigger to fire for multiple
+events while simplifying the trigger's definition.
+A full list of the DDL Events and Groups can be found in the Books Online topic, DDL
+Event Groups (http://msdn.microsoft.com/en-us/library/bb510452.aspx).
+The Books Online topic, Understanding DDL Triggers (http://msdn.microsoft.com/
+en-us/library/ms175941.aspx) has an example DDL trigger, named "safety," which
+prevents dropping or altering any table in a database. In a similar manner to the previous
+DML trigger, it does so by issuing a ROLLBACK to prevent the change. New tables can
+still be created with this trigger in place, or the trigger can be disabled to allow approved
+changes to occur, and then the trigger can be enabled to prevent further changes.338
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+The AdventureWorks database also contains a DDL trigger, named ddlDatabaseTriggerLog, which logs DDL changes to the DatabaseLog table. The trigger is disabled
+by default but can be used as a template for creating an auditing trigger for DDL Events.
+DDL triggers do not have an inserted or deleted virtual table, as DML triggers do.
+Instead the EVENTDATA() system function has to be called, which returns an XML
+document containing the event information.
+Summary
+My philosophy with regard to recovering from data loss is that prevention is better than
+cure. The two key pillars of this philosophy are strict change control processes and appropriate security permissions.
+I know from hard, personal experience that human error is the most prevalent cause of
+accidental data loss. I also know that the two biggest enabling factors for these accidents
+are development activity directly on production databases, and users with more rights
+than they need.
+Of course, potential data loss due to hardware failure, power loss, or natural disaster,
+is harder to predict or control. The use of disaster recovery solutions such as failover
+clustering, database mirroring, log shipping, or transactional replication, will put you
+in a stronger position to handle such situations, but generally won't protect you from
+data loss due to changes directly to a SQL Server database. They are no substitute for a
+comprehensive, and tested, backup and recovery plan.
+For each SQL Server database, a DBA must implement a backup strategy, consisting of
+full, differential and transaction log backups, as appropriate, that will allow data to be
+recovered to within what the business deems to be an acceptable level of data loss for that
+database. These backups must be stored securely, along with the documented recovery
+plan, which must be tested regularly to ensure that data can be recovered, and systems
+brought back online, within an acceptable time.339
+Chapter 9: Truncated Tables, Dropped Objects and Other Accidents Waiting to Happen
+With this backup and recovery strategy in place, you can sleep sounder in the knowledge
+that if disaster strikes, you'll at least be working through the techniques covered in the
+Recovering from backup section of this chapter, rather than the ones in the Recovering
+without a backup section, which could equally as well been called Last Ditch Efforts to Save
+your Job.
+Having safely recovered your data, attention can turn to the auditing techniques that
+will help identify the cause and to the change and access control measures that can help
+prevent it happening again.340

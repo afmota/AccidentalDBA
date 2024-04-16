@@ -1,0 +1,895 @@
+Chapter 8: Large or Full Transaction
+Log
+A transaction log is a physical file in which SQL Server stores a record of all the transactions and data modifications performed on the database with which the log file is
+associated. It is arguably the single most important component of a SQL Server database,
+since the SQL Server engine uses it to ensure transaction durability (all valid, committed
+data will be preserved) and transaction rollback (the effects of any partial, uncommitted
+transactions, in the data file, can be "undone"), and the SQL Server DBA can use it to
+restore a database to a previous point in time, in the event of a disaster.
+Unfortunately, however, it is also one of the most misunderstood and mismanaged
+components of SQL Server and the resulting problems are a frequent source of questions
+and pleas for help in the online technical forums. This chapter will examine, briefly, how
+the transaction log works, and then discuss the most common problems and forms of
+mismanagement that lead to runaway growth of the transaction log, including:
+•	 performing index maintenance
+•	 operating a database in FULL recovery mode, without taking log backups
+•	 long-running or uncommitted transactions that prevent space in the transaction log
+from being reused.
+Of course, if runaway growth is left unchecked your log file may expand until it eats up all
+of your disk space, at which point you'll receive the infamous 9002 (transaction log full)
+error, and the database will become read-only. We'll cover the correct ways to respond to
+runaway log growth and the 9002 error, and also explain why commonly given advice to
+truncate the log and shrink it is often dangerous.274
+Chapter 8: Large or Full Transaction Log
+Finally, we'll cover strategies for ensuring smooth and predictable growth of your log file,
+while minimizing problems associated with log fragmentation. In a busy database, a large
+transaction log may be a simple fact of life and, managed properly, this is not necessarily a
+bad thing, even if the log file space is unused a majority of the time.
+Note that in order to focus on the topic of diagnosing and curing a runaway or full transaction log, we assume prior knowledge of related topics such as database recovery models.
+If you need a refresher, a good source is Gail Shaw's Recovery Models article, at http://
+www.sqlservercentral.com/articles/Administration/75461/.
+How the Transaction Log Works
+Whenever a change is made to a database object or the data it contains, not only is the
+data or object updated in the data file, but also details of the change are recorded as a
+sequence of log records in the transaction log. Each log record contains the details of a
+specific change that has been made to the database, allowing that change to be performed
+again as a part of REDO, or undone as a part of UNDO, during crash recovery. Other log
+records contain details regarding the ID of the transaction that performed the change,
+when that transaction started and ended, which pages were changed, the data changes
+that were made, and so on.
+SQL Server, like most transactional relational database systems, utilizes the Write-Ahead
+Logging (WAL) protocol for all data modifications that occur in all databases.
+The WAL protocol
+This is described by Chunder Mohan in the paper, "ARIES: A Transaction Recovery Method
+Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging"
+(http://www.cs.berkeley.edu/~brewer/cs262/Aries.pdf).275
+Chapter 8: Large or Full Transaction Log
+The WAL protocol dictates that before a data page is changed in non-volatile storage,
+the information describing the change to the data page must first be written to stable
+storage, allowing the change to be redone or undone in the event of a failure. SQL Server
+implements this protocol by logging the information describing changes to database
+objects and data pages using log records in the transaction log. Before a transaction that
+changes data in the database completes, the log records describing the changes must
+first be hardened to disk. Changes made to the data pages in the buffer cache are then
+subsequently written out to permanent storage in the database files at checkpoint, or
+by the Lazy Writer process when the instance is under memory pressure in the buffer
+pool. Uncommitted changes can also be written to the data file by the CHECKPOINT or
+Lazy Writer processes, as long as the log records describing those changes have been first
+written to the transaction log file.
+By always writing changes to the log file first, SQL Server has the basis for a mechanism
+that can guarantee that the effects of all committed transactions will ultimately be
+reflected in the data files, and that any data modifications on disk that originate from
+incomplete transactions, i.e. those for which neither a COMMIT nor a ROLLBACK have
+been issued, are ultimately not reflected in the data files.
+This process of reconciling the contents of the data and log files occurs during the
+database recovery process (sometimes called crash recovery), which is initiated automatically whenever SQL Server restarts, or as part of the RESTORE command.
+Any transactions that were committed, and therefore recorded in the transaction log,
+before the service was interrupted, or before the time to which the database is being
+manually restored, but are not reflected in the data files, will be "rolled forward" (redone).
+Likewise, any data changes in the database that are associated with uncommitted transactions will be "rolled back" (undone), by reading the relevant operations from the log file,
+and performing the reverse physical operation on the data.276
+Chapter 8: Large or Full Transaction Log
+In these ways, SQL Server ensures that either all the actions associated with a transaction
+succeed as a unit, or that they all fail, allowing SQL Server to return the database to a
+consistent state with regard to a particular point in time. As such, the transaction log
+represents one of the fundamental means by which SQL Server ensures data consistency
+and integrity during normal operation.
+How SQL Server writes to the transaction log
+The way in which SQL Server writes to the transaction log is basically different from
+the way it writes to data files. Writes to data files occur in a random fashion, since data
+changes affect random pages stored in the database. As such, the disk on which a data file
+is stored is regularly subject to multiple seek operations, which reposition the head to the
+correct disk cylinder in order to write the changes. Write performance can be improved
+by writing to the data files in a striped fashion utilizing a proportional fill methodology,
+where the amount of data written to a specific file is proportionate to the amount of free
+space in the file, compared to the amount of free space in other files in the filegroup.
+By contrast, SQL Server writes to the transaction log sequentially, one record after
+another, and so a disk storing only a transaction log will rarely need to perform random
+seek operations. Certain operations, such as transaction log backups, Change Data
+Capture jobs and the replication log reader agent, will read the transaction log in a
+"random" fashion, but writing operations are generally sequential and can be much faster.
+This is why the recommended best practice is to segregate the log file from the data files
+and store the former on physical disks that are configured for high-speed sequential
+writes, as discussed in Chapter 2, Disk I/O Configuration.
+The fact that writes are always sequential also means that SQL Server will only ever
+write to one transaction log file at a time. There is therefore no advantage, in terms of
+log writing performance, to having multiple transaction log files. The only reason to have
+more than one log file is if space considerations dictate the need for multiple log files, on
+different disks, in order to achieve the necessary log size for a database.277
+Chapter 8: Large or Full Transaction Log
+Understanding log truncation
+Log truncation is the mechanism through which SQL Server marks the space inside
+of the transaction log as available for reuse by the database. The allocated space inside
+of a transaction log file is internally divided into smaller segments known as virtual
+log files (VLFs), and the process of log truncation is simply the act of marking a VLF as
+"inactive" and so making the space in that VLF available for reuse. It does not, as the term
+"truncation" might suggest, reduce the physical size of the transaction log.
+A VLF can only be considered inactive if it contains no part of what is termed the active
+log. A full discussion of transaction log architecture is out of scope but, briefly, any log
+record relating to an open transaction is required for possible rollback and so must
+be part of the active log. In addition, there are various other activities in the database,
+including replication, mirroring and CDC (Change Data Capture) that use the transaction
+log and need transaction log records to remain around until they have been processed.
+These records will also be part of the active log.
+As discussed previously, transaction log files are sequential files and each log record
+inserted into the log file is stamped with a Logical Sequence Number (LSN). The log
+record with the lowest LSN (MinLSN) is defined as the oldest log record that may still be
+required for some database operation or activity, and this record marks the start of the
+active log. The log record with the highest LSN (i.e. the most recent record added) marks
+the end of the active log.
+A log record is no longer part of the active log if each of the following three conditions
+is met:
+1. It relates to a transaction that is committed, and so is no longer required for rollback.
+2. It is no longer required by any other database process, including a transaction log
+backup when using FULL or BULK LOGGED recovery models.
+3. It is older (i.e. has a lower LSN) than the MinLSN record.278
+Chapter 8: Large or Full Transaction Log
+Any VLF that contains no part of the active log is inactive and can be truncated, although
+the point at which this truncation occurs depends on the recovery model in use. In the
+SIMPLE recovery model, truncation can occur immediately upon CHECKPOINT; cached
+data pages are flushed to disk (after first writing the transaction details) and any VLFs that
+contain no part of the active log are truncated.
+In the FULL (or BULK LOGGED) recovery model, once a full backup of the database has
+been taken, the inactive portion of the log is not marked as reusable on CHECKPOINT,
+because it is necessary to maintain a complete LSN chain, and so allow point-in-time
+recovery of the database. Truncation can only occur upon a BACKUP LOG operation. In
+this case, once the log backup has backed up the log, it marks any VLFs that are no longer
+necessary as inactive and hence reusable.
+Later in the chapter, in the section entitled Lack of log space reuse, we'll discuss factors,
+such as uncommitted or long-running transactions, which can prevent space reuse and
+cause the log file to grow rapidly in size.
+Sizing and growing the log
+Whenever a log file needs to grow, and additional space is allocated, this space is divided
+evenly into VLFs, based on the amount of space that is being allocated. When additional
+space is allocated in small blocks, for example using a default ten percent auto-growth
+setting, the resulting transaction log may have a large number of small VLFs. When
+additional space is allocated in larger sizes, for example when initially sizing the log to 16
+GB in a single operation, the resulting transaction log has a small number of larger VLFs.279
+Chapter 8: Large or Full Transaction Log
+Transaction Log VLFs – too many or too few?
+SQL Server MVP Kimberly Tripp discusses the impact of VLF sizes and provides guidance for how to
+properly manage VLF size in her blog post, "Transaction Log VLFs – too many or too few?" (http://
+www.sqlskills.com/BLOGS/KIMBERLY/post/Transaction-Log-VLFs-too-many-or-too-few.
+aspx).
+A very high number of small VLFs, known as log file fragmentation, can have a considerable impact on performance, especially for crash recovery, restores and backups,
+particularly log backups; in other words, operations that read the log file. Conversely, if
+the database has only a few VLFs which are large in size, this can lead to problems related
+to rapid log growth in cases where truncation is delayed, for some reason (see the Lack
+of log space reuse section). For example, let's assume that each VLF is 1 GB in size. If all
+VLFs within the log file contain some part of the active log then the log file will grow in
+1 GB steps until some of the existing VLFs cease to contain any part of the active log, at
+which point it can be truncated by the next log backup if using FULL recovery, or the next
+CHECKPOINT operation in SIMPLE recovery. As such, it's important that the log is sized
+appropriately initially, and grown in appropriately-sized steps, to minimize fragmentation
+but also avoid tying up large portions of the log for long periods.
+There is also a second reason why it is very important to size the log appropriately and
+grow it in a very controlled fashion: for log files, each growth event is a relatively expensive
+operation. It is natural that both data and log files will grow in size over time, but whereas
+the process of adding new data files and expanding existing data files can be optimized to
+some degree by enabling instant file initialization, the same is not true for log files. When a
+data file is created or grows, the space allocated on disk has to be initialized, or zeroed out,
+by SQL Server to remove the remnants of any previous data. SQL Server 2005 introduced
+a new feature, instant file initialization, to allow the data files to allocate space on disk
+without having to fill the space with zeros. This feature however, does not apply to log
+files, which still require initialization and zeroing whenever space is allocated.280
+Chapter 8: Large or Full Transaction Log
+The transaction log, when properly managed, works in a circular fashion, and the starting
+point of the transactions that must be processed as a part of crash recovery is maintained
+in the database boot page. However, nothing tracks the position of the last log record
+requiring processing during crash recovery, so the log records are stamped with a parity
+bit that gets flipped when the transaction log reaches the end of the file and wraps back
+around to the beginning of the file. To prevent the possibility of introducing corruption
+by processing random data that existed previously on disk and matches the parity bit for
+the existing log records, the space being allocated must be zeroed out whenever the log
+file grows.
+Why can't the transaction log use instant initialization?
+For further information about transaction log zeroing, see Paul Randal's blog post, "Search Engine Q&A
+#24: Why can't the transaction log use instant initialization?" (http://sqlskills.com/BLOGS/PAUL/
+post/Search-Engine-QA-24-Why-cant-the-transaction-log-use-instant-initialization.
+aspx).
+Diagnosing a Runaway Transaction Log
+If you are experiencing uncontrolled growth of the transaction log, it is due either to an
+incredibly high rate of log activity, or to factors that are preventing space in the log file
+from being reused, or both.
+If the growth is due primarily to excessive log activity, you need to investigate whether
+there might be log activity that could be avoided, for example, by adjusting how you carry
+out bulk data and index maintenance operations, so that these operations are not fully
+logged (i.e. the BULK LOGGED recovery model is used for these operations). However,
+any bulk logged operation will immediately prevent point-in-time recovery to any point
+within a log file that contains records relating to the minimally logged operations. If this
+is not acceptable, you must simply accept a large log as a fact, and plan its growth and281
+Chapter 8: Large or Full Transaction Log
+management (such as frequency of log backups) accordingly, as described in the Proper
+Log Management section later in this chapter.
+If the growth is due to a lack of log space reuse, you need to find out what is preventing
+this reuse and take steps to correct the issue.
+Excessive logging: index maintenance operations
+Index maintenance operations are the second most common cause of transaction log
+usage and growth, especially in databases using the FULL recovery model. The amount of
+log space required to perform index maintenance depends on the following factors:
+•	 rebuild or reorganize – index rebuilds generally use a lot more space in the log
+•	 recovery model – if the risks to point-in-time recovery are understood and acceptable,
+then index rebuilds can be minimally logged by temporarily switching the database
+to run in BULK LOGGED recovery mode. Index reorganization, however, is always
+fully logged.
+Index rebuilds
+Rebuilding an index offline, using ALTER INDEX REBUILD (or the deprecated
+DBCC DBREINDEX in SQL Server 2000) drops the target index and rebuilds it from
+scratch (online index rebuilds do not drop the existing index until the end of the
+rebuild operation).
+Logging and online index rebuilds
+Online Index Rebuild is a fully-logged operation on SQL Server 2008 and later, whereas it is minimally
+logged in SQL Server 2005. Therefore, performing such operations in later SQL Server versions will
+require substantially more transaction log space. See: http://support.microsoft.com/kb/2407439.282
+Chapter 8: Large or Full Transaction Log
+In the FULL recovery model, index rebuilds can be a very resource intensive operation,
+requiring a lot of space in the transaction log. In the SIMPLE or BULK LOGGED recovery
+model, rebuilding an index is a minimally logged operation, meaning that only the allocations are logged, and not the actual pages changed, therefore reducing the amount of log
+space required by the operation.
+If you switch to the SIMPLE model to perform an index rebuild, the LSN chain will
+be automatically broken. You'll only be able to recover your database to a point of
+time contained in the previous transaction log backup. To restart the chain, you'll
+need to switch back to the FULL model and immediately take a full or differential
+database backup.
+If you switch to the BULK LOGGED model, the LSN chain is always maintained but there
+are still implications for your ability to perform point-in-time restores, since a log backup
+that contains a minimally logged operation can't be used to recover to a point in time. In
+other words, you won't be able to use the STOPAT option when restoring a log file that
+contains minimally logged operations. It is still possible to restore the entire transaction
+log backup to roll the database forward, and it is still possible to restore to a point in
+time in a subsequent log file, which doesn't contain any minimally logged operations.
+However, in the event of an application bug, or a user change that causes data to be
+deleted, around the same period as the minimally logged operation, it will not be possible
+to stop at a specific point in time in the log in which these changes are recorded, in order
+to recover the data that was deleted.
+If the ability to perform a point-in-time recovery is paramount for a database, the BULK
+LOGGED recovery model should not be used for index rebuilds or any other minimally
+logged operation, unless it can be done at a time when there is no concurrent user activity
+in the database.
+If the BULK LOGGED model is used, steps should be taken to minimize the time period
+where point-in-time restore is unavailable, and so minimize exposure to data loss. To do
+this, take a log backup in FULL mode, switch to BULK LOGGED, perform the index rebuild,
+then switch back to FULL and take another log backup.283
+Chapter 8: Large or Full Transaction Log
+A final important point to note is that an ALTER INDEX REBUILD operation occurs in a
+single transaction. If the index is large, this could represent a long-running transaction
+that will prevent space reuse in the log for its duration. This means that, even if you
+rebuild an index in SIMPLE mode, where you might think that the log should remain
+small since it is auto-truncated during a checkpoint operation, the log file can expand
+rapidly during the operation.
+Index reorganization
+In contrast to rebuilding an index, reorganizing (defragmenting) an index, using ALTER
+INDEX REORGANIZE (or the deprecated DBCC INDEXDEFRAG in SQL Server 2000) is
+always a fully-logged operation, regardless of the recovery model, and so the actual
+page changes are always logged. However, index reorganizations generally require less
+log space than an index rebuild, although this is a function of the amount of fragmentation that exists in the index; a heavily fragmented index will require more log space to
+reorganize than a minimally fragmented one.
+Furthermore, the ALTER INDEX REORGANIZE operation is accomplished using multiple,
+shorter transactions. Therefore, when performed in conjunction with frequent log
+backups (or when working in SIMPLE mode), log space can be made available for reuse
+during the operation, so minimizing the size requirements for the transaction log during
+the operation.
+For example, rebuilding a 20 GB index can require more than 20 GB of space for the
+rebuild operation because it occurs in a single transaction. However, reorganizing a 20 GB
+index requires much less log space because each page allocation change in the reorganization is a separate transaction, and so the log records can be truncated with frequent log
+backups, allowing the log space to be reused.284
+Chapter 8: Large or Full Transaction Log
+Strategies for controlling excessive logging
+If your organization has zero tolerance to any potential data loss, then you'll have no
+choice but to perform index rebuild operations in the FULL recovery model, and plan
+your log size and growth appropriately. If your Service Level Agreements (SLAs) and
+Operational Level Agreements (OLAs) allow some potential for data loss, then switching
+to BULK LOGGED recovery at the start of index rebuild can minimize the amount of space
+required to rebuild the index. However, do so in a way that minimizes exposure to data
+loss, as discussed earlier.
+If your database is in FULL recovery, and is subject to frequent index reorganization
+operations, then you might need to consider increasing the frequency with which you
+take log backups, especially during the time that the indexes are being rebuilt, in order to
+control the size of the log. Regardless of the frequency of log backups, the log will be at
+least as large as the largest index being rebuilt.
+Regardless of the recovery model in use, one can minimize the impact of index maintenance operations on the transaction log by reorganizing rather than rebuilding, if
+possible, and by only maintaining those indexes that really need it.
+Microsoft has provided guidelines that can be used for most, but not all, environments
+for determining when to rebuild an index versus when to reorganize it to minimize the
+impact of index maintenance operations. These guidelines can be found in the Books
+Online Topic, Reorganizing and Rebuilding Indexes (http://technet.microsoft.com/
+en-us/library/ms189858.aspx). They state that for fragmentation levels greater than 5
+percent but less than or equal to 30 percent, you should reorganize the index, and for
+fragmentation levels greater than 30 percent, you should rebuild it.
+It's also worth noting that rebuilding small indexes is generally not worthwhile. The
+commonly cited threshold is around 1,000 pages. These values are based on recommendations made by Paul Randal while he managed the storage engine development team
+at Microsoft, and which are documented in Books Online. Note, though, that this is
+guideline advice only and may not be appropriate for all environments, as discussed by285
+Chapter 8: Large or Full Transaction Log
+Paul in his blog post, Where do the Books Online index fragmentation thresholds come from?
+(http://www.sqlskills.com/BLOGS/PAUL/post/Where-do-the-Books-Online-indexfragmentation-thresholds-come-from.aspx).
+If you use the SSMS Maintenance Plans Wizard for index maintenance, it is an all-ornothing process: you either rebuild or reorganize all indexes in your database (and all
+databases in the maintenance plan) or you rebuild none of them. A better approach may
+be to use the sys.dm_db_index_physical_stats DMV to investigate fragmentation
+and so determine a rebuild/reorganize strategy based on need.
+Ola Hallengren's free maintenance scripts
+A comprehensive set of free maintenance scripts is made available online by Ola Hallengren. Ola's scripts
+demonstrate how to use sys.dm_db_index_physical_stats to perform index analysis for intelligent maintenance, and can be used as a replacement for Database Maintenance Plans created by the
+wizards in SSMS (http://ola.hallengren.com).
+Lack of log space reuse
+If you suspect log growth is being caused by the log space not being reused, your first
+job is to find out what's preventing reuse. Start by querying sys.databases, as shown
+in Listing 8.1, and see what the value of the column log_reuse_wait_desc is for the
+database mentioned in the error message.
+DECLARE @DatabaseName VARCHAR(50) ;
+SET @DatabaseName = 'VeryImportant'
+SELECT name ,
+recovery_model_desc ,
+log_reuse_wait_desc
+FROM sys.databases
+WHERE name = @DatabaseName
+Listing 8.1: Examining the value of the log_reuse_wait_desc column.286
+Chapter 8: Large or Full Transaction Log
+The value of the log_reuse_wait_desc column will show the current reason why log
+space cannot be reused. It is possible more than one thing is preventing log reuse. The
+sys.databases view will only show one of the reasons. It is therefore possible to resolve
+one problem, query sys.databases again and see a different log_reuse_wait reason.
+The possible values for log_reuse_wait_desc are listed in Books Online (http://
+msdn.microsoft.com/en-us/library/ms178534.aspx), but we'll cover the most common
+causes here, and explain how to safely ensure that space can start to get reused.
+FULL recovery model without log backups
+If the value returned for log_reuse_wait_desc, from the previous sys.databases
+query, is Log Backup, then you are suffering from one of the most common causes of
+a full or large transaction log, namely operating a database in the FULL recovery model
+(or less common, but still possible, the BULK_LOGGED recovery model), without taking
+transaction log backups.
+It varies, depending on the edition of SQL Server that is installed, but the model database
+is configured in FULL recovery mode at installation, for many editions. Since the model
+database is a template database that is used to create new databases in SQL Server, this
+configuration is inherited from model, by the new database.
+Using the FULL recovery model is a recommended practice for most production database
+environments, since it allows for point-in-time recovery of the database, minimizing data
+loss in the event of a disaster. However, a common mistake is then to adopt a backup
+strategy consisting entirely of full (and possibly differential) database backups without
+taking frequent transaction log backups. There are two big problems with this strategy:
+1. Taking full database backups only protects the contents of the data file, not the log
+file. The only way to properly protect the data that has changed since the last full or
+differential backup, which will be required for point-in-time restores, is to perform a
+log backup.287
+Chapter 8: Large or Full Transaction Log
+2. Full database backups do not truncate the transaction log. Only a log backup will
+cause the log file to be truncated. Without the latter, space in the log file will never be
+marked for reuse, and the log file will constantly grow in size.
+In order to perform a point-in-time recovery and control the size of the log, transaction
+log backups must be taken in conjunction with full and/or differential database backups.
+If you do discover that a lack of log backups is the cause of your log growth problems,
+the first thing to do is to verify that the database in question really does need the ability
+to recover to a point in time during a restore, and therefore needs to be operating in
+FULL recovery. If it doesn't, then switch to using the SIMPLE recovery model, where the
+inactive portion of the transaction log is automatically marked as reusable, at checkpoint.
+If the database does need to operate in the FULL recovery model, then start taking
+log backups. The frequency of the transaction log backups depends on a number of
+factors such as the frequency of data changes, and on SLAs for acceptable data loss in the
+event of a crash. Also, you should take steps to ensure that the log growth is controlled
+and predictable in future, as described in the Proper Log Management section, later in
+the chapter.
+Active transactions
+If the value returned for log_reuse_wait_desc is ACTIVE_TRANSACTION, then
+you are suffering from the second most common cause of a full or large transaction
+log in SQL Server: long-running or uncommitted transactions. As discussed in the
+Understanding log truncation section of this chapter, a VLF inside the transaction log
+can only be truncated when it contains no part of the active log, and if the database is
+using the FULL or BULK LOGGED recovery models, this truncation only occurs when the
+transactions contained in the VLF have been committed and backed up. Long-running
+transactions in a database delay truncation of the VLFs that contain the log records
+generated after the start of the transaction, including the log records generated by
+changes to data in the database by other sessions, even when those changes have been288
+Chapter 8: Large or Full Transaction Log
+committed. Additionally, the amount of space required by a long-running transaction
+will be increased by space reservations for "compensation log records," which are the log
+records that would be generated if the transaction were rolled back in the system. This
+reservation is required to ensure that the transaction can be reverted successfully without
+running out of log space during the rollback.
+Another common cause of the Active Transaction value for log_reuse_wait_desc
+is the presence of "orphaned" explicit transactions that somehow never got committed.
+Applications that allow for user input inside a transaction are especially prone to this kind
+of problem.
+Long-running transactions
+One of the most common operations that results in a long-running transaction, which
+also generates large numbers of log records in a database is archiving or purging of
+data from a database. Data retention tends to be an afterthought in database design,
+usually being considered after the database has been active for a period of time and is
+approaching the capacity limits of the available storage on a server.
+Usually, when the need to archive data arises, the first reaction is to remove the unneeded
+data from the database using a single DELETE statement, as shown in Listing 8.2.
+DELETE ExampleTable
+WHERE DateTimeCol < GETDATE() - 60
+Listing 8.2: Bulk data deletion.
+Depending on the number of rows that exist in the date range to be deleted, this can
+easily become a long-running transaction that will cause transaction log growth issues,
+even when the database is using the SIMPLE recovery model. The problem can be exacerbated by the presence of cascading FOREIGN KEY constraints or auditing triggers. If the
+table from which data is being deleted is referenced by other tables, using FOREIGN KEY289
+Chapter 8: Large or Full Transaction Log
+constraints that are designed to CASCADE ON DELETE, then details of the rows that are
+deleted through the cascading constraint will also be logged. If the table has a DELETE
+trigger on it, for auditing data changes, the operations being performed during the
+triggers execution will also be logged.
+To minimize the impact on the transaction log, the data purge operation should be
+broken down into a number of shorter, individual transactions. There are a number
+of ways to break a long-running transaction down into smaller batches. If cascading
+constraints or a DELETE trigger exist for a table, we can perform the DELETE operation
+inside of a loop, to delete one day of data at a time, as shown in Listing 8.3.
+DECLARE @StopDate DATETIME ,
+@PurgeDate DATETIME
+SELECT @PurgeDate = DATEADD(DAY, DATEDIFF(DAY, 0, MIN(DateTimeCol)), 0) ,
+@StopDate = DATEADD(DAY, DATEDIFF(DAY, 0, GETDATE()) - 60, 0)
+FROM ExampleTable
+WHILE @PurgeDate < @StopDate
+BEGIN
+DELETE ExampleTable
+WHERE DateTimeCol < @PurgeDate
+SELECT @PurgeDate = DATEADD(DAY, 1, @PurgeDate)
+END
+Listing 8.3: Breaking down data purges into smaller transactions.
+Using this model for purging data, the duration of each DELETE transaction is only the
+time required to delete a single day's data from the table, plus the time required for any
+triggers or cascading constraints to perform their operations. If the database uses the
+SIMPLE recovery model, the log records generated by each daily purge will be truncated
+the next time checkpoint occurs. If the database uses the FULL or BULK LOGGED recovery
+model, the log records generated by each daily purge will be truncated after the next log
+backup that occurs for the database, if no part of the active log exists inside the VLFs
+affected by the purge.290
+Chapter 8: Large or Full Transaction Log
+When cascading constraints or auditing triggers are not a factor in the process, a different
+method can be used to purge the data from the table while minimizing the transaction
+duration. Instead of performing a single day DELETE operation, which can affect more or
+less data depending on the number of rows that exist for a specific date, the TOP operator
+can be used inside the DELETE statement to limit the number of rows affected by each
+loop of the operation. By capturing into a variable the number of rows affected by the
+DELETE operation, using @@ROWCOUNT, the operation can continue to purge data from
+the table in small batches, until the value of @@ROWCOUNT is less than the number of rows
+specified in the TOP clause of the DELETE statement, as shown in Listing 8.4.
+This method only works when triggers and cascading constraints aren't being used
+because, when they are, the result of @@ROWCOUNT will not be the actual rows deleted
+from the base table, but instead the number of rows that are affected by the trigger
+execution or through enforcing the cascading constraint.
+DECLARE @Criteria DATETIME ,
+@RowCount INT
+SELECT @Criteria = GETDATE() - 60 ,
+@RowCount = 10000
+WHILE @RowCount = 10000
+BEGIN
+DELETE TOP ( 10000 )
+FROM ExampleTable
+WHERE DateTimeCol < @Criteria
+SELECT @RowCount = @@ROWCOUNT
+END
+Listing 8.4: Using the TOP operator inside the DELETE statement for data purges.
+These methods can be used in any edition of SQL Server 2000, 2005, and 2008 to
+minimize transaction duration during data purge operations.
+However, if the database is SQL Server 2005 or 2008 Enterprise Edition, and the data
+purging process will be run regularly, then an even better way to purge the data is to
+partition the table using a sliding window partition on the column being used to delete291
+Chapter 8: Large or Full Transaction Log
+the data. This will have even less impact on the transaction log, since the partition
+containing the data can be switched out of the table and truncated, which is a metadataonly operation.
+Managing archiving
+It is well outside the scope of this chapter to delve into full, automated archiving scheme, but a possible
+archiving process could involve partitioning, and duplicate schemas between tables, allowing a partition to be switched out of one table and into another one, minimizing the active portion of data in
+the main OLTP table, but reducing the archiving process to being metadata changes only. Kimberley
+Tripp has produced a detailed white paper called "Partitioned Tables and Indexes in SQL Server 2005,"
+which also covers the sliding window technique, (see http://msdn.microsoft.com/en-us/library/
+ms345146(v=sql.90).aspx).
+Uncommitted transactions
+By default, SQL Server wraps any data modification statement in an implicit transaction
+to ensure that, in the event of a failure, the changes already made at the point of failure
+can all be rolled back, returning the data to a consistent state. If the changes succeed, the
+implicit transaction is committed to the database. In contrast to implicit transactions,
+which occur automatically, explicit transactions are created in code to wrap multiple
+changes into a single transaction, ensuring that all the changes can be undone by issuing
+a ROLLBACK command, or persisted by issuing a COMMIT for the transaction.
+When used properly, explicit transactions can ensure that data modifications that span
+multiple tables complete successfully as a unit, or not at all. When used incorrectly,
+however, orphaned transactions can be left active in the database, preventing truncation
+of the transaction log, and so resulting in the transaction log growing or filling up. There
+are a number of cases that can result in an orphaned transaction in SQL Server, and it's
+beyond the scope of this chapter to investigate them in full detail.292
+Chapter 8: Large or Full Transaction Log
+However, some of the most common causes are:
+•	 application timeouts caused by a long-running transaction
+•	 incorrect error handling in TSQL or application code
+•	 failure during trigger execution
+•	 linked server failures resulting in orphaned distributed transactions
+•	 no corresponding COMMIT/ROLLBACK statement to a BEGIN TRANSACTION command.
+Once a transaction is created it will continue to remain active until a COMMIT or
+ROLLBACK statement is issued on the connection that created the transaction, or the
+connection disconnects from the SQL Server. It is critical that you understand this last
+point when troubleshooting orphaned transactions, since modern applications generally
+utilize connection pooling, keeping connections to the SQL Server in a pool for reuse
+by the application, even when the application code calls the Close() method on the
+connection. Even though the connection is reset before being added or returned to the
+application's connection pool, open transactions continue to exist in the database if they
+have not been properly terminated.
+Identifying the active transaction
+The fastest way to identify whether transaction log growth is being caused by
+an orphaned (or just long-running) transaction is to use DBCC OPENTRAN. This
+command can accept the database name as an input parameter in the format DBCC
+OPENTRAN(DatabaseName) where DatabaseName is the name of the database to check
+for open transactions.293
+Chapter 8: Large or Full Transaction Log
+If an active transaction exists in the database, this command will output information
+similar to the following:
+Transaction information for database 'TestDatabase'.
+Oldest active transaction:
+SPID (server process ID): 105
+UID (user ID) : -1
+Name : user_transaction
+LSN : (4212:44992:2)
+Start time : Mar 26 2010 2:37:31:907AM
+SID : 0x010500000000000515000000c5dc918918d95a068b7acf204f730000
+DBCC execution completed. If DBCC printed error messages, contact your system
+administrator.
+Only the oldest active transaction is reported by DBCC OPENTRAN, and the primary
+indicator of whether or not the active transaction is problematic is the Start Time.
+Generally, uncommitted transactions that become problematic with regard to transaction
+log growth have been open for a long period of time.
+The other important piece of information is the SPID (server process ID), which is the
+session that created the open transaction. We can use the SPID to determine whether the
+transaction is actually an orphaned transaction or just a long-running one, by querying
+the sysprocesses view (in SQL Server 2000) or the sys.dm_exec_sessions and
+sys.dm_exec_connections DMVs in SQL Server 2005 and 2008, as shown in Listing
+8.5. Note that the sysprocesses view is still available in SQL Server 2005 and 2008 for
+backwards compatibility.
+-- SQL 2000 sysprocess query
+SELECT spid ,
+status ,
+hostname ,
+program_name ,
+loginame ,
+login_time ,
+last_batch ,
+( SELECT text294
+Chapter 8: Large or Full Transaction Log
+FROM ::
+fn_get_sql(sql_handle)
+) AS [sql_text]
+FROM sysprocesses
+WHERE spid = <SPID>
+-- SQL 2005/2008 DMV query
+SELECT s.session_id ,
+s.status ,
+s.host_name ,
+s.program_name ,
+s.login_name ,
+s.login_time ,
+s.last_request_start_time ,
+s.last_request_end_time ,
+t.text
+FROM sys.dm_exec_sessions s
+JOIN sys.dm_exec_connections c ON s.session_id = c.session_id
+CROSS APPLY sys.dm_exec_sql_text(c.most_recent_sql_handle) t
+WHERE s.session_id = <SPID>
+Listing 8.5: Identifying orphaned or long-running transactions using the DMVs.
+If the SPID is in a runnable, running, or suspended status, then it is likely that the source
+of the problem is a long-running, rather than orphaned, transaction. However, further
+investigation of the command text will be needed to make the final determination. It is
+possible that an earlier transaction failed and the connection was reset, for use under
+connection pooling, and that the currently executing statement is not associated with the
+open transaction.
+In SQL Server 2005 and 2008, the sys.dm_tran_session_transactions and sys.
+dm_tran_database_transactions DMVs can be used to gather information specific
+to the open transaction including the transaction start time, number of log records used
+by the open transaction, as well as the bytes of log space used, as shown in Listing 8.6.295
+Chapter 8: Large or Full Transaction Log
+SELECT st.session_id ,
+st.is_user_transaction ,
+dt.database_transaction_begin_time ,
+dt.database_transaction_log_record_count ,
+dt.database_transaction_log_bytes_used
+FROM sys.dm_tran_session_transactions st
+JOIN sys.dm_tran_database_transactions dt
+ON st.transaction_id = dt.transaction_id
+AND dt.database_id = DB_ID('master')
+WHERE st.session_id = <SPID>
+Listing 8.6: Gathering information about the open transaction.
+If the open transaction was created before the last request start time, it is likely to be an
+orphaned transaction.
+Unless the application was specifically designed to check for, and handle, orphaned
+transactions, the only way to clear the transaction is to KILL the session which will cause
+the transaction to roll back as the connection terminates, allowing the space in the log
+be made available for reuse, during the next log backup. However, the ramifications of
+performing the rollback must be understood.
+Other possible causes of log growth
+In addition to those previously identified, there are a few other problems that may
+prevent reuse of space in the log, and so lead to excessive log growth.
+Why is my transaction log full?
+For further discussion on these issues, please see Gail Shaw's article, "Why is my transaction log full?" at
+http://www.sqlservercentral.com/articles/Transaction+Log/72488/.296
+Chapter 8: Large or Full Transaction Log
+Replication
+During transactional replication, it is the job of the log reader agent to read the transaction log, looking for log records that are associated with changes that need to be replicated to subscribers (i.e. are "pending replication"). Once the changes are replicated, it
+marks the log entry as "replicated." Slow or delayed log reader activity can lead to records
+being left as "pending replication" for long periods, during which time they will remain
+part of the active log, and so the parent VLF cannot be truncated. A similar problem exists
+for log records required by the Change Data Capture (CDC) feature.
+In either case, the log_reuse_wait_desc column of sys.databases will show
+REPLICATION as the root cause of the problem. The problem will also reveal itself in
+the form of bottlenecks in the throughput performance of the transaction log disk
+array, specifically, delayed read operations under concurrent write loads. As explained in
+Chapter 2, writes to the log file occur sequentially, but read operations associated with
+the log reader agent and log backups read the file sequentially as well. Having sequential
+reads and writes occurring at the same time can, depending on the level of activity in the
+system and the size of the active portion of the log, result in random I/O activity as the
+disk heads have to change position to read from the beginning of the active log and then
+write to the end of the active log. The disk latency counters, explained in Chapter 2, can
+be used to troubleshoot this type of problem.
+The first step in troubleshooting these REPLICATION wait issues is to verify that the log
+reader SQL Agent jobs are actually running. If they are not, attempt to start them. If this
+fails, you'll need to find out why.
+If the jobs are running but the REPLICATION waits persist, and the transaction log is
+growing rapidly, you need to find some way to get the relevant log entries marked as
+"replicated" so that space in their parent VLFs can be reused. Unfortunately, there is no
+perfect solution that will avoid side effects to replication or CDC in the environment, but
+you could try one of the solutions below.297
+Chapter 8: Large or Full Transaction Log
+•	 In the case of transactional replication, the sp_repldone command can be used
+to mark all of the log records currently waiting on the log reader to process them as
+processed, but this will require re-initialization of the subscribers, using a snapshot, to
+resynchronize the replication topology. With CDC, this command will not resolve the
+problem with transaction log growth.
+•	 Disabling CDC or replication and performing a manual resynchronization of the data.
+Once CDC or replication has been removed, the pending replication log records in the
+transaction log will no longer be pending and can be cleared by the next log backup
+in FULL or BULK LOGGED recovery or CHECKPOINT operation in SIMPLE recovery.
+However, the trade-off is that the environment will require manual synchronization of
+the data for CDC, or it will require re-initialization of the subscribers for replication, if
+these features are added back to the database.
+Remember that simply switching to the SIMPLE recovery model, in the hope of
+truncating the log, will not work since replication and CDC are both supported using
+SIMPLE recovery, and the log records will continue to be required until the log reader
+SQL Agent process harvests them.
+Snapshot Replication schema change issue
+There is a known issue with Snapshot Replication in SQL Server 2005 that causes log entries that are
+marked for replication of schema changes not to be unmarked when the changes are replicated. This
+problem is explained in the following blog post that also explains how to work around the issue by using
+sp_repldone: "Size of the Transaction Log Increasing and cannot be truncated or Shrinked due to
+Snapshot Replication" (http://blogs.msdn.com/b/sqlserverfaq/archive/2009/06/01/size-of-thetransaction-log-increasing-and-cannot-be-truncated-or-shrinked-due-to-snapshotreplication.aspx).298
+Chapter 8: Large or Full Transaction Log
+ACTIVE_BACKUP_OR_RESTORE
+When the log_reuse_wait_desc column shows ACTIVE_BACKUP_OR_RESTORE as
+the current wait description, a long-running full or differential backup of the database
+is the most likely cause of the log reuse problems. During a full or differential backup of
+the database, the backup process delays log truncation so that the active portion of the
+transaction log can be included as a part of the full backup. This allows changes made to
+database pages during the backup operation to be undone when the backup is restored
+WITH RECOVERY, to bring the database to a consistent state. If such waits are causing
+persistent problems, you'll need to investigate ways to optimize the backup process, such
+as by improving the performance of the backups (via backup compression) or improving
+the performance of the underlying disk I/O system.
+DATABASE_MIRRORING
+When the log_reuse_wait_desc column shows DATABASE_MIRRORING, as the
+current wait description, synchronous database mirroring operations may be the cause of
+the log reuse issues.
+In synchronous mirroring, transactions on the principal are only committed once their
+related log records have been transferred to the mirror database. If the connection to the
+mirror is slow or broken, or the mirroring session is suspended, then a large number of
+log records on the principal will remain part of the active log, preventing log space reuse,
+until they are copied over to the mirror.
+In such cases, I would first check the status of the mirroring session for the affected
+database(s). If they are not synchronizing correctly, then you will need to troubleshoot
+the cause of the failed connection between the principal and the mirror. One of the
+most common problems with database mirroring, when certificates are used to secure
+the endpoints, is the expiration of the certificates, requiring that they be recreated. A full
+discussion of troubleshooting mirroring connectivity problems is outside of the scope of
+this chapter but, unless the databases are properly synchronizing so that the log records299
+Chapter 8: Large or Full Transaction Log
+are being sent to the mirror, the active portion of the transaction log on the principal will
+continue to grow and not be able to be truncated without breaking the mirroring setup.
+If the transaction rate on the principal greatly exceeds the rate at which log records
+can be transferred to the mirror, then the log on the principal can grow rapidly. If the
+mirror server is being used for reporting, by creating snapshots, verify that the disk I/O
+configuration for the mirror is not saturated, by using the latency counters as explained
+in Chapter 2. If this is where the problem is, eliminating use of the mirror server for
+reporting may provide temporary relief of the problem. If the problem is strictly the
+sheer volume of transactions and the database is not running on SQL Server 2008 or
+higher, then upgrading may be able to resolve the problem due to the use of log stream
+compression in SQL Server 2008 and beyond.
+The best approach is to determine the cause of the mirroring issue and resolve it. For
+example, tuning operations that produce a significant number of log records, such as bulk
+loading data, or reorganizing indexes, may reduce the impact to the system overall during
+the operation.
+Handling a "Transaction Log Full" Error
+In the worst case, transaction log mismanagement or sudden, rapid, log growth can cause
+a transaction log to grow and grow and eventually eat up all available space on its drive.
+At this point it can grow no more, you'll encounter Error 9002, the transaction log full
+error, and the database will become read-only.
+Despite the urgency of this problem, it's important to react calmly, and avoid the sort
+of "spontaneous" solutions that are covered in the following section, Mismanagement
+or What Not To Do. Obviously the pressing concern is to allow SQL Server to continue
+to write to the log, by making more space available. The first port of call is to establish
+if the cause is a lack of log backups. Run the query in Listing 8.1 and if the value for the
+log_reuse_wait_desc column is Log Backup then this is the likely cause of the issue.300
+Chapter 8: Large or Full Transaction Log
+A query to the backupset table (http://msdn.microsoft.com/en-us/library/ms186299.
+aspx) in the MSDB database, as shown in Listing 8.7, will confirm whether or not log
+backups are being taken on the database, and when the last one was taken.
+USE msdb ;
+SELECT backup_set_id ,
+backup_start_date ,
+backup_finish_date ,
+backup_size ,
+recovery_model ,
+[type]
+FROM dbo.backupset
+WHERE database_name = 'DatabaseName'
+Listing 8.7: Determine when the last log backup was taken.
+In the type column, a D represents a database backup, L a log backup and I a differential
+backup. If log backups aren't being taken, or are being taken very infrequently, then your
+best course of action is to take a log backup (assuming the database is operating in FULL
+or BULK LOGGED recovery model). Hopefully, this will free up substantial space within the
+log and you can then implement an appropriate log backup scheme, and log file growth
+management strategy.
+If, for some reason, it is not possible to perform a log backup due to a lack of disk space,
+or the time it would take to perform a log backup exceeds the acceptable time to resolve
+the problem, then it might, depending on the disaster recovery policy for the database
+in question, be acceptable to force a truncation of the log by temporarily switching the
+database to the SIMPLE recovery model in order that inactive VLFs in the log can be
+truncated on CHECKPOINT. You can then switch the recovery model back to FULL and
+perform a new full database backup (or a differential backup, assuming a full backup
+was taken at some previous time) to restart the log chain for point-in-time recovery. Of
+course, you'll still need to investigate the problem fully, in order to make sure that the
+space isn't simply eaten up again.301
+Chapter 8: Large or Full Transaction Log
+Bear in mind also that, as discussed previously, if the problem preventing space reuse is
+anything other than Log Backup, then this technique won't work, since those records
+will simply remain part of the active log, preventing truncation.
+If a lack of log backups isn't the problem, or taking a log backup doesn't solve the
+problem, then investigating the cause will require a little more time. If you can easily and
+quickly make extra space on the log drive, by shifting off other files, or adding capacity to
+the current log drive, or adding an addition log file on a different disk array, then this will
+buy you the bit of breathing space you need to get the database out of read-only mode,
+and perform a log backup.
+If a log backup fails to free up space, you need to find out what is preventing space reuse
+in the log. Interrogate sys.databases (Listing 8.1) to find out if anything is preventing
+reuse of space in the log, and take appropriate action, as described throughout the
+previous Lack of log space reuse section.
+If this reveals nothing, you'll need to investigate further and find out which operations
+are causing the excessive logging that led to the log growth, as described in the Diagnosing
+a Runaway Transaction Log section.
+Ultimately, having resolved any space reuse issue, you may still be left with a log file
+that is consuming the vast majority of the space on the drive. As a one-off measure,
+i.e. assuming steps will be taken to ensure proper management of log growth in the
+future (see the Proper Log Management section, shortly), it is acceptable to use DBCC
+SHRINKFILE (see http://msdn.microsoft.com/en-us/library/ms189493.aspx) to
+reclaim the space used by a bloated transaction log file.
+You can either specify a target_size to which to shrink the log file, or you can specify
+0 (zero) as the target size and shrink the log to its smallest possible size, and then immediately resize it to a sensible size using ALTER DATABASE. The latter is the recommended
+way, as it minimizes fragmentation of the log file. This fragmentation issue is the main
+reason why you should never schedule regular DBCC SHRINKFILE tasks as a means of
+controlling the size of the log; this is discussed in more detail in the next section.302
+Chapter 8: Large or Full Transaction Log
+Mismanagement or What Not To Do
+Unfortunately, a quick search of the Internet for "Transaction Log Full" will return a
+number of forums threads, blog posts, and even articles published on seemingly reputable
+SQL Server sites, which recommend remedial action that is, frankly, dangerous. We'll
+cover a few of the more popular suggestions here.
+Detach database, delete log file
+The idea here is that you clear all users off the database, detach the database (or shut it
+down), delete the log file (or rename it) and then re-attach the database, causing a new log
+file to be created at whatever size is dictated by the model database. This is arguably the
+most appalling of all the terrible ways to handle a full transaction log. It can result in the
+database failing to start, leaving it in the RECOVERY_PENDING state.
+Depending on whether or not the database had been cleanly shut down at the time of the
+log deletion, the database may not be able to perform the UNDO and REDO operations that
+are a normal part of the database recovery process, because the transaction log is missing,
+and so can't return the database to a consistent state. When the log file is missing, and
+the database requires the transaction log to perform crash recovery, the database will fail
+to start up properly and the only recourse will be to restore the database from the most
+recent backup available, which will most likely result in data loss.303
+Chapter 8: Large or Full Transaction Log
+Creating, detaching, re-attaching, and fixing a suspect database
+Under specific circumstances, it may be possible to hack the existing database into a configuration that
+allows the transaction log to be rebuilt, although it may compromise the integrity of the data contained
+in the database. This type of operation is, at best, a last-ditch effort that may be used when there is
+absolutely no other way of recovering the database data, and it is not a recommended practice of the
+authors, technical editors, or anyone else involved in the authoring of this book. For an explanation of
+how to attempt hacking a database back into SQL Server where the transaction log file has been deleted,
+see Paul Randal's blog post, "Creating, detaching, re-attaching, and fixing a suspect database"
+(http://www.sqlskills.com/blogs/paul/post/TechEd-Demo-Creating-detaching-re-attaching-and-fixing-a-suspect-database.aspx).
+Forcing log file truncation
+In SQL Server 2000, BACKUP LOG WITH TRUNCATE_ONLY was a supported way of forcing
+SQL Server to truncate the transaction log, while the database was operating in the FULL
+or BULK LOGGED model, without actually making a backup copy of the contents of the
+log; the records in the truncated VLFs are simply discarded. So, unlike with a normal log
+backup, you're destroying your LSN chain and will only be able to restore to a point in
+time in any previous log backup files. Also, even though the database is set to FULL (or
+BULK LOGGED) recovery, it will actually, from that point on, operate in an auto-truncate
+mode, continuing to truncate inactive VLFs on checkpoint. In order to get the database
+operating in FULL recovery again, and restart the LSN chain, you'd need to perform a full
+(or differential) backup.
+This command was often used without people realizing the implications it had for
+disaster recovery, and it was deprecated in SQL Server 2005 and removed from SQL
+Server 2008. Unfortunately, an even more insidious variation of this technique, which
+continues to be supported, has crept up to take its place, and that is BACKUP LOG
+TO DISK='NUL', where NUL is a "virtual file" that discards any data that is written
+to it. The really nasty twist to this technique is that, unlike with BACKUP LOG WITH304
+Chapter 8: Large or Full Transaction Log
+TRUNCATE_ONLY, SQL Server is unaware that the log records have simply been discarded.
+As far as SQL Server is concerned, a log backup has been performed, the log records are
+safely stored in a backup file so the LSN chain is intact, and any inactive VLFs in the live
+log can safely be truncated. Any subsequent, conventional log backups will succeed but
+will be entirely useless from the point of view of disaster recovery since a log backup file
+is "missing" and so the database can only be restored to some point in time covered by the
+last standard log backup that was taken before BACKUP LOG TO DISK='NUL' was issued.
+Do not use either of these techniques. The right way to "force" log truncation is to
+temporarily switch the database into the SIMPLE recovery model, as discussed earlier.
+Scheduled shrinking of the transaction log
+As discussed in the Handling a "Transaction Log Full" error section, in rare circumstances
+where transaction log growth has occurred due to a lack of management, and where the
+log growth is currently being actively managed, using DBCC SHRINKFILE to reclaim the
+space used by the transaction log file is an acceptable operation.
+However, the transaction log should never be shrunk using DBCC SHRINKFILE, or a
+database maintenance plan step to shrink the database, as part of normal, scheduled
+maintenance operations. The reason for this is that every time you shrink the log, it will
+need to immediately grow again to store log records for subsequent transactions and
+every log. If auto-growth is being relied upon solely for transaction log growth (see the
+next section for a fuller discussion), excessive VLFs can accumulate in the log file and this
+log fragmentation will impact the performance of any process that needs to read the
+log file and, if fragmentation gets really bad, possibly even the performance of data
+modifications. Also, as discussed previously in the Sizing and growing the log section, the
+transaction log cannot take advantage of instant file initialization, so all log growths incur
+the cost to zero-byte the storage space being allocated.305
+Chapter 8: Large or Full Transaction Log
+The best practice for the transaction log file continues to be to size it appropriately up
+front so it does not have to grow under normal operations, and then to monitor its
+usage periodically to determine if the need to grow it manually occurs, allowing you to
+determine the appropriate growth size and determine the number and size of VLFs that
+will be added to the log file.
+Proper Log Management
+In the absence of any unexpected operations or problems that have resulted in unusual
+log growth (replication problems, uncommitted transactions, and so on, as discussed
+earlier), if the transaction log associated with a FULL recovery model database fills up,
+and is forced to grow, there are really only two causes:
+•	 the size of the log file was too small to support the volume of data changes that were
+occurring in the database
+•	 the frequency of log backups was insufficient to allow rapid reuse of space within the
+log file.
+The best thing to do, if you can't increase the frequency of the log backups by decreasing
+the amount of time between log backups, is to manually grow the log file to a size that
+prevents it from having to grow using auto-growth when under load, and then leave
+the log file that size. Having a large transaction log file that has been properly grown
+to minimize the number of VLFs is not a bad thing, even if the log file has free space a
+majority of the time.
+When configuring the initial size of the transaction log for a database, it is important to
+take into account the size of the largest table in the database, and whether or not index
+maintenance operations will be performed. As a rule of thumb, the transaction log should
+be sized to 1.5 times the size of the largest index or table in the database, to allow for
+logging requirements to rebuild the index under FULL recovery.306
+Chapter 8: Large or Full Transaction Log
+In addition to the initial sizing requirements, it is important to monitor and adjust the
+size of the transaction log periodically to fit the size of the database as it grows. There
+are a couple of problems with the auto-growth settings that a database will inherit from
+model, which is currently to grow in steps of 10% of the current transaction log size:
+•	 initially, when the log file is small, the incremental growth will be small, resulting in
+the creation of a large number of small VLFs in the log, causing the fragmentation
+issues discussed earlier
+•	 when the log file is very large, the growth increments will be correspondingly large;
+since the transaction log has to be zeroed out during initialization, large growth
+events can take time, and if the log can't be grown fast enough this can result in
+9002 (transaction log full) errors and even in the auto-growth timing out and
+being rolled back.
+The auto-growth settings should be configured explicitly to a fixed size that allows the log
+file to grow quickly, if necessary, while also minimizing the number of VLFs being added
+to the log file for each growth event.
+To minimize the chances of a timeout occurring during normal transaction log growth,
+you should measure how long it takes to grow the transaction log by a variety of set sizes
+while the database is operating under normal workload, and based on the current I/O
+subsystem configuration. In cases where the necessary zero-initialization performance
+characteristics are not known for a database, I recommend, as a general rule, a fixed autogrowth size of 512 MB.
+Ultimately, though, remember that auto-growth should be configured as a security net
+only, allowing the system to automatically grow the log file when you are unable to
+respond manually. Auto-growth is not a replacement for appropriate monitoring and
+management of the transaction log file size.307
+Chapter 8: Large or Full Transaction Log
+Summary
+The transaction log for a SQL Server database is critical to the operation of the database
+and the ability to minimize data loss in the event of a disaster. Proper management of log
+backups and sizing of the transaction log is crucial to managing a database in SQL Server.
+This chapter covered the most common causes for log growth in SQL Server, and how to
+properly handle those scenarios to minimize log usage, or troubleshoot the problem to
+prevent further issues with the transaction log.
