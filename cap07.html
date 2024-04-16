@@ -33,33 +33,19 @@
     </nav>
 
     <main>
-        Chapter 7: Handling Deadlocks
-        A deadlock is defined in the dictionary as "a standstill resulting from the action of equal
-        and opposed forces," and this turns out to be a reasonable description of a deadlock in
-        SQL Server: two or more sessions inside of the database engine end up waiting for access
-        to locked resources held by each other. In a deadlock situation, none of the sessions can
-        continue to execute until one of those sessions releases its locks, so allowing the other
-        session(s) access to the locked resource. Multiple processes persistently blocking each
-        other, in an irresolvable state, will eventually result in a halt to processing inside the
-        database engine.
-        A common misconception is that DBAs need to intervene to "kill" one of the processes
-        involved in a deadlock. In fact, SQL Server is designed to detect and resolve deadlocks
-        automatically, through the use the Lock Monitor, a background process that is initiated
-        when the SQL Server instance starts, and that constantly monitors the system for
-        deadlocked sessions. However, when deadlocks are reported, the DBA must investigate their cause immediately. Many of the same issues that cause severe blocking in
-        the database, such as poor database design, lack of indexing, poorly designed queries,
-        inappropriate isolation level and so on (all discussed in Chapter 6), are also common
-        causes of deadlocking. This chapter will provide the tools, techniques and tweaks you
-        need to diagnose and prevent deadlocks, and to ensure that they are handled gracefully if
-        they ever do occur. Specifically, it will cover:
-        •	 how to capture deadlock graphs using a variety of techniques, including Trace Flags,
-        the Profiler deadlock graph event, and service broker event notifications
-        •	 how to read deadlock graphs to locate the sessions, queries and resources that are
-        involved
-        •	 common types of deadlock and how to prevent them
-        •	 using server- or client-side TRY…CATCH error handling for deadlocks, to avoid
-        UnhandledException errors in the application.238
-        Chapter 7: Handling Deadlocks
+        <h1>Capítulo 7: Lidando com Deadlocks</h1>
+
+        <p>Um deadlock é definido no dicionário como "uma paralisação resultante da ação de forças iguais e opostas", e isso acaba sendo uma descrição razoável de um deadlock no SQL Server: duas ou mais sessões dentro do mecanismo do banco de dados acabam aguardando acesso a recursos bloqueados mantidos um pelo outro. Em uma situação de deadlock, nenhuma das sessões pode continuar a executar até que uma dessas sessões libere seus bloqueios, permitindo assim que a(s) outra(s) sessão(ões) acesse(m) o recurso bloqueado. Múltiplos processos bloqueando persistentemente uns aos outros, em um estado insolúvel, eventualmente resultarão em uma interrupção no processamento dentro do mecanismo do banco de dados.</p>
+
+        <p>Um equívoco comum é que os DBAs precisam intervir para "matar" um dos processos envolvidos em um deadlock. Na verdade, o SQL Server é projetado para detectar e resolver deadlocks automaticamente, por meio do uso do <strong>Lock Monitor</strong>, um processo em segundo plano que é iniciado quando a instância do SQL Server é iniciada e que monitora constantemente o sistema em busca de sessões em deadlock. No entanto, quando os deadlocks são relatados, o DBA deve investigar sua causa imediatamente. Muitos dos mesmos problemas que causam bloqueios graves no banco de dados, como design de banco de dados inadequado, falta de indexação, consultas mal projetadas, nível de isolamento inadequado e assim por diante (todos discutidos no <a href="cap06.html" target="_self">Capítulo 6</a>), também são causas comuns de deadlocks. Este capítulo fornecerá as ferramentas, técnicas e ajustes necessários para diagnosticar e prevenir deadlocks, e garantir que eles sejam tratados com elegância, caso ocorram. Especificamente, ele abordará:</p>
+
+        <ul>
+            <li>como capturar gráficos de deadlock usando uma variedade de técnicas, incluindo Flags de Rastreamento, o evento de gráfico de deadlock do Profiler e notificações de eventos do service broker</li>
+            <li>como ler gráficos de deadlock para localizar as sessões, consultas e recursos envolvidos</li>
+            <li>tipos comuns de deadlock e como evitá-los</li>
+            <li>usando tratamento de erro <code>TRY...CATCH</code> no servidor ou no cliente para deadlocks, para evitar erros <code>UnhandledException</code> na aplicação.</li>
+        </ul>
+
         The Lock Monitor
         When the Lock Monitor performs a deadlock search and detects that one or more
         sessions are embraced in a deadlock, one of the sessions is selected as a deadlock victim
