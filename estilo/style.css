@@ -13,7 +13,7 @@
 
     --fonte-padrao: 'Roboto', sans-serif;
     --fonte-titulo: 'Rajdhani', sans-serif;
-    --fonte-codigo: 'Consolas', 'Courier New', Courier, monospace
+    --fonte-codigo: 'Courier New', 'Consolas', Courier, monospace
 }
 
 * {
@@ -150,7 +150,7 @@ main > ol {
     list-style-position: inside;
 }
 
-main > ul > li {
+main > ul > li, main > ol > li {
     font-size: 1em;
     line-height: 1.5em;
     list-style-position: outside;
@@ -179,7 +179,7 @@ a:hover {
 code {
     font-family: var(--fonte-codigo);
     font-size: 1em;
-    font-weight: 600;
+    font-weight: 500;
     word-wrap: break-word;
 }
 
