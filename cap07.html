@@ -186,166 +186,172 @@ DECLARE @message_body <cls>XML</cls> ;
             </code></pre>
         </div>
         
-        <p class="legenda"><strong>Listing 7.3</strong>: Query and processing DEADLOCK_GRAPH event messages in the queue.</p>
+        <p class="legenda">Listing 7.3: Query and processing DEADLOCK_GRAPH event messages in the queue.</p>
         
-        <p>Since Event Notifications utilize a service broker queue for processing, additional actions can be performed when the deadlock event fires. When a deadlock event occurs, Service Broker can "activate" a stored procedure that processes the message and responds appropriately, for example, by sending an email notification using Database Mail, logging the event in a table, or gathering additional information, like the execution plans for both statements, from SQL Server, based on the information contained inside of the deadlock graph. Full coverage of this topic is beyond the scope of this chapter. However, a full example of how to use queue activation to completely automate deadlock collection can be found in the code download file for this book.</p>
+        <p>Como as Notificações de Eventos utilizam uma fila do service broker para processamento, ações adicionais podem ser realizadas quando o evento de deadlock é disparado. Quando ocorre um evento de deadlock, o Service Broker pode "ativar" uma procedure armazenada que processa a mensagem e responde adequadamente, por exemplo, enviando uma notificação por email usando Database Mail, registrando o evento em uma tabela ou coletando informações adicionais, como os planos de execução de ambas as instruções, a partir do SQL Server, com base nas informações contidas dentro do gráfico de deadlock. A cobertura completa desse tópico está além do escopo deste capítulo. No entanto, um exemplo completo de como usar a ativação de fila para automatizar completamente a coleta de deadlocks pode ser encontrado no arquivo de download do código deste livro.</p>
 
-        <p>WMI Provider for server events</p>
+        <h3 id="wmiprovider">Provedor WMI para eventos de servidor</h3>
 
-        <p>Also new to SQL Server 2005, the WMI Provider for Server Events allows WMI to be used to monitor SQL Server events as they occur. Any event that can be captured through event notifications has a corresponding WMI Event Object, and any WMI managementapplication can subscribe to these event objects.</p>
+        <p>Também novo no SQL Server 2005, o Provedor WMI para Eventos de Servidor permite que o WMI seja usado para monitorar eventos do SQL Server à medida que ocorrem. Qualquer evento que possa ser capturado através de notificações de eventos tem um <strong>Objeto de Evento WMI</strong> correspondente, e qualquer aplicativo de gerenciamento WMI pode se inscrever nesses objetos de evento.</p>
 
-        <p>SQL Server Agent was updated to manage WMI events, through the use of WMI Query Language (WQL), a query language similar to T-SQL that is used with WMI and Agent Alerts for WMI events.</p>
+        <p>O SQL Server Agent foi atualizado para gerenciar eventos WMI, através do uso da WMI Query Language (WQL), uma linguagem de consulta semelhante ao T-SQL que é usada com WMI e Alertas do Agent para eventos WMI.</p>
 
-        <p>A full example of how to create a SQL Agent alert to capture and store deadlock graphs is out of scope for this chapter, and can be found in the Books Online Sample, Creating a SQL Server Agent Alert by Using the WMI Provider for Server Events (http://msdn.microsoft.com/en-us/library/ms186385.aspx). However, in essence, it involves creating, via the WMI Event Provider, a SQL Agent alert to monitor deadlock graph events. The alert queries for events using WQL, and when it receive notification that one has occurred, it fires a job that captures the deadlock graph in a designated SQL Server table.</p>
+        <p>Um exemplo completo de como criar um alerta do SQL Agent para capturar e armazenar gráficos de deadlock está fora do escopo deste capítulo e pode ser encontrado no exemplo do Books Online, <em>Criando um Alerta do SQL Server Agent Usando o Provedor WMI para Eventos de Servidor</em> (<a href="http://msdn.microsoft.com/en-us/library/ms186385.aspx" target="_blank">http://msdn.microsoft.com/en-us/library/ms186385.aspx</a>). No entanto, essencialmente, isso envolve a criação, via o Provedor de Eventos WMI, de um alerta do SQL Agent para monitorar eventos de gráfico de deadlock. O alerta consulta eventos usando WQL e, quando recebe a notificação de que um ocorreu, dispara um job que captura o gráfico de deadlock em uma tabela designada do SQL Server.</p>
 
-        <p>To capture deadlock graphs using the WMI Event Provider and a SQL Agent alert in thismanner requires that the "Replace tokens for all job responses to alerts" in SQL Server Agent Alert System properties must be enabled. It also requires that Service Broker (which processes the notification messages) is enabled in msdb as well as the database in which the deadlock graphs are stored.</p>
+        <p>Para capturar gráficos de deadlock usando o Provedor de Eventos WMI e um alerta do SQL Agent dessa maneira, é necessário que a opção "Substituir tokens para todas as respostas de jobs a alertas" nas propriedades do Sistema de Alertas do SQL Server Agent esteja habilitada. Também é necessário que o Service Broker (que processa as mensagens de notificação) esteja habilitado no msdb, bem como no banco de dados em que os gráficos de deadlock são armazenados.</p>
 
-        <p>WMI event provider bug</p>
+        <div class="dica">
+            <p class="destaque">WMI event provider bug</p>
+            <p>It is worth noting that there is a known bug in the WMI Event Provider for server names that exceed fourteen characters; this was fixed in Cumulative Update 5 for SQL Server 2005 Service Pack 2.</p>
+        </div>
 
-        <p>It is worth noting that there is a known bug in the WMI Event Provider for server names that exceed fourteen characters; this was fixed in Cumulative Update 5 for SQL Server 2005 Service Pack 2.</p>
+        <h3 id="extendevents">Eventos Estendidos</h3>
 
-        <p>Extended Events</p>
-
-        <p>Prior to SQL Server 2008, there was no way to retroactively find deadlock information. Obtaining deadlock graphs required that a SQL Trace was actively running, or that Trace Flag 1222 or 1205 was turned on for the instance. Since tracing deadlocks by either of these methods can be resource intensive, this usually meant that a series of deadlocks had to occur to prompt starting a trace or enabling the Trace Flags.</p>
+        <p>Antes do SQL Server 2008, não havia como encontrar informações sobre deadlocks retroativamente. Obter gráficos de deadlock exigia que um SQL Trace estivesse ativamente em execução, ou que as Trace Flags 1222 ou 1205 estivessem ativadas para a instância. Como rastrear deadlocks por qualquer um desses métodos pode ser intensivo em recursos, isso geralmente significava que uma série de deadlocks precisava ocorrer para motivar o início de um trace ou a ativação das Trace Flags.</p>
         
-        <p>SQL Server 2008 includes all of the previously discussed techniques for capturing deadlock graphs, and adds one new one, namely collecting the deadlock information through the system_health default event session in Extended Events. This default event session (akin, in concept, to the default trace) is running by default on all installations of SQL Server 2008 and collects a range of useful troubleshooting information for errors that occur in SQL Server, including deadlocks. Deadlock graphs captured by Extended Events in SQL Server 2008 have the unique ability to contain information about multi-victim deadlocks (deadlocks where more than session was killed by the Lock Monitor to resolve the conflict).</p>
+        <p>O SQL Server 2008 inclui todas as técnicas discutidas anteriormente para capturar gráficos de deadlock e adiciona uma nova, que é a coleta de informações de deadlock através da sessão de eventos padrão <code>system_health</code> em Eventos Estendidos. Esta sessão de eventos padrão (semelhante, em conceito, ao trace padrão) é executada por padrão em todas as instalações do SQL Server 2008 e coleta uma gama de informações úteis para solução de problemas de erros que ocorrem no SQL Server, incluindo deadlocks. Os gráficos de deadlock capturados por Eventos Estendidos no SQL Server 2008 têm a capacidade única de conter informações sobre deadlocks com múltiplas vítimas (deadlocks onde mais de uma sessão foi finalizada pelo Lock Monitor para resolver o conflito).</p>
 
-        <p>More on Extended Events</p>
+        <div class="dica">
+            <p class="destaque">Mais sobre Eventos Estendidos</p>
+            <p>Não podemos cobrir Eventos Estendidos em detalhes neste livro, mas, para uma boa visão geral do tópico, leia o artigo de Paul Randal, "SQL 2008: Advanced Troubleshooting with Extended Events".(<a href="http://technet.microsoft.com/en-us/magazine/2009.01.sql2008.aspx" target="_blank">http://technet.microsoft.com/en-us/magazine/2009.01.sql2008.aspx</a>).</p>
+        </div>
 
-        <p>We can't cover Extended Events in detail in this book but, for a good overview of the topic, read Paul Randal's article, "SQL 2008: Advanced Troubleshooting with Extended Events" (http://technet.microsoft.com/en-us/magazine/2009.01.sql2008.aspx).</p>
+        <p>A sessão <code>system_health</code> usa um alvo <code>ring_buffer</code>, que armazena as informações coletadas pelos eventos disparados na memória como um documento XML na DMV <code>sys.dm_xe_session_targets</code>. Esta DMV pode ser juntada à DMV <code>sys.dm_xe_sessions</code> para obter as informações da sessão juntamente com os dados armazenados no alvo <code>ring_buffer</code>, conforme mostrado na Listagem 7.4.</p>
 
-        <p>The system_health session uses a ring_buffer target which stores the information collected by events firing in memory as an XML document in the sys.dm_xe_session_targets DMV. This DMV can be joined to the sys.dm_xe_sessions DMV to get the session information along with the data stored in the ring_buffer target, as shown in Listing 7.4.</p>
-
-        <div>
+        <div id="container">
             <pre>
                 <code>
-SELECT CAST(target_data AS XML) AS TargetData
-FROM sys.dm_xe_session_targets st
-JOIN sys.dm_xe_sessions s ON s.address = st.event_session_address
-WHERE name = 'system_health'
-                </code>
-            </pre>
+<cls>SELECT</cls> <func>CAST</func>(target_data <cls>AS XML</cls>) <cls>AS</cls> TargetData
+<cls>FROM</cls> <com>sys.dm_xe_session_targets</com> st
+JOIN <com>sys.dm_xe_sessions</com> s <cls>ON</cls> s.<cls>address</cls> = st.event_session_address
+<cls>WHERE</cls> name = <string>'system_health'</string>
+            </code></pre>
         </div>
         
-        <p>Listing 7.4: Retrieving system_health session information.</p>
+        <p class="legenda"><strong>Listagem 7.4</strong>: Recuperando informações da sessão <code>system_health</code>.</p>
         
-        <p>The query in Listing 7.5 shows how to retrieve a valid XML deadlock graph from the default system_health session using XQuery, the target_data column, and a CROSS APPLY to get the individual event nodes. Note that, due to changes in the deadlock graph to support multi-victim deadlocks, and to minimize the size of the event data, the resulting XML cannot be saved as an XDL file for graphical representation.</p>
+        <p>A consulta no Listagem 7.5 mostra como recuperar um gráfico de deadlock XML válido da sessão padrão <code>system_health</code> usando XQuery, a coluna <code>target_data</code> e um <code>CROSS APPLY</code> para obter os nós individuais do evento. Observe que, devido às mudanças no gráfico de deadlock para suportar deadlocks com múltiplas vítimas e para minimizar o tamanho dos dados do evento, o XML resultante não pode ser salvo como um arquivo XDL para representação gráfica.</p>
 
-        <div>
-            <pre>
-                <code>
-SELECT CAST(event_data.value('(event/data/value)[1]',
-'varchar(max)') AS XML) AS DeadlockGraph
-FROM ( SELECT XEvent.query('.') AS event_data
-FROM ( -- Cast the target_data to XML
-SELECT CAST(target_data AS XML) AS TargetData
-FROM sys.dm_xe_session_targets st
-JOIN sys.dm_xe_sessions s
-ON s.address = st.event_session_address
-WHERE name = 'system_health'
-AND target_name = 'ring_buffer'
-) AS Data -- Split out the Event Nodes
-CROSS APPLY TargetData.nodes('RingBufferTarget/
-event[@name="xml_deadlock_report"]')
-AS XEventData ( XEvent )
-) AS tab ( event_data )
-                </code>
-            </pre>
+        <div id="container">
+            <pre><code>
+<cls>SELECT</cls> <func>CAST</func>(event_data.value(<string>'(event/data/value)[1]'</string>,
+                              <string>'varchar(max)'</string>) <cls>AS XML</cls>) <cls>AS</cls> DeadlockGraph
+<cls>FROM</cls>   ( <cls>SELECT</cls>    XEvent.query(<string>'.'</string>) <cls>AS</cls> event_data
+         <cls>FROM</cls>      (    <com>-- Cast the target_data to XML</com>
+                     <cls>SELECT</cls>    <func>CAST</func>(target_data <cls>AS XML</cls>) <cls>AS</cls> TargetData
+                     <cls>FROM</cls>      <com>sys.dm_xe_session_targets</com> st
+                               <join>JOIN</join> <com>sys.dm_xe_sessions</com> s
+                                <cls>ON</cls> s.<cls>address</cls> = st.event_session_address
+                     <cls>WHERE</cls>     name = <string>'system_health'</string>
+                               <join>AND</join> target_name = <string>'ring_buffer'</string>
+                   ) <cls>AS</cls> Data <com>-- Split out the Event Nodes</com>
+                   <join>CROSS APPLY</join> TargetData.nodes(<string>'RingBufferTarget/</string>
+                                    <string>event[@name="xml_deadlock_report"]'</string>)
+                   <cls>AS</cls> XEventData ( XEvent )
+       ) <cls>AS</cls> tab ( event_data )
+                </code></pre>
         </div>
         
-        <p>Listing 7.5: Retrieving an XML deadlock graph.</p>
+        <p class="legenda"><strong>Listagem 7.5</strong>: Recuperando um gráfico de deadlock XML.</p>
         
-        <p>Note, also, that there is a bug in the RTM release of SQL Server 2008 that causes deadlock graphs not to be captured and retained in an Extended Events session. This bug was fixed in Cumulative Update 1 for SQL Server 2008 and is also included in the latest Service Pack. An additional bug exists for malformed XML in the deadlock graph generated by Extended Events, which was corrected in Cumulative Update Package 6 for SQL Server 2008 Service Pack 1. It is still possible to generate a valid XML document in these earlier builds, by hacking the deadlock graph being output by Extended Events. However, since the fix to SQL Server has already been released, the specifics of the work-around will not be covered in this chapter.</p>
+        <p>Observe também que há um bug na versão RTM do SQL Server 2008 que faz com que os gráficos de deadlock não sejam capturados e retidos em uma sessão de Extended Events. Esse bug foi corrigido na Atualização Cumulativa 1 para o SQL Server 2008 e também está incluído no último Service Pack. Existe um bug adicional relacionado ao XML malformado no gráfico de deadlock gerado por Extended Events, que foi corrigido no Pacote de Atualização Cumulativa 6 para o SQL Server 2008 Service Pack 1. Ainda é possível gerar um documento XML válido nessas versões anteriores, manipulando o gráfico de deadlock sendo gerado por Extended Events. No entanto, como a correção para o SQL Server já foi lançada, os detalhes da solução alternativa não serão abordados neste capítulo.</p>
         
-        <p>Changes to Extended Events in SQL Server Denali</p>
+        <div class="dica">
+            <p class="destaque">Mudanças no Extended Events no SQL Server Denali</p>
+            <p>No momento das edições finais deste capítulo, o SQL Server Denali CTP3 foi lançado, com mudanças relacionadas a como os alvos do Extended Events armazenam dados XML dentro do elemento value na saída XML do Evento. A Listagem 7.5 mostra o uso do método .value() do XML no SQL Server, mas no Denali CTP3, o método .query() deve ser usado para recuperar o gráfico de deadlock da saída XML do Evento.</p>
+        </div>
 
-        <p>At the time of the final edits of this chapter, SQL Server Denali CTP3 was released, with changes associated to how the Extended Events targets store XML data inside of the value element of the Event XML output. Listing 7.5 shows the use of the .value() method from XML in SQL Server, but in Denali CTP3, a .query() method has to be used to retrieve the deadlock graph from the Event XML output.</p>
-
-        <p>Reading Deadlock Graphs</p>
+        <h2 id="deadlockgraphs">Lendo Gráficos de Deadlock</h2>
         
-        <p>The precise format of the deadlock graph in SQL Server has changed from version to version, and mainly for the better. In general, it now contains better information in an easier-to-digest format, such as the graphical display provided in SQL Server Management Studio and SQL Profiler, so allowing us to more easily troubleshoot deadlocks.</p>
+        <p>O formato exato do gráfico de deadlock no SQL Server mudou de versão para versão, e principalmente para melhor. Em geral, ele agora contém informações mais detalhadas em um formato mais fácil de entender, como a exibição gráfica fornecida no SQL Server Management Studio e no SQL Profiler, permitindo que possamos resolver deadlocks com mais facilidade.</p>
 
-        <p>Even with the changes to the deadlock graph XML that is output by Extended Events, in SQL Server 2008, the fundamentals of how to interpret the graph are the same as for any other XML deadlock graph.</p>
+        <p>Mesmo com as mudanças no XML do gráfico de deadlock gerado pelo Extended Events no SQL Server 2008, os fundamentos de como interpretar o gráfico são os mesmos que para qualquer outro gráfico de deadlock em XML.</p>
 
-        <p>Interpreting Trace Flag 1204 deadlock graphs</p>
+        <h3 id="traceflag_1204">Interpretando Gráficos de Deadlock do Trace Flag 1204</h3>
 
-        <p>Perhaps one of the most difficult aspects of troubleshooting deadlocks in SQL Server 2000 is interpreting the output of Trace Flag 1204. The process is complicated by the need to query the sysobjects and sysindexes system tables to find out exactly what objects are involved in the deadlock.</p>
+        <p>Talvez um dos aspectos mais difíceis de solucionar deadlocks no SQL Server 2000 seja interpretar a saída do Trace Flag 1204. O processo é complicado pela necessidade de consultar as tabelas de sistema <code>sysobjects</code> e <code>sysindexes</code> para descobrir exatamente quais objetos estão envolvidos no deadlock.</p>
 
-        <p>Listing 7.6 shows an example deadlock graph that was generated by enabling Trace Flag 1204, and then creating a deadlock situation (the code to do this is provided as part of the code download for this book).</p>
+        <p>A Listagem 7.6 mostra um exemplo de gráfico de deadlock gerado ao habilitar o Trace Flag 1204 e, em seguida, criar uma situação de deadlock (o código para fazer isso está disponível como parte do download de código deste livro).</p>
         
-        <div>
+        <div id="container">
             <pre>
                 <code>
 Deadlock encountered .... Printing deadlock information
+
 Wait-for graph
+
 Node:1
-KEY: 13:1993058136:2 (08009d1c9ab1) CleanCnt:2 Mode: S Flags: 0x0
-Grant List 0::
-Owner:0x567e7660 Mode: S Flg:0x0 Ref:1 Life:00000000 SPID:54 ECID:0
-SPID: 54 ECID: 0 Statement Type: SELECT Line #: 3
-Input Buf: Language Event: WHILE (1=1)
+<CLS>KEY:</CLS> 13:1993058136:2 (08009d1c9ab1) <CLS>CleanCnt:</CLS>2 <CLS>Mode:</CLS> S <CLS>Flags:</CLS> 0x0
+ Grant List 0::
+   <CLS>
+       <CLS>Owner:</CLS>0x567e7660 <CLS>Mode:</CLS> S <CLS>Flg:</CLS>0x0 <CLS>Ref:</CLS>1 <CLS>Life:</CLS>00000000 <CLS>SPID:</CLS>54 <CLS>ECID:</CLS>0
+   </CLS>
+   <CLS>SPID:</CLS> 54 <CLS>ECID:</CLS> 0 <CLS>Statement Type:</CLS> SELECT <CLS>Line #:</CLS> 3
+   <CLS>Input Buf:</CLS> Language <cls>Event:</cls> WHILE (1=1)
 BEGIN
-INSERT INTO #t1 EXEC BookmarkLookupSelect 4
-TRUNCATE TABLE #t1
+    INSERT INTO #t1 EXEC BookmarkLookupSelect 4
+    TRUNCATE TABLE #t1
 END
-Requested By:
-ResType:LockOwner Stype:'OR' Mode: X SPID:55 ECID:0 Ec:(0x26F7DBD8)
-Value:0x58f80880 Cost:(0/3C)
+
+ Requested By:
+   <cls>ResType:</cls>LockOwner <cls>Stype:</cls>'OR' <cls>Mode:</cls> X <cls>SPID:</cls>55 <cls>ECID:</cls>0 <cls>Ec:</cls>(0x26F7DBD8)
+<cls>Value:</cls>0x58f80880 <cls>Cost:</cls>(0/3C)
+
 Node:2
-KEY: 13:1993058136:1 (040022ae5dcc) CleanCnt:2 Mode: X Flags: 0x0
-Grant List 1::
-Owner:0x58f80940 Mode: X Flg:0x0 Ref:0 Life:02000000 SPID:55 ECID:0
-SPID: 55 ECID: 0 Statement Type: UPDATE Line #: 4
-Input Buf: Language Event: SET NOCOUNT ON
+<CLS>KEY:</CLS> 13:1993058136:1 (040022ae5dcc) <CLS>CleanCnt:</CLS>2 <CLS>Mode:</CLS> X <CLS>Flags:</CLS> 0x0
+ Grant List 1::
+   <CLS>Owner:</CLS>0x58f80940 <CLS>Mode:</CLS> X <CLS>Flg:</CLS>0x0 <CLS>Ref:</CLS>0 <CLS>Life:</CLS>02000000 <CLS>SPID:</CLS>55 <CLS>ECID:</CLS>0
+   <CLS>SPID:</CLS> 55 <CLS>ECID:</CLS> 0 <CLS>Statement Type:</CLS> UPDATE <CLS>Line #:</CLS> 4
+   <CLS>Input Buf:</CLS> Language <CLS>Event:</CLS> SET NOCOUNT ON
 WHILE (1=1)
 BEGIN
-EXEC BookmarkLookupUpdate 4
+    EXEC BookmarkLookupUpdate 4
 END
-Requested By:
-ResType:LockOwner Stype:'OR' Mode: S SPID:54 ECID:0 Ec:(0x2F881BD8)
-Value:0x567e76c0 Cost:(0/0)
+
+ Requested By:
+   <cls>ResType:</cls>LockOwner <cls>Stype:</cls>'OR' <cls>Mode:</cls> S <cls>SPID:</cls>54 <cls>ECID:</cls>0 <cls>Ec:</cls>(0x2F881BD8)
+<cls>Value:</cls>0x567e76c0 <cls>Cost:</cls>(0/0)
+
 Victim Resource Owner:
-ResType:LockOwner Stype:'OR' Mode: S SPID:54 ECID:0 Ec:(0x2F881BD8)
-Value:0x567e76c0 Cost:(0/0)
-                </code>
-            </pre>
+ <cls>ResType:</cls>LockOwner <cls>Stype:</cls>'OR' <cls>Mode:</cls> S <cls>SPID:</cls>54 <cls>ECID:</cls>0 <cls>Ec:</cls>(0x2F881BD8)
+<cls>Value:</cls>0x567e76c0 <cls>Cost:</cls>(0/0)
+                </code></pre>
         </div>
         
-        <p>Listing 7.6: Sample deadlock graph from Trace Flag 1204, involving KEY locks.</p>
+        <p class="legenda"><strong>Listagem 7.6</strong>: Exemplo de gráfico de deadlock do Trace Flag 1204, envolvendo bloqueios KEY.</p>
         
-        <p>The first thing to pay attention to in the graph output is that there are two nodes, each node representing a locked resource. The first line of output for each node shows the resource on which the lock is held, and then the Grant List section provides details of the deadlocking situation, including:</p>
+        <p>A primeira coisa a se observar na saída do gráfico é que há dois <strong>nós</strong>, cada um representando um recurso bloqueado. A primeira linha de saída para cada nó mostra o recurso sobre o qual o bloqueio está mantido, e então a seção <strong>Grant List</strong> fornece detalhes da situação de deadlock, incluindo:</p>
 
         <ul>
-            <li>Mode of the lock being held on the resource</li>
-            <li>SPID of the associated process</li>
-            <li>Statement Type the SPID is currently running</li>
-            <li>Line # (line number) that marks the start of the currently executing statement</li>
-            <li>Input Buf, the contents of the input buffer for that SPID (the last statement sent).</li>
+            <li>Modo do bloqueio sendo mantido no recurso;</li>
+            <li>SPID do processo associado;</li>
+            <li>Tipo de instrução que o SPID está executando atualmente;</li>
+            <li>Número da linha (line number) que marca o início da instrução atualmente em execução;</li>
+            <li>Input Buf, o conteúdo do buffer de entrada para esse SPID (a última instrução enviada).</li>
         </ul>
         
-        <p>So, for Node 1, we can see that a shared read (S) lock is being held by SPID 54 on an index KEY of a non-clustered index (:2) on an object with ID 1993058136. Node 2 shows that an exclusive (X) lock is being held by SPID 55 on an index key of the clustered index (:1) of the same object.</p>
+        <p>Então, para o Nó 1, podemos ver que um bloqueio de leitura compartilhada (<code>S</code>) está sendo mantido pelo <code>SPID 54</code> em uma chave de índice de um índice não-clustered (<code>:2</code>) em um objeto com ID <code>1993058136</code>. O Nó 2 mostra que um bloqueio exclusivo (<code>X</code>) está sendo mantido pelo <code>SPID 55</code> em uma chave de índice do índice clustered (<code>:1</code>) do mesmo objeto.</p>
         
-        <p>Further down, for each node, is the Requested By section, which details any resource requests that cannot be granted, due to blocking. For Node 1, we can see that that SPID 55 is waiting for an exclusive lock on the non-clustered index key (it is blocked by the S lock held by SPID 54). For Node 2, we can see that SPID 54 is waiting to acquire a shared read lock on the clustered index key (it is blocked by the exclusive lock held by SPID 55).</p>
+        <p>Mais adiante, para cada nó, está a seção <strong>Requested By</strong>, que detalha quaisquer solicitações de recursos que não podem ser concedidas devido ao bloqueio. Para o Nó 1, podemos ver que o <code>SPID 55</code> está aguardando um bloqueio exclusivo na chave do índice não-clustered (ele está bloqueado pelo bloqueio <code>S</code> mantido pelo <code>SPID 54</code>). Para o Nó 2, podemos ver que o <code>SPID 54</code> está aguardando adquirir um bloqueio de leitura compartilhada na chave do índice clustered (ele está bloqueado pelo bloqueio exclusivo mantido pelo <code>SPID 55</code>).</p>
         
-        <p>Furthermore, back in the Grant List section, we can see that SPID 54 has issued the SELECT statement on Line # 3 of the BookmarkLookupSelect stored procedure (but is unable to acquire a shared read lock) and SPID 55 has issued the UPDATE statement on Line # 4 of the BookmarkLookupUpdate stored procedure (but is unable to acquire an exclusive lock).</p>
+        <p>Além disso, na seção <strong>Grant List</strong>, podemos ver que o <code>SPID 54</code> emitiu a instrução <code>SELECT</code> na Linha # 3 da stored procedure <code>BookmarkLookupSelect</code> (mas não consegue adquirir um bloqueio de leitura compartilhada) e o <code>SPID 55</code> emitiu a instrução <code>UPDATE</code> na Linha # 4 da stored procedure <code>BookmarkLookupUpdate</code> (mas não consegue adquirir um bloqueio exclusivo).</p>
         
-        <p>This is a classic deadlock situation, and happens to be one of the more common types of deadlock, covered in more detail later in this chapter, in the section titled Bookmark lookup deadlock.</p>
+        <p>Esta é uma situação clássica de deadlock, e é um dos tipos mais comuns de deadlock, abordado com mais detalhes posteriormente neste capítulo, na seção intitulada <a href="#" target="_self">Deadlock de busca de bookmark</a>.</p>
         
-        <p>Finally, in the Victim Resource Owner section we can find out which SPID was chosen as the deadlock victim, in this case, SPID 54. Alternatively, we can identify the deadlock victim by matching the binary information in the Value to the binary information in the Owner portion of the Grant List.</p>
+        <p>Finalmente, na seção <strong>Victim Resource Owner</strong>, podemos descobrir qual <code>SPID</code> foi escolhido como a vítima do deadlock, neste caso, o <code>SPID 54</code>. Alternativamente, podemos identificar a vítima do deadlock combinando as informações binárias no <code>Value</code> com as informações binárias na parte <code>Owner</code> da Grant List.</p>
         
-        <p>We've discussed a lot about the deadlocking incident, but so far we know only that it occurred on an object with an ID of 1993058136. In order to identify properly the object(s) involved in the deadlock, the information in the KEY entry for each node needs to be used to query sysobjects and sysindexes. The KEY entry is formatted as databaseid:objected:indexid. So, in this example, SPID 54 was holding a Shared (S) lock on index id 2, a non-clustered index, with objectID 1993058136. The query in Listing 7.7 shows how to determine the table and index names associated with the deadlock.</p>
+        <p>Discutimos muito sobre o incidente de deadlock, mas até agora sabemos apenas que ocorreu em um objeto com ID <code>1993058136</code>. Para identificar corretamente os objetos envolvidos no deadlock, as informações na entrada <code>KEY</code> de cada nó precisam ser usadas para consultar <code>sysobjects</code> e <code>sysindexes</code>. A entrada <code>KEY</code> é formatada como <code>databaseid:objectid:indexid</code>. Então, neste exemplo, o <code>SPID 54</code> estava mantendo um bloqueio Shared (<code>S</code>) no <code>índice id 2</code>, um índice não-clustered, com objectID <code>1993058136</code>. A consulta na Listagem 7.7 mostra como determinar os nomes da tabela e do índice associados ao deadlock.</p>
         
-        <div>
+        <div id="container">
             <pre>
                 <code>
-SELECT o.name AS TableName ,
-i.name AS IndexName
-FROM sysobjects AS o
-JOIN sysindexes AS i ON o.id = i.id
-WHERE o.id = 1993058136
-AND i.indid IN ( 1, 2 )
-                </code>
-            </pre>
+<cls>SELECT</cls>  o.name <cls>AS</cls> TableName ,
+        i.name <cls>AS</cls> IndexName
+<cls>FROM</cls>    <com>sysobjects</com> <cls>AS</cls> o
+        <join>JOIN</join> <com>sysindexes</com> <cls>AS</cls> i <cls>ON</cls> o.id = i.id
+<cls>WHERE</cls>   o.id = 1993058136
+        <join>AND</join> i.indid <join>IN</join> ( 1, 2 )
+                </code></pre>
         </div>
         
         <p>Listing 7.7: Finding the names of the objects associated with the deadlock.</p>

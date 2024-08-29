@@ -10,10 +10,9 @@
     --cor4: #8a0000;
     --cor5: #330000;
     --cor6: #fff3d2;
-
     --fonte-padrao: 'Roboto', sans-serif;
     --fonte-titulo: 'Rajdhani', sans-serif;
-    --fonte-codigo: 'Courier New', 'Consolas', Courier, monospace
+    --fonte-codigo: 'Consolas', Courier, 'Courier New', monospace
 }
 
 * {
@@ -179,7 +178,7 @@ a:hover {
 code {
     font-family: var(--fonte-codigo);
     font-size: 1em;
-    font-weight: 500;
+    font-weight: 600;
     word-wrap: break-word;
 }
 
