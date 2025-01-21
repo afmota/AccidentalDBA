@@ -528,7 +528,7 @@ SPID 61 is waiting for a Shared KEY lock on the index cidx_BookmarkLookupDeadloc
 
         <p>Como podemos ver na seção da lista de deadlocks da Listagem 7.11, o SPID 61, ao tentar executar a instrução <code>SELECT</code> contra o <code>cidx_BookmarkLookupDeadlock</code>, é escolhido como a vítima do deadlock.</p>
 
-        <h3 id="deadlockxml">Interpretando gráficos de deadlock em XML</h3>
+        <h3 id="deadlock_xml">Interpretando gráficos de deadlock em XML</h3>
 
         <p>As informações contidas no gráfico de deadlock em XML, obtido do SQL Profiler, notificações de eventos do Service Broker, entre outros, são essencialmente as mesmas que as obtidas a partir da saída do Trace Flag 1222 e são interpretadas da mesma forma. No entanto, o formato em que as informações são apresentadas é muito diferente. O gráfico de deadlock em XML pode ser exibido graficamente no Management Studio ao salvar o XML em um arquivo com a extensão <code>.XDL</code> e abrir o arquivo no Management Studio (embora, como discutido anteriormente, o XML gerado por Extended Events não possa ser exibido graficamente dessa maneira).</p>
 
@@ -552,124 +552,125 @@ SPID 61 is waiting for a Shared KEY lock on the index cidx_BookmarkLookupDeadloc
 
         <p>Uma exibição visual como esta torna muito mais fácil entender o bloqueio circular que causou o deadlock.</p>
 
-        <p>Common types of deadlock and how to eliminate them</p>
+        <h2 id="commomtypedeadlock">Tipos comuns de deadlock e como eliminá-los</h2>
 
-        <p>When troubleshooting any type of problem in SQL Server, you learn with experience how to recognize, from a distance, the particular varieties of problem that tend to crop up on a regular basis. The same is true of deadlocks; the same types of deadlock tend to appear with predictable regularity and, once you understand what patterns to look for, resolving the deadlock becomes much more straightforward.</p>
+        <p>Ao solucionar qualquer tipo de problema no SQL Server, você aprende com a experiência a reconhecer, à distância, os tipos específicos de problemas que tendem a surgir regularmente. O mesmo ocorre com deadlocks; os mesmos tipos de deadlock tendem a aparecer com uma regularidade previsível e, uma vez que você entende quais padrões procurar, resolver o deadlock se torna muito mais simples.</p>
 
-        <p>This section assumes knowledge of basic locking mechanisms inside SQL Server (see Chapter 6) and examines how to resolve the most common types of deadlock, namely the bookmark lookup deadlock, the serializable range scan deadlock, the cascading constraint deadlock, the intra-query parallelism deadlock and the accessing objects in different orders deadlock.</p>
+        <p>Esta seção pressupõe o conhecimento dos mecanismos básicos de bloqueio no SQL Server (consulte o <a href="cap06.html" target="_self">Capítulo 6</a>) e analisa como resolver os tipos mais comuns de deadlock, a saber: o deadlock de busca por índice (<strong>bookmark lookup</strong> deadlock), o deadlock de varredura em intervalo serializável (<strong>serializable range scan</strong> deadlock), o deadlock de restrição em cascata (<strong>cascading constraint</strong> deadlock), o deadlock de paralelismo intra-consulta (<strong>intra-query parallelism</strong> deadlock) e o deadlock causado pelo acesso a objetos em ordens diferentes (<strong>accessing objects in different orders</strong> deadlock).</p>
 
-        <p>Bookmark lookup deadlock</p>
+        <h3 id="bookmarklookup">Bookmark lookup deadlock</h3>
 
-        <p>Bookmark lookup deadlocks are one of the most common deadlocks in SQL Server. Fortunately, although they have a habit of appearing randomly, without any changes to the database or the code inside of it, they are also one of the easiest types of deadlock to troubleshoot.</p>
+        <p>Os deadlocks de busca por índice (bookmark lookup deadlocks) são um dos tipos mais comuns de deadlock no SQL Server. Felizmente, embora tendam a aparecer de forma aleatória, sem quaisquer alterações no banco de dados ou no código, eles também estão entre os tipos de deadlock mais fáceis de solucionar.</p>
 
-        <p>Bookmark lookup deadlocks generally have a SELECT statement as the victim, and an INSERT, UPDATE, or DELETE statement as the other contributing process to the deadlock. They occur partly as a general consequence of SQL Server's pessimistic locking mechanisms for concurrency, but mainly due to the lack of an appropriate covering index for the SELECT operation.</p>
+        <p>Os deadlocks de busca por índice geralmente têm uma instrução <code>SELECT</code> como vítima e uma instrução INSERT, UPDATE ou DELETE como o outro processo contribuinte para o deadlock. Eles ocorrem, em parte, como uma consequência geral dos mecanismos de bloqueio pessimistas do SQL Server para concorrência, mas principalmente devido à falta de um índice de cobertura adequado para a operação SELECT.</p>
 
-        <p>When a column is used in the WHERE clause to filter the SELECT statement and a non-clustered index exists on that column, then the database engine takes a shared lock on the required rows or pages in the non-clustered index. In order to return any additional columns from the table, not covered by the non-clustered index, the database engine performs an operation known as KEY, or RID, lookup (in SQL Server 2000, the term "bookmark lookup" was used). This operation uses either the Clustered Index Key or RID (in the case of a heap) to look up the row in the table data and retrieve the additional columns.</p>
+        <p>Quando uma coluna é usada na cláusula <code>WHERE</code> para filtrar a instrução <code>SELECT</code> e existe um índice não clusterizado nessa coluna, o mecanismo de banco de dados aplica um bloqueio compartilhado nas linhas ou páginas necessárias no índice não clusterizado. Para retornar quaisquer colunas adicionais da tabela que não sejam cobertas pelo índice não clusterizado, o mecanismo de banco de dados realiza uma operação conhecida como KEY ou RID lookup (no SQL Server 2000, o termo "bookmark lookup" era usado). Essa operação utiliza a chave do índice clusterizado ou o RID (no caso de um heap) para localizar a linha nos dados da tabela e recuperar as colunas adicionais.</p>
 
-        <p>When a lookup operation occurs, the database engine takes additional shared locks on the rows or pages needed from the table. These locks are held for the duration of the SELECT operation, or until lock escalation is triggered to increase the lock granularity from row or page to table.</p>
+        <p>Quando ocorre uma operação de lookup, o mecanismo de banco de dados aplica bloqueios compartilhados adicionais nas linhas ou páginas necessárias da tabela. Esses bloqueios são mantidos durante toda a operação <code>SELECT</code> ou até que ocorra a escalada de bloqueio para aumentar a granularidade do bloqueio de linha ou página para tabela.</p>
 
-        <p>The deadlock occurs, as we have seen in previous sections, when an operation that changes the data in a table (for example, an INSERT, UPDATE, or DELETE operation) occurs simultaneously with the SELECT. When the data-changing session executes, it acquires an exclusive lock on the row or page of the clustered index or table, and performs the data change operation. At the same time the SELECT operation acquires a shared lock on the non-clustered index. The data-changing operation requires an exclusive lock on the non-clustered index to complete the modification, and the SELECT operation requires a shared lock on the clustered index, or table, to perform the bookmark lookup. Shared locks and exclusive locks are incompatible, so if the data-changing operation and the SELECT operation affect the same rows then the data-changing operation will be blocked by the SELECT, and the SELECT will be blocked by the data change, resulting in a deadlock.</p>
+        <p>O deadlock ocorre, como vimos em seções anteriores, quando uma operação que altera os dados em uma tabela (por exemplo, uma operação de <code>INSERT</code>, <code>UPDATE</code> ou <code>DELETE</code>) acontece simultaneamente com a operação <code>SELECT</code>. Quando a sessão que altera os dados é executada, ela adquire um bloqueio exclusivo na linha ou página do índice clusterizado ou tabela e realiza a operação de alteração de dados. Ao mesmo tempo, a operação <code>SELECT</code> adquire um bloqueio compartilhado no índice não clusterizado. A operação de alteração de dados requer um bloqueio exclusivo no índice não clusterizado para concluir a modificação, e a operação <code>SELECT</code> requer um bloqueio compartilhado no índice clusterizado ou tabela para realizar o bookmark lookup. Bloqueios compartilhados e exclusivos são incompatíveis, então, se a operação de alteração de dados e a operação <code>SELECT</code> afetarem as mesmas linhas, a operação de alteração será bloqueada pelo <code>SELECT</code>, e o <code>SELECT</code> será bloqueado pela alteração de dados, resultando em um deadlock.</p>
 
-        <p>One of the most common online recommendations for curing this type of deadlock is to use a NOLOCK table hint in the SELECT statement, to prevent it from acquiring shared locks. This is bad advice. While it might prevent the deadlock, it can have unwanted side effects, such as allowing operations to read uncommitted changes to the database data, and so return inaccurate results.</p>
+        <p>Uma das recomendações mais comuns online para resolver esse tipo de deadlock é usar a dica de tabela <code>NOLOCK</code> na instrução <code>SELECT</code>, para evitar que ela adquira bloqueios compartilhados. Essa é uma má prática. Embora possa evitar o deadlock, pode causar efeitos colaterais indesejados, como permitir que operações leiam alterações não confirmadas nos dados do banco de dados, resultando assim em resultados imprecisos.</p>
 
-        <p>The correct fix for this type of deadlock is to change the definition of the non-clustered index so that it contains, either as additional key columns or as INCLUDE columns (see Chapter 5), all the columns it needs to cover the query. Columns returned by the query that are not used in a JOIN, WHERE, or GROUP BY clause, can be added to the index as INCLUDE columns. Any column used in a JOIN, the WHERE clause, or in a GROUP BY should ideally be a part of the index key but, in circumstances where this exceeds the 900-byte limit, addition as an INCLUDE column may work as well. Implementing the covering index will resolve the deadlock without the unexpected side effects of using NOLOCK.</p>
+        <p>A correção adequada para esse tipo de deadlock é alterar a definição do índice não clusterizado para que ele contenha, como colunas-chave adicionais ou como colunas <code>INCLUDE</code> (veja o <a href="cap05.html">Capítulo 5</a>), todas as colunas necessárias para cobrir a consulta. As colunas retornadas pela consulta que não são usadas em uma cláusula <code>JOIN</code>, <code>WHERE</code> ou <code>GROUP BY</code> podem ser adicionadas ao índice como colunas INCLUDE. Qualquer coluna usada em um <code>JOIN</code>, na cláusula <code>WHERE</code> ou em um <code>GROUP BY</code> deve idealmente fazer parte da chave do índice, mas, em casos onde isso exceda o limite de 900 bytes, adicioná-la como uma coluna <code>INCLUDE</code> também pode funcionar. Implementar o índice de cobertura resolverá o deadlock sem os efeitos colaterais inesperados de usar <code>NOLOCK</code>.</p>
         
-        <p>A shortcut to finding the appropriate covering index for a query is to run it through the Database Engine Tuning Advisor (DTA). However, as discussed in Chapter 5, the DTA recommendations are only as good as the supplied workload, and repeated single-query evaluations against the same database can result in an excessive number of indexes, which often overlap. Manual review of any index recommendation made by the DTA should be made to determine if modification of an existing index can cover the query without creating a new index. A good video example, Using the DTA to Assist in Performance Tuning, can be found on the SQL Share website (http://www.sqlshare.com/using-thedta-to-assist-in-performance-tuning_599.aspx).</p>
+        <p>Uma maneira rápida de encontrar o índice de cobertura apropriado para uma consulta é executá-la no Database Engine Tuning Advisor (DTA). No entanto, como discutido no <a href="cap05.html">Capítulo 5</a>, as recomendações do DTA são tão boas quanto a carga de trabalho fornecida, e a avaliação repetida de uma única consulta no mesmo banco de dados pode resultar em um número excessivo de índices, que frequentemente se sobrepõem. É recomendável revisar manualmente qualquer recomendação de índice feita pelo DTA para determinar se a modificação de um índice existente pode cobrir a consulta sem criar um novo índice. Um bom exemplo em vídeo, <em>"Using the DTA to Assist in Performance Tuning"</em>, pode ser encontrado no site SQL Share (<a href="http://www.sqlshare.com/using-thedta-to-assist-in-performance-tuning_599.aspx" target="_blank">http://www.sqlshare.com/using-thedta-to-assist-in-performance-tuning_599.aspx</a>).</p>
 
-        <p>Range scans caused by SERIALIZABLE isolation</p>
+        <h3 id="rangescan">Range scans causados por isolamento SERIALIZABLE</h3>
 
-        <p>The SERIALIZABLE isolation level is the most restrictive isolation level in SQL Server for concurrency control, ensuring that every transaction is completely isolated from the effects of any other transaction.</p>
+        <p>O nível de isolamento <code>SERIALIZABLE</code> é o nível de isolamento mais restritivo no SQL Server para controle de concorrência, garantindo que cada transação seja completamente isolada dos efeitos de qualquer outra transação.</p>
 
-        <p>To accomplish this level of transactional isolation, range locks are used when reading data, in place of the row or page level locking used under READ COMMITTED isolation. These range locks ensure that no data changes can occur that affect the result set, allowing the operation to be repeated inside the same transaction with the same result. While the default isolation level for SQL Server is READ COMMITTED, certain providers, like COM+ and BizTalk, change the isolation to SERIALIZABLE when connections are made.</p>
+        <p>Para alcançar esse nível de isolamento transacional, <strong>bloqueios de intervalo</strong> são usados ao ler dados, no lugar dos bloqueios de nível de linha ou página usados no isolamento <code>READ COMMITTED</code>. Esses bloqueios de intervalo garantem que nenhuma alteração nos dados possa ocorrer que afete o conjunto de resultados, permitindo que a operação seja repetida dentro da mesma transação com o mesmo resultado. Embora o nível de isolamento padrão do SQL Server seja <code>READ COMMITTED</code>, certos provedores, como COM+ e BizTalk, alteram o isolamento para <code>SERIALIZABLE</code> quando as conexões são feitas.</p>
 
-        <p>Range locks have two components associated with their names, the lock type used to lock the range and then the lock type used for locking the individual rows within the range. The four most common range locks are shared-shared (RangeS-S), shared-update (RangeS-U), insert-null (RangeI-N), and exclusive (RangeX-X). Deadlocks associated with SERIALIZABLE isolation are generally caused by lock conversion, where a lock of higher compatibility, such as a RangeS-S or RangeS-U lock, needs to be converted to a lock of lower compatibility, such as a RangeI-N or RangeX-X lock.</p>
+        <p>Os bloqueios de intervalo têm dois componentes associados aos seus nomes: o tipo de bloqueio usado para bloquear o intervalo e o tipo de bloqueio usado para bloquear as linhas individuais dentro do intervalo. Os quatro bloqueios de intervalo mais comuns são: compartilhado-compartilhado (<code>RangeS-S</code>), compartilhado-atualização (<code>RangeS-U</code>), inserção-nulo (<code>RangeI-N</code>) e exclusivo (<code>RangeX-X</code>). Deadlocks associados ao isolamento <code>SERIALIZABLE</code> geralmente são causados por conversão de bloqueio, onde um bloqueio de maior compatibilidade, como um bloqueio <code>RangeS-S</code> ou <code>RangeS-U</code>, precisa ser convertido para um bloqueio de menor compatibilidade, como um bloqueio <code>RangeI-N</code> ou <code>RangeX-X</code>.</p>
 
-        <p>A common deadlock that occurs under SERIALIZABLE isolation has a pattern that involves a transaction that checks if a row exists in a table before inserting or updating the data in the table. A reproducible example of this deadlock is included in the code examples for this chapter. This type of deadlock will generally produce a deadlock graph with a resource-list similar to the one shown in Listing 7.13.</p>
+        <p>Um deadlock comum que ocorre sob o isolamento <code>SERIALIZABLE</code> tem um padrão que envolve uma transação que verifica se uma linha existe em uma tabela antes de inserir ou atualizar os dados na tabela. Um exemplo reproduzível desse deadlock está incluído nos exemplos de código para este capítulo. Esse tipo de deadlock geralmente produzirá um gráfico de deadlock com um <code>resouce-list</code> semelhante à mostrada na Lista 7.13.</p>
 
-        <div>
+        <div id="container">
             <pre>
-                <code>
-                    <resource-list>
-                    <keylock hobtid="72057594050969600" dbid="5" objectname="AdventureWorks.
-                    Sales.SalesOrderHeader" indexname="IX_SalesOrderHeader_CustomerID" id="lock35bcc80"
-                    mode="RangeS-U" associatedObjectId="72057594050969600">
-                    <owner-list>
-                    <owner id="processad4d2e8" mode="RangeS-U" />
-                    <owner id="process9595b8" mode="RangeS-S" />
-                    </owner-list>
-                    <waiter-list>
-                    <waiter id="processad4d2e8" mode="RangeI-N" requestType="convert" />
-                    <waiter id="process9595b8" mode="RangeI-N" requestType="convert" />
-                    </waiter-list>
-                    </keylock>
-                    </resource-list>
-                </code>
-            </pre>
+                <code><cls>
+    &lt;resource-list&gt;
+      &lt;keylock hobtid=&quot;72057594050969600&quot; dbid=&quot;5&quot; objectname=&quot;AdventureWorks.
+Sales.SalesOrderHeader&quot; indexname=&quot;IX_SalesOrderHeader_CustomerID&quot; id=&quot;lock35bcc80&quot; 
+mode=&quot;RangeS-U&quot; associatedObjectId=&quot;72057594050969600&quot;&gt;
+        &lt;owner-list&gt;
+          &lt;owner id=&quot;processad4d2e8&quot; mode=&quot;RangeS-U&quot; /&gt;
+          &lt;owner id=&quot;process9595b8&quot; mode=&quot;RangeS-S&quot; /&gt;
+        &lt;/owner-list&gt;
+        &lt;waiter-list&gt;
+          &lt;waiter id=&quot;processad4d2e8&quot; mode=&quot;RangeI-N&quot; requestType=&quot;convert&quot; /&gt;
+          &lt;waiter id=&quot;process9595b8&quot; mode=&quot;RangeI-N&quot; requestType=&quot;convert&quot; /&gt;
+        &lt;/waiter-list&gt;
+      &lt;/keylock&gt;
+    &lt;/resource-list&gt;
+                </cls></code></pre>
         </div>
 
-        <p>Listing 7.13: Extract from a deadlock graph for a SERIALIZABLE range scan deadlock.</p>
+        <p class="legenda"><strong>Listagem 7.13</strong>: Extração de um gráfico de deadlock para um deadlock de varredura de intervalo SERIALIZABLE.</p>
 
-        <p>In this example, two processes have acquired compatible shared locks, RangeS-S and RangeS-U, on the SalesOrderHeader table. When one of the processes requires a lock conversion to a lock type that is incompatible with the lock being held by the other process, in this case a RangeI-N, it is blocked. If both processes require a lock conversion to RangeI-N locks, the result is a deadlock since each session is waiting on the other to release its high compatibility lock.</p>
+        <p>Neste exemplo, dois processos adquiriram locks compartilhados compatíveis, <code>RangeS-S</code> e <code>RangeS-U</code>, na tabela <code>SalesOrderHeader</code>. Quando um dos processos necessita de uma conversão de lock para um tipo de lock que é incompatível com o lock mantido pelo outro processo, neste caso um <code>RangeI-N</code>, ele fica bloqueado. Se ambos os processos exigirem uma conversão de lock para locks <code>RangeI-N</code>, o resultado é um deadlock, pois cada sessão está esperando que a outra libere seu lock de alta compatibilidade.</p>
 
-        <p>There are several possible solutions to this type of deadlock and the most appropriate one depends on the database and the application it supports. If it is not necessary for the database to maintain the range locks acquired during the SELECT operation that checks for row existence and the SELECT operation can be moved outside of the transaction that performs the data change, then the deadlock can be prevented.</p>
+        <p>Existem várias soluções possíveis para esse tipo de deadlock, e a mais apropriada depende do banco de dados e da aplicação que ele suporta. Se não for necessário que o banco de dados mantenha os locks de intervalo adquiridos durante a operação <code>SELECT</code> que verifica a existência da linha, e a operação <code>SELECT</code> puder ser movida para fora da transação que realiza a alteração de dados, então o deadlock pode ser prevenido.</p>
         
-        <p>If the operation doesn't require the use of SERIALIZABLE isolation, then changing the isolation level to a less restrictive isolation level, for example READ COMMITTED, will prevent the deadlock and allow a greater degree of concurrency.</p>
+        <p>Se a operação não exigir o uso da isolação <code>SERIALIZABLE</code>, então alterar o nível de isolação para um nível menos restritivo, por exemplo, <code>READ COMMITTED</code>, impedirá o deadlock e permitirá um maior grau de concorrência.</p>
 
-        If neither of these solutions is appropriate, the deadlock can be resolved by forcing the SELECT statement to use a lower-compatibility lock, through the use of an UPDLOCK or XLOCK table hint. This will block any other transactions attempting to acquire locks of higher compatibility. This fix is specific to this particular type of deadlock due to the usage of SERIALIZABLE isolation. Using UPDLOCK hints under READ COMMITTED may result in deadlocks occurring more frequently under certain circumstances.
+        <p>Se nenhuma dessas soluções for apropriada, o deadlock pode ser resolvido forçando a instrução <code>SELECT</code> a usar um lock de menor compatibilidade, através do uso de uma dica de tabela <code>UPDLOCK</code> ou <code>XLOCK</code>. Isso bloqueará quaisquer outras transações que tentem adquirir locks de maior compatibilidade. Esta solução é específica para este tipo particular de deadlock devido ao uso da isolação <code>SERIALIZABLE</code>. O uso de dicas <code>UPDLOCK</code> sob o <code>READ COMMITTED</code> pode resultar em deadlocks ocorrendo com mais frequência em determinadas circunstâncias.</p>
 
-        <p>Cascading constraint deadlocks</p>
+        <h3 id="cascadeadlock">Deadlocks em restrições em cascata</h3>
 
-        <p>Cascading constraint deadlocks are generally very similar to a Serializable Range Scan deadlock, even though the isolation level under which the victim transaction was running isn't SERIALIZABLE. To enforce cascading constraints, SQL Server has to traverse the FOREIGN KEY hierarchy to ensure that orphaned child records are not left behind, as the result of an UPDATE or DELETE operation to a parent table. To do this requires that the transaction that modifies the parent table be isolated from the effects of other transactions, in order to prevent a change that would violate FOREIGN KEY constraints, when the cascade operation subsequently completes.</p>
+        <p>Deadlocks em restrições em cascata são, geralmente, muito semelhantes a um deadlock de varredura de intervalo no nível de isolamento Serializable, mesmo que o nível de isolamento da transação vítima não seja <code>SERIALIZABLE</code>. Para aplicar as restrições em cascata, o SQL Server precisa percorrer a hierarquia de <code>FOREIGN KEY</code> para garantir que registros filhos órfãos não sejam deixados para trás como resultado de uma operação de <code>UPDATE</code> ou <code>DELETE</code> na tabela pai. Para isso, é necessário que a transação que modifica a tabela pai esteja isolada dos efeitos de outras transações, a fim de evitar mudanças que violem as restrições de <code>FOREIGN</code> KEY quando a operação em cascata for concluída posteriormente.</p>
 
-        <p>Under the default READ COMMITTED isolation, the database engine would acquire and hold, for the duration of the transaction, Exclusive locks on all rows that had to be changed. This blocks users from reading or changing the affected rows, but it doesn't prevent another session from adding a new row into a child table for the parent key being deleted. To prevent this from occurring, the database engine acquires and holds range locks, which block the addition of new rows into the range affected by the cascading operation. This is essentially an under-the-cover use of SERIALIZABLE isolation, during the enforcement of the cascading constraint, but the isolation level for the batch is not actually changed; only the type of locks used for the cascading operation are changed.</p>
+        <p>No nível de isolamento padrão <code>READ COMMITTED</code>, o mecanismo de banco de dados adquire e mantém, durante toda a transação, bloqueios exclusivos (Exclusive locks) em todas as linhas que precisam ser alteradas. Isso impede que outros usuários leiam ou alterem as linhas afetadas, mas não impede que outra sessão adicione uma nova linha na tabela filha para a chave pai que está sendo excluída. Para evitar esse comportamento, o mecanismo de banco de dados adquire e mantém bloqueios de intervalo (Range locks), que impedem a adição de novas linhas dentro do intervalo afetado pela operação em cascata. Isso é, essencialmente, um uso implícito do isolamento <code>SERIALIZABLE</code> durante a aplicação da restrição em cascata, mas o nível de isolamento do lote não é realmente alterado; apenas o tipo de bloqueios usados na operação em cascata é modificado.</p>
         
-        <p>When a deadlock occurs during a cascading operation, the first thing to look for is whether or not non-clustered indexes exist for the FOREIGN KEY columns that are used (see Chapter 5 for more on Indexing Foreign Keys). If appropriate indexes on the FOREIGN KEY columns do not exist, the locks being taken to enforce the constraints will be held for longer periods of time, increasing the likelihood of a deadlock between two operations, if a lock conversion occurs.</p>
+        <p>Quando ocorre um deadlock durante uma operação em cascata, a primeira coisa a verificar é se existem ou não índices não clusterizados para as colunas de <code>FOREIGN KEY</code> que estão sendo utilizadas (consulte o <a href="cap05.html" target="_self">Capítulo 5</a> para mais informações sobre indexação de FOREIGN KEYS). Se índices apropriados nas colunas de <code>FOREIGN KEY</code> não existirem, os bloqueios realizados para aplicar as restrições serão mantidos por períodos mais longos, aumentando a probabilidade de um deadlock entre duas operações, caso ocorra uma conversão de bloqueio.</p>
 
-        <p>Intra-query parallelism deadlocks</p>
+        <h3 id="intraconsulta">Deadlocks de paralelismo intra-consulta</h3>
 
-        <p>An intra-query parallelism deadlock occurs when a single session executes a query that runs with parallelism, and deadlocks itself. Unlike other deadlocks in SQL Server, these deadlocks may actually be caused by a bug in the SQL Server parallelism synchronization code, rather than any problem with the database or application design. Since there are risks associated with fixing some bugs, it may be that the bug is known and won't be fixed, since it is possible to work around it by reducing the degree of parallelism for that the query, using the MAXDOP query hint, or by adding or changing indexes to reduce the cost of the query or make it more efficient.</p>
+        <p>Um deadlock de paralelismo intra-consulta ocorre quando uma única sessão executa uma consulta que utiliza paralelismo e acaba entrando em deadlock consigo mesma. Diferentemente de outros deadlocks no SQL Server, esses deadlocks podem ser causados por um bug no código de sincronização de paralelismo do SQL Server, e não por um problema no design do banco de dados ou da aplicação. Como existem riscos associados à correção de alguns bugs, pode ser que o bug seja conhecido e não seja corrigido, pois é possível contorná-lo reduzindo o grau de paralelismo da consulta usando a dica de consulta <code>MAXDOP</code>, ou adicionando ou alterando índices para reduzir o custo da consulta ou torná-la mais eficiente.</p>
 
-        <p>The deadlock graph for a parallelism deadlock will have the same SPID for all of the processes, and will have more than two processes in the process-list. The resourcelist will have threadpool, exchangeEvent, or both, listed as resources, but it won't have lock resources associated with it. In addition, the deadlock graph for this type of deadlock will be significantly longer than any other type of deadlock, depending on the degree of parallelism and the number of nodes that existed in the execution plan.</p>
+        <p>O gráfico de deadlock para um deadlock de paralelismo terá o mesmo SPID para todos os processos e terá mais de dois processos na <code>process-list</code>. A <code>resource-list</code> incluirá <code><strong>threadpool</strong></code>, <code><strong>exchangeEvent</strong></code>, ou ambos, como recursos, mas não terá recursos de bloqueio associados a ela. Além disso, o gráfico de deadlock para esse tipo de deadlock será significativamente mais longo do que qualquer outro tipo de deadlock, dependendo do grau de paralelismo e do número de nós existentes no plano de execução.</p>
 
-        <p>Additional information about this specific type of deadlock can be found on Bart Duncan's blog post, Today's Annoyingly-Unwieldy Term: "Intra-Query Parallel Thread Deadlocks" (http://blogs.msdn.com/bartd/archive/2008/09/24/today-s-annoyinglyunwieldy-term-intra-query-parallel-thread-deadlocks.aspx).</p>
+        <p>Informações adicionais sobre esse tipo específico de deadlock podem ser encontradas na postagem do blog de Bart Duncan, intitulada <em>Today's Annoyingly-Unwieldy Term: "Intra-Query Parallel Thread Deadlocks"</em> (<a href="http://blogs.msdn.com/bartd/archive/2008/09/24/today-s-annoyinglyunwieldy-term-intra-query-parallel-thread-deadlocks.aspx" target="_blank">http://blogs.msdn.com/bartd/archive/2008/09/24/today-s-annoyinglyunwieldy-term-intra-query-parallel-thread-deadlocks.aspx</a>).</p>
         
-        <p>Accessing objects in different orders</p>
+        <h3 id="accessobjects">Acessando objetos em ordens diferentes</h3>
 
-        <p>One of the easiest deadlocks to create, and consequently one of the easiest to prevent, is caused by accessing objects in a database in different operation orders inside of T-SQL code, inside of transactions, as shown in Listings 7.14 and 7.15.</p>
+        <p>Um dos deadlocks mais fáceis de criar, e consequentemente um dos mais fáceis de prevenir, é causado pelo acesso a objetos em um banco de dados em diferentes ordens de operação dentro do código T-SQL, dentro de transações, como mostrado nos Listagens 7.14 e 7.15.</p>
 
-        <div>
+        <div id="container">
             <pre>
                 <code>
-                    BEGIN TRANSACTION
-                    UPDATE TableA
-                    SET Column1 = 1
-                    SELECT Column2
-                    FROM TableB
-                </code>
-            </pre>
+<cls>BEGIN TRANSACTION</cls>
+
+<cls>UPDATE</cls> TabelaA
+<cls>SET</cls>    Coluna1 = 1
+
+<cls>SELECT</cls> Coluna2
+<cls>FROM</cls>   TabelaB
+                </code></pre>
         </div>
 
-        <p>Listing 7.14: Transaction1 updates TableA then reads TableB.</p>
+        <p class="legenda"><strong>Listagem 7.14</strong>: A Transação1 atualiza a TabelaA e, em seguida, lê a TabelaB.</p>
 
-        <div>
+        <div id="container">
             <pre>
                 <code>
-                    BEGIN TRANSACTION
-                    UPDATE TableB
-                    SET Column2 = 1
-                    SELECT Column1
-                    FROM TableA
-                </code>
-            </pre>
+<cls>BEGIN TRANSACTION</cls>
+
+<cls>UPDATE</cls> TabelaB
+<cls>SET</cls>    Column2 = 1
+
+<cls>SELECT</cls> Coluna2
+<cls>FROM</cls>   TabelaA
+                </code></pre>
         </div>
         
-        <p>Listing 7.15: Transaction2 updates TableB then reads TableA.</p>
+        <p class="legenda"><strong>Listagem 7.15</strong>: A Transação2 atualiza a TabelaB e depois lê a TabelaA.</p>
         
-        <p>Transaction1's UPDATE against TableA will result in an exclusive lock being held on the table until the transaction completes. At the same time, Transaction2 runs an UPDATE against TableB, which also results in an exclusive lock being held until the transaction completes. After completing the UPDATE to TableA, Transaction1 tries to read TableB but is blocked and unable to acquire the necessary shared lock, due to the exclusive lock being held by Transaction2. After completing its UPDATE to TableB, Transaction2 reads TableA and is also blocked, unable to acquire a shared lock due to the exclusive lock held by Transaction1. Since the two transactions are both blocking each other, the result is a deadlock and the Lock Monitor will kill one of the two sessions, rolling back its transaction to allow the other to complete.</p>
+        <p>A Transação1 faz um <code>UPDATE</code> na <code>TabelaA</code>, resultando em um bloqueio exclusivo (exclusive lock) na tabela até que a transação seja concluída. Ao mesmo tempo, a Transação2 executa um <code>UPDATE</code> na <code>TabelaB</code>, o que também gera um bloqueio exclusivo até a conclusão da transação. Após concluir o <code>UPDATE</code> na <code>TabelaA</code>, a Transação1 tenta ler a <code>TabelaB</code>, mas é bloqueada porque não consegue obter o bloqueio compartilhado necessário, devido ao bloqueio exclusivo mantido pela Transação2. Da mesma forma, após finalizar o <code>UPDATE</code> na <code>TabelaB</code>, a Transação2 tenta ler a <code>TabelaA</code>, mas também é bloqueada, pois não consegue obter o bloqueio compartilhado necessário devido ao bloqueio exclusivo mantido pela Transação1. Como ambas as transações estão se bloqueando mutuamente, ocorre um deadlock, e o Monitor de Bloqueios encerrará uma das sessões, revertendo sua transação para permitir que a outra seja concluída.</p>
 
-        <p>When using explicit transactions in code, it is important that objects are always accessed in the same order, to prevent this type of deadlock from occurring.</p>
+        <p>Ao utilizar transações explícitas no código, é fundamental que os objetos sejam sempre acessados na mesma ordem para prevenir a ocorrência desse tipo de deadlock.</p>
 
-        <p>Handling Deadlocks to Prevent Errors</p>
+        <h2 id="handlingdeadlocks">Handling Deadlocks to Prevent Errors</h2>
 
         <p>In most cases, the same issues that cause severe blocking in the database, such as poor database design, lack of indexing, poorly designed queries, inappropriate isolation level and so on (all discussed in Chapter 6), are also the common causes of deadlocking. In most cases, by fixing such issues, we can prevent deadlocks from occurring. Unfortunately, the time deadlocks become a problem, it may not be possible to make the necessary design changes to correct them.</p>
 

@@ -12,7 +12,7 @@
     --cor6: #fff3d2;
     --fonte-padrao: 'Roboto', sans-serif;
     --fonte-titulo: 'Rajdhani', sans-serif;
-    --fonte-codigo: 'Consolas', Courier, 'Courier New', monospace
+    --fonte-codigo: Courier, 'Courier New', 'Consolas', monospace
 }
 
 * {
@@ -139,6 +139,7 @@ main a {
     background-color: var(--cor0);
     padding: 2px 6px;
     word-wrap: break-word;
+    font-style: italic;
 }
 
 main > ul {
@@ -178,7 +179,6 @@ a:hover {
 code {
     font-family: var(--fonte-codigo);
     font-size: 1em;
-    font-weight: 600;
     word-wrap: break-word;
 }
 
