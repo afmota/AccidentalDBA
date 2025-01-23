@@ -670,147 +670,152 @@ mode=&quot;RangeS-U&quot; associatedObjectId=&quot;72057594050969600&quot;&gt;
 
         <p>Ao utilizar transações explícitas no código, é fundamental que os objetos sejam sempre acessados na mesma ordem para prevenir a ocorrência desse tipo de deadlock.</p>
 
-        <h2 id="handlingdeadlocks">Handling Deadlocks to Prevent Errors</h2>
+        <h2 id="handlingdeadlocks">Lidando com Deadlocks para Prevenir Erros</h2>
 
-        <p>In most cases, the same issues that cause severe blocking in the database, such as poor database design, lack of indexing, poorly designed queries, inappropriate isolation level and so on (all discussed in Chapter 6), are also the common causes of deadlocking. In most cases, by fixing such issues, we can prevent deadlocks from occurring. Unfortunately, the time deadlocks become a problem, it may not be possible to make the necessary design changes to correct them.</p>
+        <p>Na maioria dos casos, os mesmos problemas que causam bloqueios severos no banco de dados, como design inadequado do banco de dados, falta de indexação, consultas mal projetadas, nível de isolamento inadequado e assim por diante (todos discutidos no <a href="cap06.html" target="_self">Capítulo 6</a>), também são as causas comuns de deadlocks. Na maioria dos casos, ao corrigir esses problemas, podemos prevenir a ocorrência de deadlocks. Infelizmente, quando os deadlocks se tornam um problema, pode não ser possível fazer as alterações necessárias no design para corrigi-los.</p>
 
-        <p>Therefore, an important part of application and database design is defensive programming; a technique that anticipates and handles exceptions as a part of the general code base for an application or database. Defensive programming to handle deadlock exceptions can be implemented in two different ways:</p>
+        <p>Portanto, uma parte importante do design de aplicativos e bancos de dados é a programação defensiva; uma técnica que antecipa e lida com exceções como parte da base de código geral para um aplicativo ou banco de dados. A programação defensiva para lidar com exceções de deadlock pode ser implementada de duas maneiras diferentes:</p>
 
         <ul>
-            <li>database-side, through the use of T-SQL TRY…CATCH blocks</li>
-            <li>application-side, through the use of application TRY…CATCH blocks.</li>
+            <li>do lado do banco de dados, através do uso de blocos TRY…CATCH do T-SQL</li>
+            <li>do lado da aplicação, através do uso de blocos TRY…CATCH da aplicação.</li>
         </ul>
 
-        <p>In either case, proper handling of the 1205 exception raised by SQL Server for the deadlock victim can help avoid UnhandledException errors in the application and the ensuing end-user phone calls to Help Desk or Support.</p>
+        <p>Em ambos os casos, o tratamento adequado da exceção 1205 gerada pelo SQL Server para a vítima do deadlock pode ajudar a evitar erros de UnhandledException na aplicação e as subsequentes chamadas dos usuários finais para o Help Desk ou Suporte.</p>
         
-        <p>T-SQL TRY…CATCH blocks</p>
+        <h3 id="trycatch">Blocos T-SQL TRY…CATCH</h3>
 
-        <p>Depending on how an application is designed, and whether there is separation between application code and database code, the simplest implementation of deadlock error handling could be via the use of BEGIN TRY/CATCH blocks inside of the T-SQL being executed.</p>
+        <p>Dependendo de como uma aplicação é projetada, e se há separação entre o código da aplicação e o código do banco de dados, a implementação mais simples do tratamento de erros de deadlock pode ser feita por meio do uso de blocos <code>BEGIN TRY/CATCH</code> dentro do T-SQL que está sendo executado.</p>
 
-        <p>This technique is most applicable in cases where an application calls stored procedures for all of its data access. In such cases, changing the code in a stored procedure so that it handles the deadlock exception doesn't require changes to application code, or recompiling and redistribution of the application. This greatly simplifies the implementation of such changes.</p>
+        <p>Esta técnica é mais aplicável em casos onde uma aplicação chama procedimentos armazenados para todo o seu acesso a dados. Nesses casos, alterar o código em um procedimento armazenado para que ele lide com a exceção de deadlock não requer mudanças no código da aplicação, recompilação e redistribuição da aplicação. Isso simplifica muito a implementação dessas mudanças.</p>
 
-        <p>The best way to deal with a deadlock, within your error handling code, will depend on your application and its expected behavior in the event of a deadlock. One way of handling the deadlock would be to retry the transaction a set number of times before actually raising an exception back to the application for handling. The cross-locking situation associated with a deadlock generally only lasts a very short duration, usually timed in milliseconds so, more often than not, a subsequent attempt at executing the T-SQL code selected as a victim will succeed, and there will be no need to raise any exceptions to the application.</p>
+        <p>A melhor maneira de lidar com um deadlock, dentro do seu código de tratamento de erros, dependerá da sua aplicação e do comportamento esperado em caso de deadlock. Uma maneira de lidar com o deadlock seria tentar a transação um determinado número de vezes antes de realmente lançar uma exceção de volta para a aplicação tratar. A situação de bloqueio cruzado associada a um deadlock geralmente dura apenas um curto período de tempo, geralmente medido em milissegundos, então, na maioria das vezes, uma tentativa subsequente de executar o código T-SQL selecionado como vítima terá sucesso, e não haverá necessidade de lançar exceções para a aplicação.</p>
 
-        <p>However, it is possible that the deadlock will continue to occur, and we need to avoid getting into an infinite loop, attempting repeatedly to execute the same failing code. To prevent this, a variable is used to count down from a maximum number of retry attempts; when zero is reached, an exception will be raised back to the application. This technique is demonstrated in Listing 7.16.</p>
+        <p>No entanto, é possível que o deadlock continue a ocorrer, e precisamos evitar entrar em um loop infinito, tentando repetidamente executar o mesmo código com falha. Para prevenir isso, uma variável é usada para contar a partir de um número máximo de tentativas; quando zero é alcançado, uma exceção será lançada de volta para a aplicação. Esta técnica é demonstrada na Listagem 7.16.</p>
 
-        <div>
+        <div id="container">
             <pre>
                 <code>
-                    DECLARE @retries INT ;
-                    SET @retries = 4 ;
-                    WHILE ( @retries > 0 )
-                    BEGIN269
-                    Chapter 7: Handling Deadlocks
-                    BEGIN TRY
-                    BEGIN TRANSACTION ;
-                    -- place sql code here
-                    SET @retries = 0 ;
-                    COMMIT TRANSACTION ;
-                    END TRY
-                    BEGIN CATCH
-                    -- Error is a deadlock
-                    IF ( ERROR_NUMBER() = 1205 )
-                    SET @retries = @retries - 1 ;
-                    -- Error is not a deadlock
-                    ELSE
-                    BEGIN
-                    DECLARE @ErrorMessage NVARCHAR(4000) ;
-                    DECLARE @ErrorSeverity INT ;
-                    DECLARE @ErrorState INT ;
-                    SELECT @ErrorMessage = ERROR_MESSAGE() ,
-                    @ErrorSeverity = ERROR_SEVERITY() ,
-                    @ErrorState = ERROR_STATE() ;
-                    -- Re-Raise the Error that caused the problem
-                    RAISERROR (@ErrorMessage, -- Message text.
-                    @ErrorSeverity, -- Severity.
-                    @ErrorState -- State.
+<cls>DECLARE</cls> @retries <cls>INT</cls> ;
+<cls>SET</cls> @retries = 4 ;
+
+<cls>WHILE</cls> ( @retries > 0 )
+    <cls>BEGIN</cls>
+        <cls>BEGIN TRY</cls>
+            <cls>BEGIN TRANSACTION</cls> ;
+
+            <com>-- place sql code here</com>
+            <cls>SET</cls> @retries = 0 ;
+
+            <cls>COMMIT TRANSACTION</cls> ;
+        <cls>END TRY</cls>
+        <cls>BEGIN CATCH</cls>
+            <com>-- Error is a deadlock</com>
+            <cls>IF</cls> ( <func>ERROR_NUMBER</func>() = 1205 )
+                <cls>SET</cls> @retries = @retries - 1 ;
+
+            <com>-- Error is not a deadlock</com>
+            <cls>ELSE</cls>
+                <cls>BEGIN</cls>
+                    <cls>DECLARE</cls> @ErrorMessage <cls>NVARCHAR</cls>(4000) ;
+                    <cls>DECLARE</cls> @ErrorSeverity <cls>INT</cls> ;
+                    <cls>DECLARE</cls> @ErrorState <cls>INT</cls> ;
+
+                    <cls>SELECT</cls> @ErrorMessage = ERROR_MESSAGE() ,
+                    @ErrorSeverity = <func>ERROR_SEVERITY</func>() ,
+                    @ErrorState = <func>ERROR_STATE</func>() ;
+
+                    <com>-- Re-Raise the Error that caused the problem</com>
+                    <cls>RAISERROR</cls> (@ErrorMessage, <com>-- Message text.</com>
+                    @ErrorSeverity, <com>-- Severity.</com>
+                    @ErrorState <com>-- State.</com>
                     ) ;
-                    SET @retries = 0 ;
-                    END
-                    IF XACT_STATE() <> 0
-                    ROLLBACK TRANSACTION ;
-                    END CATCH ;
-                    END ;
-                    GO
-                </code>
-            </pre>
+                    <cls>SET</cls> @retries = 0 ;
+                <cls>END</cls>
+
+            <cls>IF</cls> <func>XACT_STATE</func>() <> 0
+                <cls>ROLLBACK TRANSACTION</cls> ;
+        <cls>END CATCH</cls> ;
+    <cls>END</cls> ;
+<cls>GO</cls>
+                </code></pre>
         </div>
         
-        <p>Listing 7.16: TRY…CATCH handling of deadlock exceptions, in T-SQL.</p>
+        <p class="legenda"><strong>Listagem 7.16</strong>: Tratamento de exceções de deadlock com TRY...CATCH, em T-SQL</p>
         
-        <p>Handling ADO.NET SqlExceptions in .NET code</p>
+        <h3 id="sqlexceptions">Tratando SqlExceptions do ADO.NET no código .NET</h3>
 
-        <p>While it is possible to handle deadlocks in SQL Server 2005 and 2008, using BEGIN TRY and BEGIN CATCH blocks, the same functionality doesn't exist in SQL Server 2000, and in any event it may not be acceptable to have the database engine retry the operation automatically. In either case, the client application should be coded to handle the deadlock exception that is raised by SQL Server.</p>
+        <p>Embora seja possível lidar com deadlocks no SQL Server 2005 e 2008, usando blocos <code>BEGIN TRY</code> e <code>BEGIN CATCH</code>, a mesma funcionalidade não existe no SQL Server 2000, e, em qualquer caso, pode não ser aceitável que o mecanismo do banco de dados tente a operação novamente automaticamente. Em ambos os casos, a aplicação cliente deve ser codificada para lidar com a exceção de deadlock gerada pelo SQL Server.</p>
 
-        <p>There isn't much difference between the error handling in .NET and the error handling in T-SQL. A TRY…CATCH block is used to execute the SQL call from the application and catch any resulting exception raised by SQL Server. If the code should reattempt the operation in the event of a deadlock, a maximum number of retries should be set by a member variable that is decremented each time a deadlock is encountered.</p>
+        <p>Não há muita diferença entre o tratamento de erros no .NET e no T-SQL. Um bloco <code>TRY...CATCH</code> é usado para executar a chamada SQL a partir da aplicação e capturar qualquer exceção resultante gerada pelo SQL Server. Se o código deve tentar a operação novamente no caso de um deadlock, um número máximo de tentativas deve ser definido por uma variável membro que é decrementada cada vez que um deadlock é encontrado.</p>
 
-        <p>The example in Listing 7.17 shows how to catch the SqlException in C#, but can be used as a model to handle deadlocks in other languages as well.</p>
+        <p>O exemplo na Listagem 7.17 mostra como capturar a SqlException em C#, mas pode ser usado como modelo para lidar com deadlocks em outras linguagens também.</p>
 
-        <div>
+        <div id="container">
             <pre>
                 <code>
-                    int retries = 4;
-                    while (retries > 0)
-                    {
-                        try
-                        {
-                            // place sql code here
-                            retries = 0;
-                        }
-                        catch (SqlException exception)
-                        {
-                            // exception is a deadlock
-                            if (exception.Number == 1205)
-                            {
-                                // Delay processing to allow retry.
-                                Thread.Sleep(500);
-                                retries --;
-                            }
-                            // exception is not a deadlock
-                            else
-                            {
-                                throw;
-                            }
-                        }
-                    }
-                </code>
-            </pre>
+int retries = 4;
+while (retries > 0)
+{
+    try
+    {
+        // place sql code here
+        retries = 0;
+    }
+    catch (SqlException exception)
+    {
+        // exception is a deadlock
+        if (exception.Number == 1205)
+        {
+            // Delay processing to allow retry.
+            Thread.Sleep(500);
+            retries --;
+        }
+        // exception is not a deadlock
+        else
+        {
+            throw;
+        }
+    }
+}
+                </code></pre>
         </div>
         
-        <p>Listing 7.17: TRY…CATCH handling of deadlock exceptions, in C#.</p>
+        <p class="legenda"><strong>Listagem 7.17</strong>: Tratamento de exceções de deadlock com <code>TRY...CATCH</code>, em C#</p>
 
-        <p>Rather than retrying the operation, it may be desirable to log the exception in the Windows Application Event Log, or perhaps display a MessageBox dialog and determine whether or not to retry the operation, based on user input. These are two examples of how handling the deadlock exception in the application code allows for more flexibility over handling the deadlock in the database engine.</p>
+        <p>Em vez de tentar a operação novamente, pode ser desejável registrar a exceção no Log de Eventos de Aplicativos do Windows ou, talvez, exibir uma caixa de diálogo <code>MessageBox</code> e determinar se deve ou não tentar a operação novamente, com base na entrada do usuário. Esses são dois exemplos de como o tratamento da exceção de deadlock no código da aplicação permite mais flexibilidade em comparação com o tratamento do deadlock no mecanismo do banco de dados.</p>
 
-        <p>Controlling Deadlock Behavior with Deadlock Priority</p>
+        <h2 id="deadlockbehavior">Controlando o Comportamento de Deadlocks com Prioridade de Deadlock</h2>
 
-        <p>There are circumstances (for example, a critical report that performs a long running SELECT that must complete even if it is the ideal deadlock victim) where it may be preferable to specify which process will be chosen as the deadlock victim in the event of a deadlock, rather than let SQL Server decide based purely on the cost of rollback. As demonstrated in Listing 7.18, SQL Server offers the ability to set, at the session or batch level, a deadlock priority using the SET DEADLOCK PRIORITY option.</p>
+        <p>Existem circunstâncias (por exemplo, um relatório crítico que executa um <code>SELECT</code> de longa duração e deve ser concluído, mesmo que seja a vítima ideal de um deadlock) em que pode ser preferível especificar qual processo será escolhido como a vítima de deadlock no caso de um deadlock, em vez de deixar o SQL Server decidir com base puramente no custo de rollback. Conforme demonstrado na Listagem 7.18, o SQL Server oferece a capacidade de definir, no nível de sessão ou lote, uma prioridade de deadlock usando a opção <code>SET DEADLOCK PRIORITY</code>.</p>
 
-        <div>
+        <div id="container">
             <pre>
                 <code>
-                    -- Set a Low deadlock priority
-                    SET DEADLOCK_PRIORITY LOW ;
-                    GO
-                    -- Set a High deadlock priority
-                    SET DEADLOCK_PRIORITY HIGH ;
-                    GO
-                    -- Set a numeric deadlock priority
-                    SET DEADLOCK_PRIORITY 2 ;
-                </code>
-            </pre>
+<com>-- Set a Low deadlock priority</com>
+<cls>SET DEADLOCK_PRIORITY LOW</cls> ;
+<cls>GO</cls>
+
+<com>-- Set a High deadlock priority</com>
+<cls>SET DEADLOCK_PRIORITY HIGH</cls> ;
+<cls>GO</cls>
+
+<com>-- Set a numeric deadlock priority</com>
+<cls>SET DEADLOCK_PRIORITY</cls> 2 ;
+                </code></pre>
         </div>
         
-        <p>Listing 7.18: Setting deadlock priority.</p>
+        <p class="legenda"><strong>Listagem 7.18</strong>: Definindo prioridade de deadlock</p>
         
-        <p>A process running in a batch or session with a low deadlock priority will be chosen as the deadlock victim over one that is running with a higher deadlock priority. Like all other SET options in SQL Server, the DEADLOCK PRIORITY is only in effect for the current execution scope. If it is set inside of a stored procedure, then when the stored procedure execution completes, the priority returns to the original priority of the calling execution scope.</p>
+        <p>Um processo em execução em um lote ou sessão com uma prioridade de deadlock baixa será escolhido como a vítima de deadlock em vez de um que esteja em execução com uma prioridade de deadlock mais alta. Como todas as outras opções <code>SET</code> no SQL Server, a <code>DEADLOCK PRIORITY</code> só está em vigor para o escopo de execução atual. Se for definida dentro de um procedimento armazenado, então, quando a execução do procedimento armazenado for concluída, a prioridade retorna à prioridade original do escopo de execução chamador.</p>
 
-        <p>Note that SQL Server 2000 offers only two deadlock priorities; Low and Normal. This allows the victim to be determined by setting its priority to Low. SQL Server 2005 and 2008 however, have three named deadlock priorities; Low, Normal, and High, as well as a numeric range from -10 to +10, for fine-tuning the deadlock priority of different operations.</p>
+        <p>Observe que o SQL Server 2000 oferece apenas duas prioridades de deadlock: <code>Low</code> e <code>Normal</code>. Isso permite que a vítima seja determinada configurando sua prioridade como <code>Low</code>. No entanto, o SQL Server 2005 e 2008 têm três prioridades de deadlock nomeadas: <code>Low</code>, <code>Normal</code> e <code>High</code>, além de uma faixa numérica de -10 a +10, para ajustar com mais precisão a prioridade de deadlock de diferentes operações.</p>
 
-        <p>The deadlock priority is set at execution time, and all users have the permission to set a deadlock priority. This can be a problem if users have ad hoc query access to SQL Server, and set their deadlock priority higher than other processes, in order to prevent their own process from being selected as a victim.</p>
+        <p>A prioridade de deadlock é definida no momento da execução, e todos os usuários têm permissão para definir uma prioridade de deadlock. Isso pode ser um problema se os usuários tiverem acesso a consultas ad hoc no SQL Server e definirem suas prioridades de deadlock mais altas do que outros processos, a fim de evitar que seus próprios processos sejam escolhidos como vítimas.</p>
 
-        <p>Summary</p>
+        <h2 id="summary">Resumo</h2>
 
-        <p>This chapter has covered how to capture and interpret deadlock graph information in SQL Server to troubleshoot deadlocking. The most common deadlocks have also been covered to provide a foundation for troubleshooting other types of deadlocks that might occur. Most often, deadlocks are the result of a design problem in the database or code that can be fixed to prevent the deadlock from occurring. However, when changes to the database are not possible to resolve the deadlock, adding appropriate error handling in the application code reduces the impact caused by a deadlock occurring. The information included in this chapter should allow rapid and efficient troubleshooting of most deadlocks in SQL Server.</p>
+        <p>Este capítulo abordou como capturar e interpretar informações de gráficos de deadlock no SQL Server para solucionar problemas de deadlocks. Os deadlocks mais comuns também foram abordados para fornecer uma base para solucionar outros tipos de deadlocks que possam ocorrer. Na maioria das vezes, os deadlocks são o resultado de um problema de design no banco de dados ou no código, que pode ser corrigido para evitar que o deadlock ocorra. No entanto, quando não é possível fazer mudanças no banco de dados para resolver o deadlock, adicionar o tratamento adequado de erros no código da aplicação reduz o impacto causado pela ocorrência de um deadlock. As informações incluídas neste capítulo devem permitir a solução rápida e eficiente da maioria dos deadlocks no SQL Server.</p>
     </main>
 
     <div id="topo">
