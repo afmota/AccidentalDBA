@@ -34,196 +34,97 @@
         </nav>
 
         <main>
-            Chapter 8: Large or Full Transaction
-            Log
-            A transaction log is a physical file in which SQL Server stores a record of all the transactions and data modifications performed on the database with which the log file is
-            associated. It is arguably the single most important component of a SQL Server database,
-            since the SQL Server engine uses it to ensure transaction durability (all valid, committed
-            data will be preserved) and transaction rollback (the effects of any partial, uncommitted
-            transactions, in the data file, can be "undone"), and the SQL Server DBA can use it to
-            restore a database to a previous point in time, in the event of a disaster.
-            Unfortunately, however, it is also one of the most misunderstood and mismanaged
-            components of SQL Server and the resulting problems are a frequent source of questions
-            and pleas for help in the online technical forums. This chapter will examine, briefly, how
-            the transaction log works, and then discuss the most common problems and forms of
-            mismanagement that lead to runaway growth of the transaction log, including:
-            •	 performing index maintenance
-            •	 operating a database in FULL recovery mode, without taking log backups
-            •	 long-running or uncommitted transactions that prevent space in the transaction log
-            from being reused.
-            Of course, if runaway growth is left unchecked your log file may expand until it eats up all
-            of your disk space, at which point you'll receive the infamous 9002 (transaction log full)
-            error, and the database will become read-only. We'll cover the correct ways to respond to
-            runaway log growth and the 9002 error, and also explain why commonly given advice to
-            truncate the log and shrink it is often dangerous.274
-            Chapter 8: Large or Full Transaction Log
-            Finally, we'll cover strategies for ensuring smooth and predictable growth of your log file,
-            while minimizing problems associated with log fragmentation. In a busy database, a large
-            transaction log may be a simple fact of life and, managed properly, this is not necessarily a
-            bad thing, even if the log file space is unused a majority of the time.
-            Note that in order to focus on the topic of diagnosing and curing a runaway or full transaction log, we assume prior knowledge of related topics such as database recovery models.
-            If you need a refresher, a good source is Gail Shaw's Recovery Models article, at http://
-            www.sqlservercentral.com/articles/Administration/75461/.
-            How the Transaction Log Works
-            Whenever a change is made to a database object or the data it contains, not only is the
-            data or object updated in the data file, but also details of the change are recorded as a
-            sequence of log records in the transaction log. Each log record contains the details of a
-            specific change that has been made to the database, allowing that change to be performed
-            again as a part of REDO, or undone as a part of UNDO, during crash recovery. Other log
-            records contain details regarding the ID of the transaction that performed the change,
-            when that transaction started and ended, which pages were changed, the data changes
-            that were made, and so on.
-            SQL Server, like most transactional relational database systems, utilizes the Write-Ahead
-            Logging (WAL) protocol for all data modifications that occur in all databases.
-            The WAL protocol
-            This is described by Chunder Mohan in the paper, "ARIES: A Transaction Recovery Method
-            Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging"
-            (http://www.cs.berkeley.edu/~brewer/cs262/Aries.pdf).275
-            Chapter 8: Large or Full Transaction Log
-            The WAL protocol dictates that before a data page is changed in non-volatile storage,
-            the information describing the change to the data page must first be written to stable
-            storage, allowing the change to be redone or undone in the event of a failure. SQL Server
-            implements this protocol by logging the information describing changes to database
-            objects and data pages using log records in the transaction log. Before a transaction that
-            changes data in the database completes, the log records describing the changes must
-            first be hardened to disk. Changes made to the data pages in the buffer cache are then
-            subsequently written out to permanent storage in the database files at checkpoint, or
-            by the Lazy Writer process when the instance is under memory pressure in the buffer
-            pool. Uncommitted changes can also be written to the data file by the CHECKPOINT or
-            Lazy Writer processes, as long as the log records describing those changes have been first
-            written to the transaction log file.
-            By always writing changes to the log file first, SQL Server has the basis for a mechanism
-            that can guarantee that the effects of all committed transactions will ultimately be
-            reflected in the data files, and that any data modifications on disk that originate from
-            incomplete transactions, i.e. those for which neither a COMMIT nor a ROLLBACK have
-            been issued, are ultimately not reflected in the data files.
-            This process of reconciling the contents of the data and log files occurs during the
-            database recovery process (sometimes called crash recovery), which is initiated automatically whenever SQL Server restarts, or as part of the RESTORE command.
-            Any transactions that were committed, and therefore recorded in the transaction log,
-            before the service was interrupted, or before the time to which the database is being
-            manually restored, but are not reflected in the data files, will be "rolled forward" (redone).
-            Likewise, any data changes in the database that are associated with uncommitted transactions will be "rolled back" (undone), by reading the relevant operations from the log file,
-            and performing the reverse physical operation on the data.276
-            Chapter 8: Large or Full Transaction Log
-            In these ways, SQL Server ensures that either all the actions associated with a transaction
-            succeed as a unit, or that they all fail, allowing SQL Server to return the database to a
-            consistent state with regard to a particular point in time. As such, the transaction log
-            represents one of the fundamental means by which SQL Server ensures data consistency
-            and integrity during normal operation.
-            How SQL Server writes to the transaction log
-            The way in which SQL Server writes to the transaction log is basically different from
-            the way it writes to data files. Writes to data files occur in a random fashion, since data
-            changes affect random pages stored in the database. As such, the disk on which a data file
-            is stored is regularly subject to multiple seek operations, which reposition the head to the
-            correct disk cylinder in order to write the changes. Write performance can be improved
-            by writing to the data files in a striped fashion utilizing a proportional fill methodology,
-            where the amount of data written to a specific file is proportionate to the amount of free
-            space in the file, compared to the amount of free space in other files in the filegroup.
-            By contrast, SQL Server writes to the transaction log sequentially, one record after
-            another, and so a disk storing only a transaction log will rarely need to perform random
-            seek operations. Certain operations, such as transaction log backups, Change Data
-            Capture jobs and the replication log reader agent, will read the transaction log in a
-            "random" fashion, but writing operations are generally sequential and can be much faster.
-            This is why the recommended best practice is to segregate the log file from the data files
-            and store the former on physical disks that are configured for high-speed sequential
-            writes, as discussed in Chapter 2, Disk I/O Configuration.
-            The fact that writes are always sequential also means that SQL Server will only ever
-            write to one transaction log file at a time. There is therefore no advantage, in terms of
-            log writing performance, to having multiple transaction log files. The only reason to have
-            more than one log file is if space considerations dictate the need for multiple log files, on
-            different disks, in order to achieve the necessary log size for a database.277
-            Chapter 8: Large or Full Transaction Log
-            Understanding log truncation
-            Log truncation is the mechanism through which SQL Server marks the space inside
-            of the transaction log as available for reuse by the database. The allocated space inside
-            of a transaction log file is internally divided into smaller segments known as virtual
-            log files (VLFs), and the process of log truncation is simply the act of marking a VLF as
-            "inactive" and so making the space in that VLF available for reuse. It does not, as the term
-            "truncation" might suggest, reduce the physical size of the transaction log.
-            A VLF can only be considered inactive if it contains no part of what is termed the active
-            log. A full discussion of transaction log architecture is out of scope but, briefly, any log
-            record relating to an open transaction is required for possible rollback and so must
-            be part of the active log. In addition, there are various other activities in the database,
-            including replication, mirroring and CDC (Change Data Capture) that use the transaction
-            log and need transaction log records to remain around until they have been processed.
-            These records will also be part of the active log.
-            As discussed previously, transaction log files are sequential files and each log record
-            inserted into the log file is stamped with a Logical Sequence Number (LSN). The log
-            record with the lowest LSN (MinLSN) is defined as the oldest log record that may still be
-            required for some database operation or activity, and this record marks the start of the
-            active log. The log record with the highest LSN (i.e. the most recent record added) marks
-            the end of the active log.
-            A log record is no longer part of the active log if each of the following three conditions
-            is met:
-            1. It relates to a transaction that is committed, and so is no longer required for rollback.
-            2. It is no longer required by any other database process, including a transaction log
-            backup when using FULL or BULK LOGGED recovery models.
-            3. It is older (i.e. has a lower LSN) than the MinLSN record.278
-            Chapter 8: Large or Full Transaction Log
-            Any VLF that contains no part of the active log is inactive and can be truncated, although
-            the point at which this truncation occurs depends on the recovery model in use. In the
-            SIMPLE recovery model, truncation can occur immediately upon CHECKPOINT; cached
-            data pages are flushed to disk (after first writing the transaction details) and any VLFs that
-            contain no part of the active log are truncated.
-            In the FULL (or BULK LOGGED) recovery model, once a full backup of the database has
-            been taken, the inactive portion of the log is not marked as reusable on CHECKPOINT,
-            because it is necessary to maintain a complete LSN chain, and so allow point-in-time
-            recovery of the database. Truncation can only occur upon a BACKUP LOG operation. In
-            this case, once the log backup has backed up the log, it marks any VLFs that are no longer
-            necessary as inactive and hence reusable.
-            Later in the chapter, in the section entitled Lack of log space reuse, we'll discuss factors,
-            such as uncommitted or long-running transactions, which can prevent space reuse and
-            cause the log file to grow rapidly in size.
-            Sizing and growing the log
-            Whenever a log file needs to grow, and additional space is allocated, this space is divided
-            evenly into VLFs, based on the amount of space that is being allocated. When additional
-            space is allocated in small blocks, for example using a default ten percent auto-growth
-            setting, the resulting transaction log may have a large number of small VLFs. When
-            additional space is allocated in larger sizes, for example when initially sizing the log to 16
-            GB in a single operation, the resulting transaction log has a small number of larger VLFs.279
-            Chapter 8: Large or Full Transaction Log
-            Transaction Log VLFs – too many or too few?
-            SQL Server MVP Kimberly Tripp discusses the impact of VLF sizes and provides guidance for how to
-            properly manage VLF size in her blog post, "Transaction Log VLFs – too many or too few?" (http://
-            www.sqlskills.com/BLOGS/KIMBERLY/post/Transaction-Log-VLFs-too-many-or-too-few.
-            aspx).
-            A very high number of small VLFs, known as log file fragmentation, can have a considerable impact on performance, especially for crash recovery, restores and backups,
-            particularly log backups; in other words, operations that read the log file. Conversely, if
-            the database has only a few VLFs which are large in size, this can lead to problems related
-            to rapid log growth in cases where truncation is delayed, for some reason (see the Lack
-            of log space reuse section). For example, let's assume that each VLF is 1 GB in size. If all
-            VLFs within the log file contain some part of the active log then the log file will grow in
-            1 GB steps until some of the existing VLFs cease to contain any part of the active log, at
-            which point it can be truncated by the next log backup if using FULL recovery, or the next
-            CHECKPOINT operation in SIMPLE recovery. As such, it's important that the log is sized
-            appropriately initially, and grown in appropriately-sized steps, to minimize fragmentation
-            but also avoid tying up large portions of the log for long periods.
-            There is also a second reason why it is very important to size the log appropriately and
-            grow it in a very controlled fashion: for log files, each growth event is a relatively expensive
-            operation. It is natural that both data and log files will grow in size over time, but whereas
-            the process of adding new data files and expanding existing data files can be optimized to
-            some degree by enabling instant file initialization, the same is not true for log files. When a
-            data file is created or grows, the space allocated on disk has to be initialized, or zeroed out,
-            by SQL Server to remove the remnants of any previous data. SQL Server 2005 introduced
-            a new feature, instant file initialization, to allow the data files to allocate space on disk
-            without having to fill the space with zeros. This feature however, does not apply to log
-            files, which still require initialization and zeroing whenever space is allocated.280
-            Chapter 8: Large or Full Transaction Log
-            The transaction log, when properly managed, works in a circular fashion, and the starting
-            point of the transactions that must be processed as a part of crash recovery is maintained
-            in the database boot page. However, nothing tracks the position of the last log record
-            requiring processing during crash recovery, so the log records are stamped with a parity
-            bit that gets flipped when the transaction log reaches the end of the file and wraps back
-            around to the beginning of the file. To prevent the possibility of introducing corruption
-            by processing random data that existed previously on disk and matches the parity bit for
-            the existing log records, the space being allocated must be zeroed out whenever the log
-            file grows.
-            Why can't the transaction log use instant initialization?
-            For further information about transaction log zeroing, see Paul Randal's blog post, "Search Engine Q&A
-            #24: Why can't the transaction log use instant initialization?" (http://sqlskills.com/BLOGS/PAUL/
-            post/Search-Engine-QA-24-Why-cant-the-transaction-log-use-instant-initialization.
-            aspx).
-            Diagnosing a Runaway Transaction Log
+            <h1>Capítulo 8: Log de Transações Grande ou Completo</h1>
+
+            <p>Um log de transações é um arquivo físico no qual o SQL Server armazena um registro de todas as transações e modificações de dados realizadas no banco de dados com o qual o arquivo de log está associado. É, indiscutivelmente, o componente mais importante de um banco de dados SQL Server, uma vez que o mecanismo do SQL Server o utiliza para garantir a durabilidade da transação (todos os dados válidos e confirmados serão preservados) e o rollback da transação (os efeitos de quaisquer transações parciais não confirmadas, no arquivo de dados, podem ser "desfeitos"), e o DBA do SQL Server pode utilizá-lo para restaurar um banco de dados a um ponto anterior no tempo, em caso de desastre.</p>
+
+            <p>Infelizmente, no entanto, é também um dos componentes mais incompreendidos e mal geridos do SQL Server e os problemas resultantes são uma fonte frequente de perguntas e pedidos de ajuda nos fóruns técnicos online. Este capítulo examinará, brevemente, como o log de transações funciona e, em seguida, discutirá os problemas mais comuns e as formas de má gestão que levam ao crescimento descontrolado do log de transações, incluindo:</p>
+
+            <ul>
+                <li>executar a manutenção de índices;</li>
+                <li>operar um banco de dados no modo de recuperação <code>FULL</code>, sem fazer backups do log;</li>
+                <li>transações de longa duração ou não confirmadas que impedem o reuso do espaço no log de transações.</li>
+            </ul>
+
+            <p>Claro, se o crescimento descontrolado não for controlado, seu arquivo de log pode se expandir até consumir todo o espaço do disco, momento em que você receberá o infame erro 9002 (log de transações cheio), e o banco de dados se tornará somente leitura. Vamos cobrir as maneiras corretas de responder ao crescimento descontrolado do log e ao erro 9002, e também explicar por que o conselho comumente dado para truncar o log e encolhê-lo é muitas vezes perigoso.</p>
+
+            <p>Por fim, abordaremos estratégias para garantir um crescimento suave e previsível do seu arquivo de log, enquanto minimizamos os problemas associados à fragmentação do log. Em um banco de dados movimentado, um grande log de transações pode ser um simples fato da vida e, se gerido corretamente, isso não é necessariamente algo ruim, mesmo que o espaço do arquivo de log seja inutilizado a maior parte do tempo.</p>
+
+            <p>Observe que, para focar no tópico de diagnosticar e resolver um log de transações descontrolado ou cheio, assumimos conhecimento prévio de tópicos relacionados, como modelos de recuperação de banco de dados. Se precisar de uma revisão, uma boa fonte é o artigo "Modelos de Recuperação" de Gail Shaw, disponível em <a href="http://www.sqlservercentral.com/articles/Administration/75461/" target="_blank">http://www.sqlservercentral.com/articles/Administration/75461/</a>.</p>
+
+            <h2 id="logtransactionworks">Como o Log de Transações Trabalha</h2>
+
+            <p>Sempre que uma alteração é feita em um objeto de banco de dados ou nos dados que ele contém, não apenas os dados ou o objeto são atualizados no arquivo de dados, mas também os detalhes da alteração são registrados como uma sequência de registros de log no log de transações. Cada registro de log contém os detalhes de uma mudança específica que foi feita no banco de dados, permitindo que essa mudança seja executada novamente como parte do <code>REDO</code>, ou desfeita como parte do <code>UNDO</code>, durante a recuperação de falhas. Outros registros de log contêm detalhes sobre o ID da transação que realizou a alteração, quando essa transação começou e terminou, quais páginas foram alteradas, as mudanças de dados que foram feitas e assim por diante.</p>
+
+            <p>O SQL Server, como a maioria dos sistemas de banco de dados relacionais transacionais, utiliza o protocolo de Registro Antecipado de Escrita (Write-Ahead Logging - WAL) para todas as modificações de dados que ocorrem em todos os bancos de dados.</p>
+
+            <div class="dica">
+                <p class="destaque">The WAL protocol</p>
+                <p>This is described by Chunder Mohan in the paper, "ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging" (<a href="http://www.cs.berkeley.edu/~brewer/cs262/Aries.pdf" target="_blank">http://www.cs.berkeley.edu/~brewer/cs262/Aries.pdf</a>).</p>
+            </div>
+
+            <p>O protocolo WAL (Write-Ahead Logging) dita que, antes de uma página de dados ser alterada em armazenamento não volátil, as informações descrevendo a mudança na página de dados devem primeiro ser gravadas em armazenamento estável, permitindo que a alteração seja refeita ou desfeita em caso de falha. O SQL Server implementa este protocolo registrando as informações que descrevem mudanças em objetos de banco de dados e páginas de dados usando registros de log no log de transações. Antes de uma transação que altera dados no banco de dados ser concluída, os registros de log que descrevem as alterações devem primeiro ser gravados no disco. As alterações feitas nas páginas de dados no cache de buffer são então subsequentemente gravadas em armazenamento permanente nos arquivos de banco de dados no ponto de verificação, ou pelo processo de Escritor Preguiçoso (Lazy Writer) quando a instância está sob pressão de memória no pool de buffers. Alterações não confirmadas também podem ser gravadas no arquivo de dados pelos processos de <code>CHECKPOINT</code> ou Lazy Writer, desde que os registros de log que descrevem essas alterações tenham sido primeiro escritos no arquivo de log de transações.</p>
+
+            <p>Ao sempre gravar as alterações no arquivo de log primeiro, o SQL Server tem a base para um mecanismo que pode garantir que os efeitos de todas as transações confirmadas serão refletidos nos arquivos de dados, e que quaisquer modificações de dados no disco originadas de transações incompletas, ou seja, aquelas para as quais nem um <code>COMMIT</code> nem um <code>ROLLBACK</code> foram emitidos, não serão refletidas nos arquivos de dados.</p>
+
+            <p>Este processo de conciliação do conteúdo dos arquivos de dados e log ocorre durante o <strong>processo de recuperação do banco de dados</strong> (às vezes chamado de recuperação após falha), que é iniciado automaticamente sempre que o SQL Server é reiniciado, ou como parte do comando <code>RESTORE</code>.</p>
+
+            <p>Quaisquer transações que foram confirmadas e, portanto, registradas no log de transações, antes da interrupção do serviço, ou antes do tempo para o qual o banco de dados está sendo restaurado manualmente, mas que não estão refletidas nos arquivos de dados, serão "avançadas" (refeitas). Da mesma forma, quaisquer alterações de dados no banco de dados associadas a transações não confirmadas serão "desfeitas", lendo as operações relevantes do arquivo de log e executando a operação física reversa nos dados.</p>
+
+            <p>Dessa forma, o SQL Server garante que todas as ações associadas a uma transação sejam bem-sucedidas como uma unidade, ou que todas falhem, permitindo que o SQL Server retorne o banco de dados a um estado consistente em relação a um ponto específico no tempo. Como tal, o log de transações representa um dos meios fundamentais pelos quais o SQL Server assegura a consistência e integridade dos dados durante a operação normal.</p>
+
+            <h3 id="comoescreve">Como o SQL Server escreve no log de transações</h3>
+
+            <p>A maneira como o SQL Server escreve no log de transações é basicamente diferente da maneira como ele escreve nos arquivos de dados. As escritas nos <strong>arquivos de dados</strong> ocorrem de forma aleatória, uma vez que as alterações nos dados afetam páginas aleatórias armazenadas no banco de dados. Como tal, o disco no qual um arquivo de dados é armazenado é regularmente submetido a múltiplas operações de busca, que reposicionam a cabeça para o cilindro de disco correto a fim de gravar as alterações. O desempenho da escrita pode ser melhorado escrevendo-se nos arquivos de dados de forma intercalada utilizando uma metodologia de preenchimento proporcional, onde a quantidade de dados escrita em um arquivo específico é proporcional à quantidade de espaço livre no arquivo, em comparação com a quantidade de espaço livre em outros arquivos no grupo de arquivos.</p>
+
+            <p>Por outro lado, o SQL Server escreve no <strong>log de transações</strong> de forma sequencial, um registro após o outro, e, portanto, um disco que armazena apenas um log de transações raramente precisará realizar operações de busca aleatórias. Certas operações, como backups de log de transações, tarefas de Captura de Dados de Alteração (Change Data Capture) e o agente leitor de log de replicação, lerão o log de transações de forma "aleatória", mas as operações de escrita são geralmente sequenciais e podem ser muito mais rápidas. É por isso que a prática recomendada é separar o arquivo de log dos arquivos de dados e armazenar o primeiro em discos físicos configurados para gravações sequenciais de alta velocidade, conforme discutido no <a href="cap02.html" target="_self">Capítulo 2, Configuração de E/S de Disco</a>.</p>
+
+            <p>O fato de que as escritas são sempre sequenciais também significa que o SQL Server sempre escreverá em apenas um arquivo de log de transações por vez. Portanto, não há vantagem, em termos de desempenho de escrita do log, em ter múltiplos arquivos de log de transações. A única razão para ter mais de um arquivo de log é se as considerações de espaço exigirem a necessidade de múltiplos arquivos de log, em discos diferentes, para alcançar o tamanho necessário do log para um banco de dados.</p>
+            
+            <h3 id="logtruncation">Compreendendo a truncagem do log</h3>
+
+            <p>A truncagem do log é o mecanismo pelo qual o SQL Server marca o espaço dentro do log de transações como disponível para reutilização pelo banco de dados. O espaço alocado dentro de um arquivo de log de transações é internamente dividido em segmentos menores conhecidos como arquivos de log virtual (VLFs), e o processo de truncagem do log é simplesmente o ato de marcar um VLF como "inativo", tornando o espaço nesse VLF disponível para reutilização. Isso não reduz o tamanho físico do log de transações, como o termo "truncagem" poderia sugerir.</p>
+
+            <p>Um VLF só pode ser considerado inativo se não contiver nenhuma parte do que é denominado log ativo. Uma discussão completa sobre a arquitetura do log de transações está fora do escopo, mas, brevemente, qualquer registro de log relacionado a uma transação aberta é necessário para um possível rollback e, portanto, deve fazer parte do log ativo. Além disso, há várias outras atividades no banco de dados, incluindo replicação, espelhamento e CDC (Captura de Dados de Alteração), que usam o log de transações e precisam que os registros do log de transações permaneçam disponíveis até serem processados. Esses registros também farão parte do log ativo.</p>
+
+            <p>Como discutido anteriormente, os arquivos de log de transações são arquivos <strong>sequenciais</strong> e cada registro de log inserido no arquivo de log é marcado com um <strong>Número Sequencial Lógico</strong> (<strong>Logical Sequence Number - LSN</strong>). O registro de log com o menor LSN (MinLSN) é definido como o registro de log mais antigo que ainda pode ser necessário para alguma operação ou atividade do banco de dados, e este registro marca o início do log ativo. O registro de log com o maior LSN (ou seja, o registro mais recente adicionado) marca o fim do log ativo.</p>
+
+            <p>Um registro de log não faz mais parte do log ativo se cada uma das seguintes três condições for atendida:</p>
+
+            <ol>
+                <li>Ele está relacionado a uma transação que foi confirmada e, portanto, não é mais necessária para rollback.</li>
+                <li>Ele não é mais necessário para nenhum outro processo de banco de dados, incluindo um backup de log de transações ao usar modelos de recuperação <code>FULL</code> ou <code>BULK LOGGED</code>.</li>
+                <li>Ele é mais antigo (ou seja, tem um LSN menor) do que o registro MinLSN.</li>
+            </ol>
+
+            <p>Qualquer VLF que não contenha parte do log ativo está inativo e pode ser truncado, embora o ponto em que essa truncagem ocorre dependa do modelo de recuperação em uso. No modelo de recuperação <code>SIMPLE</code>, a truncagem pode ocorrer imediatamente após o <code>CHECKPOINT</code>; páginas de dados em cache são gravadas no disco (após a gravação dos detalhes da transação) e quaisquer VLFs que não contenham parte do log ativo são truncados.</p>
+
+            <p>No modelo de recuperação <code>FULL</code> (ou <code>BULK LOGGED</code>), uma vez que um backup completo do banco de dados tenha sido realizado, a parte inativa do log não é marcada como reutilizável no <code>CHECKPOINT</code>, porque é necessário manter uma cadeia de LSN completa, e assim permitir a recuperação do banco de dados em um ponto no tempo. A truncagem só pode ocorrer em uma operação de <code>BACKUP LOG</code>. Nesse caso, uma vez que o backup do log tenha sido realizado, ele marca quaisquer VLFs que não sejam mais necessários como inativos e, portanto, reutilizáveis.</p>
+
+            <p>Mais adiante no capítulo, na seção intitulada <a href="">Falta de reutilização do espaço do log</a>, discutiremos fatores, como transações não confirmadas ou de longa duração, que podem impedir a reutilização do espaço e fazer com que o arquivo de log cresça rapidamente em tamanho.</p>
+
+            <h3 id="sizinglog">Dimensionando e aumentando o log</h3>
+
+            <p>Sempre que um arquivo de log precisa crescer e um espaço adicional é alocado, esse espaço é dividido igualmente em VLFs, com base na quantidade de espaço que está sendo alocada. Quando o espaço adicional é alocado em blocos pequenos, por exemplo, usando uma configuração de crescimento automático de dez por cento por padrão, o log de transações resultante pode ter um grande número de pequenos VLFs. Quando o espaço adicional é alocado em tamanhos maiores, por exemplo, ao dimensionar inicialmente o log para 16 GB em uma única operação, o log de transações resultante tem um pequeno número de VLFs maiores.</p>
+
+            <div class="dica">
+                <p class="destaque">VLFs de Log de Transações – muitos ou poucos?</p>
+                A MVP do SQL Server, Kimberly Tripp, discute o impacto dos tamanhos dos VLFs e fornece orientações sobre como gerenciar adequadamente o tamanho dos VLFs em sua postagem no blog, "VLFs de Log de Transações – muitos ou poucos?" (<a href="http://www.sqlskills.com/BLOGS/KIMBERLY/post/Transaction-Log-VLFs-too-many-or-too-few.aspx" target="_blank">http://www.sqlskills.com/BLOGS/KIMBERLY/post/Transaction-Log-VLFs-too-many-or-too-few.aspx</a>).
+            </div>
+
+            <p>Um número muito alto de pequenos VLFs, conhecido como fragmentação de arquivo de log, pode ter um impacto considerável no desempenho, especialmente para recuperação após falhas, restaurações e backups, particularmente backups de log; em outras palavras, operações que leem o arquivo de log. Por outro lado, se o banco de dados tiver apenas alguns VLFs grandes, isso pode levar a problemas relacionados ao rápido crescimento do log em casos em que a truncagem é atrasada, por algum motivo (veja a seção <a href="cap08.html#">Falta de reutilização do espaço do log</a>). Por exemplo, vamos supor que cada VLF tenha 1 GB de tamanho. Se todos os VLFs no arquivo de log contiverem alguma parte do log ativo, então o arquivo de log crescerá em passos de 1 GB até que alguns dos VLFs existentes deixem de conter qualquer parte do log ativo, momento em que poderá ser truncado pelo próximo backup de log se estiver usando recuperação <code>FULL</code>, ou pela próxima operação de <code>CHECKPOINT</code> na recuperação <code>SIMPLE</code>. Portanto, é importante que o log seja dimensionado adequadamente inicialmente e cresça em etapas de tamanho apropriado, para minimizar a fragmentação, mas também evitar a alocação de grandes porções do log por longos períodos.</p>
+
+            <p>Há também uma segunda razão pela qual é muito importante dimensionar o log de forma adequada e aumentá-lo de maneira muito controlada: para arquivos de log, cada evento de crescimento é uma operação relativamente cara. É natural que tanto os arquivos de dados quanto os arquivos de log cresçam de tamanho ao longo do tempo, mas enquanto o processo de adicionar novos arquivos de dados e expandir os arquivos de dados existentes pode ser otimizado até certo ponto, permitindo a <strong>inicialização instantânea de arquivos</strong>, o mesmo não é verdadeiro para arquivos de log. Quando um arquivo de dados é criado ou cresce, o espaço alocado no disco precisa ser inicializado, ou preenchido com zeros, pelo SQL Server para remover os vestígios de qualquer dado anterior. O SQL Server 2005 introduziu um novo recurso, a inicialização instantânea de arquivos, para permitir que os arquivos de dados alocassem espaço no disco sem precisar preencher o espaço com zeros. No entanto, esse recurso não se aplica a arquivos de log, que ainda exigem inicialização e preenchimento com zeros sempre que o espaço é alocado.</p>
+            
+            <p>O log de transações, quando gerido corretamente, funciona de maneira circular, e o ponto de início das transações que devem ser processadas como parte da recuperação após falhas é mantido na página de inicialização do banco de dados. No entanto, nada rastreia a posição do último registro de log que requer processamento durante a recuperação após falhas, então os registros de log são marcados com um bit de paridade que é invertido quando o log de transações atinge o final do arquivo e volta ao início do arquivo. Para evitar a possibilidade de introduzir corrupção processando dados aleatórios que existiam anteriormente no disco e que coincidem com o bit de paridade dos registros de log existentes, o espaço alocado deve ser preenchido com zeros sempre que o arquivo de log cresce.</p>
+
+            <div class="dica">
+                <p class="destaque">Por que o log de transações não pode usar a inicialização instantânea?</p>
+                <p>Para mais informações sobre a inicialização do log de transações, veja a postagem no blog de Paul Randal, "Search Engine Q&A#24: Why can't the transaction log use instant initialization?" (http://sqlskills.com/BLOGS/PAUL/post/Search-Engine-QA-24-Why-cant-the-transaction-log-use-instant-initialization.aspx).</p>
+            </div>
+
+            <h2 id="runawaylog">Diagnóstico de um Log de Transações Fora de Controle</h2>
+
             If you are experiencing uncontrolled growth of the transaction log, it is due either to an
             incredibly high rate of log activity, or to factors that are preventing space in the log file
             from being reused, or both.
