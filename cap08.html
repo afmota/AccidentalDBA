@@ -120,81 +120,49 @@
 
             <div class="dica">
                 <p class="destaque">Por que o log de transações não pode usar a inicialização instantânea?</p>
-                <p>Para mais informações sobre a inicialização do log de transações, veja a postagem no blog de Paul Randal, "Search Engine Q&A#24: Why can't the transaction log use instant initialization?" (http://sqlskills.com/BLOGS/PAUL/post/Search-Engine-QA-24-Why-cant-the-transaction-log-use-instant-initialization.aspx).</p>
+                <p>Para mais informações sobre a inicialização do log de transações, veja a postagem no blog de Paul Randal, "<em>Search Engine Q&A#24: Why can't the transaction log use instant initialization?</em>" (<a href="http://sqlskills.com/BLOGS/PAUL/post/Search-Engine-QA-24-Why-cant-the-transaction-log-use-instant-initialization.aspx" target="_blank">http://sqlskills.com/BLOGS/PAUL/post/Search-Engine-QA-24-Why-cant-the-transaction-log-use-instant-initialization.aspx</a>).</p>
             </div>
 
             <h2 id="runawaylog">Diagnóstico de um Log de Transações Fora de Controle</h2>
 
-            If you are experiencing uncontrolled growth of the transaction log, it is due either to an
-            incredibly high rate of log activity, or to factors that are preventing space in the log file
-            from being reused, or both.
-            If the growth is due primarily to excessive log activity, you need to investigate whether
-            there might be log activity that could be avoided, for example, by adjusting how you carry
-            out bulk data and index maintenance operations, so that these operations are not fully
-            logged (i.e. the BULK LOGGED recovery model is used for these operations). However,
-            any bulk logged operation will immediately prevent point-in-time recovery to any point
-            within a log file that contains records relating to the minimally logged operations. If this
-            is not acceptable, you must simply accept a large log as a fact, and plan its growth and281
-            Chapter 8: Large or Full Transaction Log
-            management (such as frequency of log backups) accordingly, as described in the Proper
-            Log Management section later in this chapter.
-            If the growth is due to a lack of log space reuse, you need to find out what is preventing
-            this reuse and take steps to correct the issue.
-            Excessive logging: index maintenance operations
-            Index maintenance operations are the second most common cause of transaction log
-            usage and growth, especially in databases using the FULL recovery model. The amount of
-            log space required to perform index maintenance depends on the following factors:
-            •	 rebuild or reorganize – index rebuilds generally use a lot more space in the log
-            •	 recovery model – if the risks to point-in-time recovery are understood and acceptable,
-            then index rebuilds can be minimally logged by temporarily switching the database
-            to run in BULK LOGGED recovery mode. Index reorganization, however, is always
-            fully logged.
-            Index rebuilds
-            Rebuilding an index offline, using ALTER INDEX REBUILD (or the deprecated
-            DBCC DBREINDEX in SQL Server 2000) drops the target index and rebuilds it from
-            scratch (online index rebuilds do not drop the existing index until the end of the
-            rebuild operation).
-            Logging and online index rebuilds
-            Online Index Rebuild is a fully-logged operation on SQL Server 2008 and later, whereas it is minimally
-            logged in SQL Server 2005. Therefore, performing such operations in later SQL Server versions will
-            require substantially more transaction log space. See: http://support.microsoft.com/kb/2407439.282
-            Chapter 8: Large or Full Transaction Log
-            In the FULL recovery model, index rebuilds can be a very resource intensive operation,
-            requiring a lot of space in the transaction log. In the SIMPLE or BULK LOGGED recovery
-            model, rebuilding an index is a minimally logged operation, meaning that only the allocations are logged, and not the actual pages changed, therefore reducing the amount of log
-            space required by the operation.
-            If you switch to the SIMPLE model to perform an index rebuild, the LSN chain will
-            be automatically broken. You'll only be able to recover your database to a point of
-            time contained in the previous transaction log backup. To restart the chain, you'll
-            need to switch back to the FULL model and immediately take a full or differential
-            database backup.
-            If you switch to the BULK LOGGED model, the LSN chain is always maintained but there
-            are still implications for your ability to perform point-in-time restores, since a log backup
-            that contains a minimally logged operation can't be used to recover to a point in time. In
-            other words, you won't be able to use the STOPAT option when restoring a log file that
-            contains minimally logged operations. It is still possible to restore the entire transaction
-            log backup to roll the database forward, and it is still possible to restore to a point in
-            time in a subsequent log file, which doesn't contain any minimally logged operations.
-            However, in the event of an application bug, or a user change that causes data to be
-            deleted, around the same period as the minimally logged operation, it will not be possible
-            to stop at a specific point in time in the log in which these changes are recorded, in order
-            to recover the data that was deleted.
-            If the ability to perform a point-in-time recovery is paramount for a database, the BULK
-            LOGGED recovery model should not be used for index rebuilds or any other minimally
-            logged operation, unless it can be done at a time when there is no concurrent user activity
-            in the database.
-            If the BULK LOGGED model is used, steps should be taken to minimize the time period
-            where point-in-time restore is unavailable, and so minimize exposure to data loss. To do
-            this, take a log backup in FULL mode, switch to BULK LOGGED, perform the index rebuild,
-            then switch back to FULL and take another log backup.283
-            Chapter 8: Large or Full Transaction Log
-            A final important point to note is that an ALTER INDEX REBUILD operation occurs in a
-            single transaction. If the index is large, this could represent a long-running transaction
-            that will prevent space reuse in the log for its duration. This means that, even if you
-            rebuild an index in SIMPLE mode, where you might think that the log should remain
-            small since it is auto-truncated during a checkpoint operation, the log file can expand
-            rapidly during the operation.
-            Index reorganization
+            <p>Se você estiver enfrentando um crescimento descontrolado do log de transações, isso se deve a uma taxa incrivelmente alta de atividade do log ou a fatores que estão impedindo a reutilização do espaço no arquivo de log, ou ambos.</p>
+
+            <p>Se o crescimento se deve principalmente a uma atividade excessiva de log, você precisa investigar se pode haver alguma atividade de log que poderia ser evitada, por exemplo, ajustando como você realiza operações de manutenção de dados em massa e de índice, de modo que essas operações não sejam totalmente logadas (ou seja, o modelo de recuperação <code>BULK LOGGED</code> é usado para essas operações). No entanto, qualquer operação logada em massa impedirá imediatamente a recuperação pontual para qualquer ponto dentro de um arquivo de log que contenha registros relacionados às operações logadas minimamente. Se isso não for aceitável, você deve simplesmente aceitar um grande log como um fato e planejar seu crescimento e gerenciamento (como a frequência de backups de log) de acordo, conforme descrito na seção de <a href="cap08.html">Gestão Adequada de Logs</a> mais adiante neste capítulo.</p>
+
+            <p>Se o crescimento se deve à falta de reutilização do espaço do log, você precisa descobrir o que está impedindo essa reutilização e tomar medidas para corrigir o problema.</p>
+
+            <h3 id="excessivelog">Log excessivo: operações de manutenção de índice</h3>
+
+            <p>As operações de manutenção de índice são a segunda causa mais comum de uso e crescimento do log de transações, especialmente em bancos de dados que usam o modelo de recuperação COMPLETA. A quantidade de espaço de log necessária para realizar a manutenção de índice depende dos seguintes fatores:</p>
+
+            <ul>
+                <li><strong>reconstruir ou reorganizar</strong> – reconstruções de índice geralmente usam muito mais espaço no log;</li>
+                <li><strong>modelo de recuperação</strong> – se os riscos para a recuperação pontual forem compreendidos e aceitáveis, as reconstruções de índice podem ser logadas minimamente ao alternar temporariamente o banco de dados para o modo de recuperação BULK LOGGED. No entanto, a reorganização do índice é sempre totalmente logada.</li>
+            </ul>
+
+            <h4>Index rebuilds</h4>
+
+            <p>A reconstrução de um índice offline, usando <code>ALTER INDEX REBUILD</code> (ou o obsoleto <code>DBCC DBREINDEX</code> no SQL Server 2000) remove o índice alvo e o reconstrói do zero (reconstruções de índice online não removem o índice existente até o final da operação de reconstrução).</p>
+
+            <div class="dica">
+                <p class="destaque">Log e reconstruções de índice online</p>
+                <p>A reconstrução de índice online é uma operação totalmente registrada no SQL Server 2008 e posteriores, enquanto é registrada minimamente no SQL Server 2005. Portanto, realizar essas operações em versões posteriores do SQL Server exigirá substancialmente mais espaço no log de transações. Veja: <a href="http://support.microsoft.com/kb/2407439" target="_blank">http://support.microsoft.com/kb/2407439</a>.</p>
+            </div>
+
+            <p>No modelo de recuperação <code>FULL</code>, as reconstruções de índice podem ser uma operação muito intensiva em recursos, exigindo muito espaço no log de transações. No modelo de recuperação <code>SIMPLE</code> ou <code>BULK LOGGED</code>, a reconstrução de um índice é uma operação minimamente logada, o que significa que apenas as alocações são registradas, e não as páginas reais alteradas, reduzindo assim a quantidade de espaço de log necessária para a operação.</p>
+
+            <p>Se você alternar para o modelo <code>SIMPLE</code> para realizar uma reconstrução de índice, a cadeia de LSN será automaticamente quebrada. Você só poderá recuperar seu banco de dados para um ponto no tempo contido no backup de log de transações anterior. Para reiniciar a cadeia, você precisará alternar de volta para o modelo <code>FULL</code> e imediatamente fazer um backup completo ou diferencial do banco de dados.</p>
+
+            <p>Se você alternar para o modelo <code>BULK LOGGED</code>, a cadeia de LSN é sempre mantida, mas ainda há implicações para a sua capacidade de realizar restaurações pontuais, uma vez que um backup de log que contém uma operação minimamente registrada não pode ser usado para recuperação a um ponto no tempo. Em outras palavras, você não poderá usar a opção <code>STOPAT</code> ao restaurar um arquivo de log que contém operações minimamente registradas. Ainda é possível restaurar todo o backup de log de transações para avançar o banco de dados, e ainda é possível restaurar para um ponto no tempo em um arquivo de log subsequente, que não contenha operações minimamente registradas. No entanto, no caso de um bug de aplicação ou uma alteração de usuário que cause a exclusão de dados, no mesmo período da operação minimamente registrada, não será possível interromper em um ponto específico no tempo no log em que essas alterações foram registradas, para recuperar os dados que foram excluídos.</p>
+
+            <p>Se a capacidade de realizar uma recuperação pontual for fundamental para um banco de dados, o modelo de recuperação <code>BULK LOGGED</code> não deve ser usado para reconstruções de índice ou qualquer outra operação minimamente logada, a menos que possa ser feita em um momento em que não haja atividade de usuário concorrente no banco de dados.</p>
+
+            <p>Se o modelo <code>BULK LOGGED</code> for usado, devem ser tomadas medidas para minimizar o período de tempo em que a restauração pontual está indisponível, e assim minimizar a exposição à perda de dados. Para fazer isso, faça um backup do log em modo COMPLETO, alterne para <code>BULK LOGGED</code>, execute a reconstrução do índice, depois volte para <code>FULL</code> e faça outro backup do log.</p>
+
+            <p>Um ponto final importante a ser observado é que uma operação de <code>ALTER INDEX REBUILD</code> ocorre em uma <em>única</em> transação. Se o índice for grande, isso pode representar uma transação de longa duração que impedirá a reutilização de espaço no log durante sua duração. Isso significa que, mesmo que você reconstrua um índice no modo <code>SIMPLE</code>, onde você pode pensar que o log deve permanecer pequeno, pois ele é truncado automaticamente durante uma operação de checkpoint, o arquivo de log pode se expandir rapidamente durante a operação.</p>
+            
+            <h4>Reorganização de Índices</h4>
+
             In contrast to rebuilding an index, reorganizing (defragmenting) an index, using ALTER
             INDEX REORGANIZE (or the deprecated DBCC INDEXDEFRAG in SQL Server 2000) is
             always a fully-logged operation, regardless of the recovery model, and so the actual
