@@ -59,8 +59,8 @@
             <p>O SQL Server, como a maioria dos sistemas de banco de dados relacionais transacionais, utiliza o protocolo de Registro Antecipado de Escrita (Write-Ahead Logging - WAL) para todas as modificações de dados que ocorrem em todos os bancos de dados.</p>
 
             <div class="dica">
-                <p class="destaque">The WAL protocol</p>
-                <p>This is described by Chunder Mohan in the paper, "ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging" (<a href="http://www.cs.berkeley.edu/~brewer/cs262/Aries.pdf" target="_blank">http://www.cs.berkeley.edu/~brewer/cs262/Aries.pdf</a>).</p>
+                <p class="destaque">O protocolo WAL</p>
+                <p>Isso é descrito por Chunder Mohan no artigo "<em>ARIES: A Transaction Recovery Method Supporting Fine-Granularity Locking and Partial Rollbacks Using Write-Ahead Logging</em>". (<a href="http://www.cs.berkeley.edu/~brewer/cs262/Aries.pdf" target="_blank">http://www.cs.berkeley.edu/~brewer/cs262/Aries.pdf</a>).</p>
             </div>
 
             <p>O protocolo WAL (Write-Ahead Logging) dita que, antes de uma página de dados ser alterada em armazenamento não volátil, as informações descrevendo a mudança na página de dados devem primeiro ser gravadas em armazenamento estável, permitindo que a alteração seja refeita ou desfeita em caso de falha. O SQL Server implementa este protocolo registrando as informações que descrevem mudanças em objetos de banco de dados e páginas de dados usando registros de log no log de transações. Antes de uma transação que altera dados no banco de dados ser concluída, os registros de log que descrevem as alterações devem primeiro ser gravados no disco. As alterações feitas nas páginas de dados no cache de buffer são então subsequentemente gravadas em armazenamento permanente nos arquivos de banco de dados no ponto de verificação, ou pelo processo de Escritor Preguiçoso (Lazy Writer) quando a instância está sob pressão de memória no pool de buffers. Alterações não confirmadas também podem ser gravadas no arquivo de dados pelos processos de <code>CHECKPOINT</code> ou Lazy Writer, desde que os registros de log que descrevem essas alterações tenham sido primeiro escritos no arquivo de log de transações.</p>
@@ -101,7 +101,7 @@
 
             <p>No modelo de recuperação <code>FULL</code> (ou <code>BULK LOGGED</code>), uma vez que um backup completo do banco de dados tenha sido realizado, a parte inativa do log não é marcada como reutilizável no <code>CHECKPOINT</code>, porque é necessário manter uma cadeia de LSN completa, e assim permitir a recuperação do banco de dados em um ponto no tempo. A truncagem só pode ocorrer em uma operação de <code>BACKUP LOG</code>. Nesse caso, uma vez que o backup do log tenha sido realizado, ele marca quaisquer VLFs que não sejam mais necessários como inativos e, portanto, reutilizáveis.</p>
 
-            <p>Mais adiante no capítulo, na seção intitulada <a href="">Falta de reutilização do espaço do log</a>, discutiremos fatores, como transações não confirmadas ou de longa duração, que podem impedir a reutilização do espaço e fazer com que o arquivo de log cresça rapidamente em tamanho.</p>
+            <p>Mais adiante no capítulo, na seção intitulada <a href="cap08.html#lackoflog">Falta de reutilização do espaço do log</a>, discutiremos fatores, como transações não confirmadas ou de longa duração, que podem impedir a reutilização do espaço e fazer com que o arquivo de log cresça rapidamente em tamanho.</p>
 
             <h3 id="sizinglog">Dimensionando e aumentando o log</h3>
 
@@ -109,10 +109,10 @@
 
             <div class="dica">
                 <p class="destaque">VLFs de Log de Transações – muitos ou poucos?</p>
-                A MVP do SQL Server, Kimberly Tripp, discute o impacto dos tamanhos dos VLFs e fornece orientações sobre como gerenciar adequadamente o tamanho dos VLFs em sua postagem no blog, "VLFs de Log de Transações – muitos ou poucos?" (<a href="http://www.sqlskills.com/BLOGS/KIMBERLY/post/Transaction-Log-VLFs-too-many-or-too-few.aspx" target="_blank">http://www.sqlskills.com/BLOGS/KIMBERLY/post/Transaction-Log-VLFs-too-many-or-too-few.aspx</a>).
+                <p>A MVP do SQL Server, Kimberly Tripp, discute o impacto dos tamanhos dos VLFs e fornece orientações sobre como gerenciar adequadamente o tamanho dos VLFs em sua postagem no blog, "VLFs de Log de Transações – muitos ou poucos?" (<a href="http://www.sqlskills.com/BLOGS/KIMBERLY/post/Transaction-Log-VLFs-too-many-or-too-few.aspx" target="_blank">http://www.sqlskills.com/BLOGS/KIMBERLY/post/Transaction-Log-VLFs-too-many-or-too-few.aspx</a>).</p>
             </div>
 
-            <p>Um número muito alto de pequenos VLFs, conhecido como fragmentação de arquivo de log, pode ter um impacto considerável no desempenho, especialmente para recuperação após falhas, restaurações e backups, particularmente backups de log; em outras palavras, operações que leem o arquivo de log. Por outro lado, se o banco de dados tiver apenas alguns VLFs grandes, isso pode levar a problemas relacionados ao rápido crescimento do log em casos em que a truncagem é atrasada, por algum motivo (veja a seção <a href="cap08.html#">Falta de reutilização do espaço do log</a>). Por exemplo, vamos supor que cada VLF tenha 1 GB de tamanho. Se todos os VLFs no arquivo de log contiverem alguma parte do log ativo, então o arquivo de log crescerá em passos de 1 GB até que alguns dos VLFs existentes deixem de conter qualquer parte do log ativo, momento em que poderá ser truncado pelo próximo backup de log se estiver usando recuperação <code>FULL</code>, ou pela próxima operação de <code>CHECKPOINT</code> na recuperação <code>SIMPLE</code>. Portanto, é importante que o log seja dimensionado adequadamente inicialmente e cresça em etapas de tamanho apropriado, para minimizar a fragmentação, mas também evitar a alocação de grandes porções do log por longos períodos.</p>
+            <p>Um número muito alto de pequenos VLFs, conhecido como fragmentação de arquivo de log, pode ter um impacto considerável no desempenho, especialmente para recuperação após falhas, restaurações e backups, particularmente backups de log; em outras palavras, operações que leem o arquivo de log. Por outro lado, se o banco de dados tiver apenas alguns VLFs grandes, isso pode levar a problemas relacionados ao rápido crescimento do log em casos em que a truncagem é atrasada, por algum motivo (veja a seção <a href="cap08.html#lackoflog">Falta de reutilização do espaço do log</a>). Por exemplo, vamos supor que cada VLF tenha 1 GB de tamanho. Se todos os VLFs no arquivo de log contiverem alguma parte do log ativo, então o arquivo de log crescerá em passos de 1 GB até que alguns dos VLFs existentes deixem de conter qualquer parte do log ativo, momento em que poderá ser truncado pelo próximo backup de log se estiver usando recuperação <code>FULL</code>, ou pela próxima operação de <code>CHECKPOINT</code> na recuperação <code>SIMPLE</code>. Portanto, é importante que o log seja dimensionado adequadamente inicialmente e cresça em etapas de tamanho apropriado, para minimizar a fragmentação, mas também evitar a alocação de grandes porções do log por longos períodos.</p>
 
             <p>Há também uma segunda razão pela qual é muito importante dimensionar o log de forma adequada e aumentá-lo de maneira muito controlada: para arquivos de log, cada evento de crescimento é uma operação relativamente cara. É natural que tanto os arquivos de dados quanto os arquivos de log cresçam de tamanho ao longo do tempo, mas enquanto o processo de adicionar novos arquivos de dados e expandir os arquivos de dados existentes pode ser otimizado até certo ponto, permitindo a <strong>inicialização instantânea de arquivos</strong>, o mesmo não é verdadeiro para arquivos de log. Quando um arquivo de dados é criado ou cresce, o espaço alocado no disco precisa ser inicializado, ou preenchido com zeros, pelo SQL Server para remover os vestígios de qualquer dado anterior. O SQL Server 2005 introduziu um novo recurso, a inicialização instantânea de arquivos, para permitir que os arquivos de dados alocassem espaço no disco sem precisar preencher o espaço com zeros. No entanto, esse recurso não se aplica a arquivos de log, que ainda exigem inicialização e preenchimento com zeros sempre que o espaço é alocado.</p>
             
@@ -163,60 +163,33 @@
             
             <h4>Reorganização de Índices</h4>
 
-            In contrast to rebuilding an index, reorganizing (defragmenting) an index, using ALTER
-            INDEX REORGANIZE (or the deprecated DBCC INDEXDEFRAG in SQL Server 2000) is
-            always a fully-logged operation, regardless of the recovery model, and so the actual
-            page changes are always logged. However, index reorganizations generally require less
-            log space than an index rebuild, although this is a function of the amount of fragmentation that exists in the index; a heavily fragmented index will require more log space to
-            reorganize than a minimally fragmented one.
-            Furthermore, the ALTER INDEX REORGANIZE operation is accomplished using multiple,
-            shorter transactions. Therefore, when performed in conjunction with frequent log
-            backups (or when working in SIMPLE mode), log space can be made available for reuse
-            during the operation, so minimizing the size requirements for the transaction log during
-            the operation.
-            For example, rebuilding a 20 GB index can require more than 20 GB of space for the
-            rebuild operation because it occurs in a single transaction. However, reorganizing a 20 GB
-            index requires much less log space because each page allocation change in the reorganization is a separate transaction, and so the log records can be truncated with frequent log
-            backups, allowing the log space to be reused.284
-            Chapter 8: Large or Full Transaction Log
-            Strategies for controlling excessive logging
-            If your organization has zero tolerance to any potential data loss, then you'll have no
-            choice but to perform index rebuild operations in the FULL recovery model, and plan
-            your log size and growth appropriately. If your Service Level Agreements (SLAs) and
-            Operational Level Agreements (OLAs) allow some potential for data loss, then switching
-            to BULK LOGGED recovery at the start of index rebuild can minimize the amount of space
-            required to rebuild the index. However, do so in a way that minimizes exposure to data
-            loss, as discussed earlier.
-            If your database is in FULL recovery, and is subject to frequent index reorganization
-            operations, then you might need to consider increasing the frequency with which you
-            take log backups, especially during the time that the indexes are being rebuilt, in order to
-            control the size of the log. Regardless of the frequency of log backups, the log will be at
-            least as large as the largest index being rebuilt.
-            Regardless of the recovery model in use, one can minimize the impact of index maintenance operations on the transaction log by reorganizing rather than rebuilding, if
-            possible, and by only maintaining those indexes that really need it.
-            Microsoft has provided guidelines that can be used for most, but not all, environments
-            for determining when to rebuild an index versus when to reorganize it to minimize the
-            impact of index maintenance operations. These guidelines can be found in the Books
-            Online Topic, Reorganizing and Rebuilding Indexes (http://technet.microsoft.com/
-            en-us/library/ms189858.aspx). They state that for fragmentation levels greater than 5
-            percent but less than or equal to 30 percent, you should reorganize the index, and for
-            fragmentation levels greater than 30 percent, you should rebuild it.
-            It's also worth noting that rebuilding small indexes is generally not worthwhile. The
-            commonly cited threshold is around 1,000 pages. These values are based on recommendations made by Paul Randal while he managed the storage engine development team
-            at Microsoft, and which are documented in Books Online. Note, though, that this is
-            guideline advice only and may not be appropriate for all environments, as discussed by285
-            Chapter 8: Large or Full Transaction Log
-            Paul in his blog post, Where do the Books Online index fragmentation thresholds come from?
-            (http://www.sqlskills.com/BLOGS/PAUL/post/Where-do-the-Books-Online-indexfragmentation-thresholds-come-from.aspx).
-            If you use the SSMS Maintenance Plans Wizard for index maintenance, it is an all-ornothing process: you either rebuild or reorganize all indexes in your database (and all
-            databases in the maintenance plan) or you rebuild none of them. A better approach may
-            be to use the sys.dm_db_index_physical_stats DMV to investigate fragmentation
-            and so determine a rebuild/reorganize strategy based on need.
-            Ola Hallengren's free maintenance scripts
-            A comprehensive set of free maintenance scripts is made available online by Ola Hallengren. Ola's scripts
-            demonstrate how to use sys.dm_db_index_physical_stats to perform index analysis for intelligent maintenance, and can be used as a replacement for Database Maintenance Plans created by the
-            wizards in SSMS (http://ola.hallengren.com).
-            Lack of log space reuse
+            <p>Em contraste com a reconstrução de um índice, reorganizar (desfragmentar) um índice, usando <code>ALTER INDEX REORGANIZE</code> (ou o obsoleto <code>DBCC INDEXDEFRAG</code> no SQL Server 2000) é sempre uma operação totalmente registrada, independentemente do modelo de recuperação, e assim as mudanças reais nas páginas são sempre registradas. No entanto, as reorganizações de índices geralmente requerem menos espaço de log do que uma reconstrução de índice, embora isso dependa da quantidade de fragmentação que existe no índice; um índice fortemente fragmentado exigirá mais espaço de log para reorganizar do que um minimamente fragmentado.</p>
+
+            <p>Além disso, a operação <code>ALTER INDEX REORGANIZE</code> é realizada usando várias transações mais curtas. Portanto, quando realizada em conjunto com backups frequentes de log (ou quando se trabalha em modo <code>SIMPLE</code>), o espaço de log pode ser disponibilizado para reutilização durante a operação, minimizando assim os requisitos de tamanho do log de transações durante a operação.</p>
+
+            <p>Por exemplo, reconstruir um índice de 20 GB pode exigir mais de 20 GB de espaço para a operação de reconstrução porque ocorre em uma única transação. No entanto, reorganizar um índice de 20 GB requer muito menos espaço de log porque cada mudança de alocação de página na reorganização é uma transação separada, e assim os registros de log podem ser truncados com backups frequentes de log, permitindo que o espaço de log seja reutilizado.</p>
+
+            <h4>Estratégias para controlar o log excessivo</h4>
+
+            <p>Se sua organização tem tolerância zero para qualquer potencial perda de dados, então não haverá outra escolha a não ser realizar operações de reconstrução de índice no modelo de recuperação <code>FULL</code>, e planejar o tamanho e crescimento do log de maneira adequada. Se seus Acordos de Nível de Serviço (SLAs) e Acordos de Nível Operacional (OLAs) permitem algum potencial de perda de dados, então mudar para a recuperação em modo <code>BULK LOGGED</code> no início da reconstrução do índice pode minimizar a quantidade de espaço necessário para reconstruir o índice. No entanto, faça isso de uma maneira que minimize a exposição à perda de dados, conforme discutido anteriormente.</p>
+
+            <p>Se o seu banco de dados estiver no modo de recuperação <code>FULL</code> e estiver sujeito a operações frequentes de reorganização de índices, então você pode precisar considerar aumentar a frequência com que realiza backups de log, especialmente durante o tempo em que os índices estão sendo reconstruídos, a fim de controlar o tamanho do log. Independentemente da frequência dos backups de log, o log será pelo menos tão grande quanto o maior índice sendo reconstruído.</p>
+
+            <p>Independentemente do modelo de recuperação em uso, é possível minimizar o impacto das operações de manutenção de índices no log de transações reorganizando, em vez de reconstruir, se possível, e mantendo apenas aqueles índices que realmente precisam.</p>
+
+            <p>A Microsoft forneceu diretrizes que podem ser usadas na maioria, mas não em todos os ambientes, para determinar quando reconstruir um índice em vez de reorganizá-lo para minimizar o impacto das operações de manutenção de índices. Essas diretrizes podem ser encontradas no tópico do Books Online, <em>Reorganizando e Reconstruindo Índices</em> (<a href="http://technet.microsoft.com/en-us/library/ms189858.aspx" target="_blank">http://technet.microsoft.com/en-us/library/ms189858.aspx</a>). Elas indicam que, para níveis de fragmentação superiores a 5% mas menores ou iguais a 30%, você deve reorganizar o índice, e para níveis de fragmentação superiores a 30%, você deve reconstruí-lo.</p>
+
+            <p>Também vale mencionar que reconstruir índices pequenos geralmente não vale a pena. O limite comumente citado é em torno de 1.000 páginas. Esses valores são baseados em recomendações feitas por Paul Randal enquanto ele gerenciava a equipe de desenvolvimento do mecanismo de armazenamento na Microsoft, e que estão documentadas no Books Online. No entanto, note que isso é apenas uma orientação e pode não ser adequado para todos os ambientes, como discutido por Paul em sua postagem no blog, <em>De onde vêm os limites de fragmentação de índices do Books Online?</em> (<a href="http://www.sqlskills.com/BLOGS/PAUL/post/Where-do-the-Books-Online-indexfragmentation-thresholds-come-from.aspx" target="_blank">http://www.sqlskills.com/BLOGS/PAUL/post/Where-do-the-Books-Online-indexfragmentation-thresholds-come-from.aspx</a>).</p>
+
+            <p>Se você usar o SSMS Maintenance Plans Wizard para a manutenção de índices, é um processo de tudo ou nada: você ou reconstrói ou reorganiza todos os índices no seu banco de dados (e todos os bancos de dados no plano de manutenção) ou você não reconstrói nenhum deles. Uma abordagem melhor pode ser usar a DMV <code>sys.dm_db_index_physical_stats</code> para investigar a fragmentação e, assim, determinar uma estratégia de reconstrução/reorganização com base na necessidade.</p>
+
+            <div class="dica">
+                <p class="destaque">Os scripts de manutenção gratuitos do Ola Hallengren</p>
+                <p>Um conjunto abrangente de scripts de manutenção gratuitos está disponível online por Ola Hallengren. Os scripts de Ola demonstram como usar <code>sys.dm_db_index_physical_stats</code> para realizar uma análise de índice para manutenção inteligente e podem ser usados como substitutos para os Planos de Manutenção de Banco de Dados criados pelos assistentes no SSMS (<a href="http://ola.hallengren.com" target="_blank">http://ola.hallengren.com</a>).</p>
+            </div>
+
+            <h3 id="lackoflog">Falta de reutilização do espaço de log</h3>
+
             If you suspect log growth is being caused by the log space not being reused, your first
             job is to find out what's preventing reuse. Start by querying sys.databases, as shown
             in Listing 8.1, and see what the value of the column log_reuse_wait_desc is for the
